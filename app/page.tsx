@@ -17,6 +17,7 @@ export default function Home() {
       <p style={{ color: '#AFA9EC', fontSize: 18, margin: '0 0 3rem' }}>
         Tu celebracion, a tu manera
       </p>
+
       
         href="/login"
         style={{
