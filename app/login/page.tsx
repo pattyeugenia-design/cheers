@@ -5,11 +5,20 @@ import { supabase } from '../supabase'
 
 export default function Login() {
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
+    // Maneja el hash token al regresar de Google
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        window.location.href = '/dashboard'
+      }
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         window.location.href = '/dashboard'
       }
     })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   async function loginConGoogle() {
@@ -27,4 +36,10 @@ export default function Login() {
         <p style={{ fontSize: 48, margin: '0 0 8px' }}>🥂</p>
         <h1 style={{ fontSize: 24, fontWeight: 500, color: '#3C3489', margin: '0 0 8px' }}>Bienvenido a Cheers</h1>
         <p style={{ fontSize: 14, color: '#534AB7', margin: '0 0 2rem' }}>Tu celebración, a tu manera</p>
-        <button onClick={loginConGoogle}
+        <button onClick={loginConGoogle} style={{ width: '100%', padding: '0.9rem', background: '#7F77DD', border: 'none', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, cursor: 'pointer' }}>
+          Entrar con Google →
+        </button>
+      </div>
+    </main>
+  )
+}
