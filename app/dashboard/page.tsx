@@ -7,10 +7,20 @@ export default function Dashboard() {
   const [usuario, setUsuario] = useState<any>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUsuario(data.user)
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        window.location.href = '/login'
+        return
+      }
+      setUsuario(data.session.user)
     })
   }, [])
+
+  if (!usuario) return (
+    <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#AFA9EC' }}>Cargando...</p>
+    </main>
+  )
 
   return (
     <main style={{ minHeight: '100vh', background: '#26215C', fontFamily: 'sans-serif', padding: '2rem' }}>
@@ -20,7 +30,6 @@ export default function Dashboard() {
           Hola, {usuario?.user_metadata?.name?.split(' ')[0] || 'festejada'}
         </h1>
         <p style={{ fontSize: 14, color: '#AFA9EC', margin: '0 0 2rem' }}>{usuario?.email}</p>
-
         <a href="/nueva" style={{ display: 'block', width: '100%', padding: '0.9rem', background: '#7F77DD', border: 'none', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>
           Crear nueva celebración 🎉
         </a>
