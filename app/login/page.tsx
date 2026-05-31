@@ -1,24 +1,25 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 export default function Login() {
+  const [cargando, setCargando] = useState(false)
+
   useEffect(() => {
-    // Maneja el hash token al regresar de Google
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        window.location.href = '/dashboard'
-      }
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        window.location.href = '/dashboard'
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    // Si hay hash en la URL, Supabase lo procesa automaticamente
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token')) {
+      setCargando(true)
+      setTimeout(async () => {
+        const { data } = await supabase.auth.getSession()
+        if (data.session) {
+          window.location.href = '/dashboard'
+        } else {
+          setCargando(false)
+        }
+      }, 1500)
+    }
   }, [])
 
   async function loginConGoogle() {
@@ -29,6 +30,12 @@ export default function Login() {
       },
     })
   }
+
+  if (cargando) return (
+    <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#AFA9EC', fontSize: 18 }}>Entrando... 🥂</p>
+    </main>
+  )
 
   return (
     <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', padding: '2rem' }}>
