@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}/dashboard`)
     }
+    return NextResponse.redirect(`${origin}/error?msg=${error.message}`)
   }
 
-  return NextResponse.redirect(`${origin}/login`)
+  return NextResponse.redirect(`${origin}/login?msg=no-code`)
 }
