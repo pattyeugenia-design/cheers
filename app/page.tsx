@@ -15,7 +15,7 @@ export default function Home() {
         Cheers
       </h1>
       <p style={{ color: '#AFA9EC', fontSize: 18, margin: '0 0 3rem' }}>
-        Tu celebración, a tu manera
+        Tu celebracion, a tu manera
       </p>
       
         href="/login"
@@ -31,7 +31,7 @@ export default function Home() {
           textAlign: 'center',
         }}
       >
-        Crear mi celebración 🎉
+        Crear mi celebracion
       </a>
     </main>
   )
