@@ -146,9 +146,12 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
           <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '2rem', textAlign: 'center' }}>
             <p style={{ fontSize: 40, margin: '0 0 12px' }}>🥂</p>
             <p style={{ fontSize: 18, fontWeight: 500, color: '#EEEDFE', margin: '0 0 8px' }}>{t.listo}, {nombre}!</p>
-            <p style={{ fontSize: 14, color: '#AFA9EC', margin: 0 }}>
+            <p style={{ fontSize: 14, color: '#AFA9EC', margin: '0 0 1.5rem' }}>
               {asistencia === 'si' ? t.respuesta_si : asistencia === 'no' ? t.respuesta_no : t.respuesta_talvez}
             </p>
+            <a href="/nueva" style={{ display: 'inline-block', padding: '0.7rem 1.5rem', background: '#7F77DD', borderRadius: 8, color: '#EEEDFE', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
+              Crear mi celebracion →
+            </a>
           </div>
         )}
 
