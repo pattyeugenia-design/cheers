@@ -8,19 +8,24 @@ export default function NuevaCelebracion() {
   const [festejado, setFestejado] = useState('')
   const [loading, setLoading] = useState(false)
   const [listo, setListo] = useState(false)
+  const [slug, setSlug] = useState('')
 
   async function crear() {
     setLoading(true)
-    const slug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    const { data: { user } } = await supabase.auth.getUser()
+    const nuevoSlug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
     const { error } = await supabase.from('celebraciones').insert({
       nombre,
       tipo,
       festejado_nombre: festejado,
-      organizador_id: 'test',
-      slug,
+      organizador_id: user?.id || 'anonimo',
+      slug: nuevoSlug,
     })
     setLoading(false)
-    if (!error) setListo(true)
+    if (!error) {
+      setSlug(nuevoSlug)
+      setListo(true)
+    }
   }
 
   if (listo) return (
@@ -29,7 +34,7 @@ export default function NuevaCelebracion() {
         <p style={{ fontSize: 48 }}>🥂</p>
         <h1 style={{ fontSize: 28, fontWeight: 500 }}>¡Celebracion creada!</h1>
         <p style={{ color: '#AFA9EC', marginBottom: '2rem' }}>{nombre}</p>
-        <a href={`/${nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`} style={{ display: 'block', padding: '0.9rem 2rem', background: '#7F77DD', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, textDecoration: 'none' }}>
+        <a href={`/${slug}`} style={{ display: 'block', padding: '0.9rem 2rem', background: '#7F77DD', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, textDecoration: 'none' }}>
           Ver mi celebracion →
         </a>
       </div>
