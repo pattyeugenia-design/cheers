@@ -11,37 +11,71 @@ export default function Dashboard() {
   const [usuario, setUsuario] = useState<any>(null)
   const [celebraciones, setCelebraciones] = useState<any[]>([])
   const [conteos, setConteos] = useState<Record<string, number>>({})
+  const [intentos, setIntentos] = useState(0)
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const user = session.user
+        setUsuario(user)
+
+        const { data: cels } = await supabase
+          .from('celebraciones')
+          .select('*')
+          .eq('organizador_id', user.id)
+          .order('created_at', { ascending: false })
+
+        setCelebraciones(cels || [])
+
+        const nuevosConteos: Record<string, number> = {}
+        for (const cel of cels || []) {
+          const { count } = await supabase
+            .from('rsvps')
+            .select('*', { count: 'exact', head: true })
+            .eq('celebracion_slug', cel.slug)
+            .eq('asistencia', 'si')
+          nuevosConteos[cel.slug] = count || 0
+        }
+        setConteos(nuevosConteos)
+      } else if (event === 'SIGNED_OUT') {
         window.location.href = '/login'
-        return
       }
-      const user = data.session.user
-      setUsuario(user)
-
-      const { data: cels } = await supabase
-        .from('celebraciones')
-        .select('*')
-        .eq('organizador_id', user.id)
-        .order('created_at', { ascending: false })
-
-      setCelebraciones(cels || [])
-
-      // Contar RSVPs por celebración
-      const nuevosConteos: Record<string, number> = {}
-      for (const cel of cels || []) {
-        const { count } = await supabase
-          .from('rsvps')
-          .select('*', { count: 'exact', head: true })
-          .eq('celebracion_slug', cel.slug)
-          .eq('asistencia', 'si')
-        nuevosConteos[cel.slug] = count || 0
-      }
-      setConteos(nuevosConteos)
     })
+
+    // También intentar con getUser por si la sesión ya existe
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user && !usuario) {
+        setUsuario(user)
+        const { data: cels } = await supabase
+          .from('celebraciones')
+          .select('*')
+          .eq('organizador_id', user.id)
+          .order('created_at', { ascending: false })
+        setCelebraciones(cels || [])
+
+        const nuevosConteos: Record<string, number> = {}
+        for (const cel of cels || []) {
+          const { count } = await supabase
+            .from('rsvps')
+            .select('*', { count: 'exact', head: true })
+            .eq('celebracion_slug', cel.slug)
+            .eq('asistencia', 'si')
+          nuevosConteos[cel.slug] = count || 0
+        }
+        setConteos(nuevosConteos)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
+
+  // Si después de 3 segundos no hay usuario, redirigir a login
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!usuario) window.location.href = '/login'
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [usuario])
 
   if (!usuario) return (
     <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -53,14 +87,12 @@ export default function Dashboard() {
     <main style={{ minHeight: '100vh', background: '#26215C', fontFamily: 'sans-serif', padding: '2rem' }}>
       <div style={{ maxWidth: 440, margin: '0 auto' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-          <div>
-            <p style={{ fontSize: 28, margin: '0 0 4px' }}>🥂</p>
-            <h1 style={{ fontSize: 22, fontWeight: 500, color: '#EEEDFE', margin: '0 0 2px' }}>
-              Hola, {usuario?.user_metadata?.name?.split(' ')[0] || 'festejada'}
-            </h1>
-            <p style={{ fontSize: 13, color: '#AFA9EC', margin: 0 }}>{usuario?.email}</p>
-          </div>
+        <div style={{ marginBottom: '2rem' }}>
+          <p style={{ fontSize: 28, margin: '0 0 4px' }}>🥂</p>
+          <h1 style={{ fontSize: 22, fontWeight: 500, color: '#EEEDFE', margin: '0 0 2px' }}>
+            Hola, {usuario?.user_metadata?.name?.split(' ')[0] || 'festejada'}
+          </h1>
+          <p style={{ fontSize: 13, color: '#AFA9EC', margin: 0 }}>{usuario?.email}</p>
         </div>
 
         <a href="/nueva" style={{ display: 'block', width: '100%', padding: '0.9rem', background: '#7F77DD', border: 'none', borderRadius: 12, color: '#EEEDFE', fontSize: 15, fontWeight: 500, textAlign: 'center', textDecoration: 'none', marginBottom: '2rem' }}>
