@@ -23,6 +23,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
   const [confirmado, setConfirmado] = useState(false)
   const [totalRsvps, setTotalRsvps] = useState(0)
   const [rsvps, setRsvps] = useState<any[]>([])
+  const [copiado, setCopiado] = useState(false)
 
   useEffect(() => {
     params.then(p => {
@@ -57,6 +58,17 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
       .eq('asistencia', 'si')
     setTotalRsvps(count || 0)
     setCargando(false)
+  }
+
+  async function compartir() {
+    const url = `https://joincheers.app/${slug}`
+    if (navigator.share) {
+      await navigator.share({ title: celebracion?.nombre, url })
+    } else {
+      await navigator.clipboard.writeText(url)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    }
   }
 
   async function enviarRsvp() {
@@ -96,14 +108,19 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
         <h1 style={{ fontSize: 28, fontWeight: 500, color: '#FFFFFF', margin: '0 0 6px' }}>{celebracion.nombre}</h1>
         <p style={{ fontSize: 14, color: '#CECBF6', margin: '0 0 12px' }}>joincheers.app/{celebracion.slug}</p>
         {totalRsvps > 0 && (
-          <p style={{ fontSize: 13, color: '#AFA9EC', margin: 0 }}>
+          <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 16px' }}>
             🥂 {totalRsvps} {totalRsvps === 1 ? t.persona_confirmada : t.personas_confirmadas}
           </p>
         )}
+        <button
+          onClick={compartir}
+          style={{ padding: '0.6rem 1.5rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 20, color: '#EEEDFE', fontSize: 14, cursor: 'pointer' }}
+        >
+          {copiado ? '✅ Link copiado!' : '🔗 Compartir link'}
+        </button>
       </div>
 
       <div style={{ padding: '2rem 1.5rem', maxWidth: 400, margin: '0 auto' }}>
-
         {esOrganizador ? (
           <div>
             <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: 1 }}>Respuestas de tus invitados</p>
