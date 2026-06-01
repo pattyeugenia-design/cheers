@@ -3,66 +3,103 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
+const emojis: Record<string, string> = {
+  cumpleanos: '🎂', boda: '💍', xv: '👑', graduacion: '🎓', babyshower: '🍼', bachelorette: '💃', otro: '✨'
+}
+
 export default function Dashboard() {
   const [usuario, setUsuario] = useState<any>(null)
   const [celebraciones, setCelebraciones] = useState<any[]>([])
+  const [conteos, setConteos] = useState<Record<string, number>>({})
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         window.location.href = '/login'
         return
       }
       const user = data.session.user
       setUsuario(user)
-      supabase
+
+      const { data: cels } = await supabase
         .from('celebraciones')
         .select('*')
         .eq('organizador_id', user.id)
         .order('created_at', { ascending: false })
-        .then(({ data: cels }) => setCelebraciones(cels || []))
+
+      setCelebraciones(cels || [])
+
+      // Contar RSVPs por celebración
+      const nuevosConteos: Record<string, number> = {}
+      for (const cel of cels || []) {
+        const { count } = await supabase
+          .from('rsvps')
+          .select('*', { count: 'exact', head: true })
+          .eq('celebracion_slug', cel.slug)
+          .eq('asistencia', 'si')
+        nuevosConteos[cel.slug] = count || 0
+      }
+      setConteos(nuevosConteos)
     })
   }, [])
 
   if (!usuario) return (
     <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#AFA9EC' }}>Cargando...</p>
+      <p style={{ color: '#AFA9EC', fontFamily: 'sans-serif' }}>Cargando...</p>
     </main>
   )
 
-  const emojis: Record<string, string> = {
-    cumpleanos: '🎂', boda: '💍', xv: '👑', graduacion: '🎓', babyshower: '🍼', otro: '✨'
-  }
-
   return (
     <main style={{ minHeight: '100vh', background: '#26215C', fontFamily: 'sans-serif', padding: '2rem' }}>
-      <div style={{ maxWidth: 400, margin: '0 auto' }}>
-        <p style={{ fontSize: 32, margin: '0 0 8px' }}>🥂</p>
-        <h1 style={{ fontSize: 24, fontWeight: 500, color: '#EEEDFE', margin: '0 0 4px' }}>
-          Hola, {usuario?.user_metadata?.name?.split(' ')[0] || 'festejada'}
-        </h1>
-        <p style={{ fontSize: 14, color: '#AFA9EC', margin: '0 0 2rem' }}>{usuario?.email}</p>
+      <div style={{ maxWidth: 440, margin: '0 auto' }}>
 
-        <a href="/nueva" style={{ display: 'block', width: '100%', padding: '0.9rem', background: '#7F77DD', border: 'none', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, cursor: 'pointer', textAlign: 'center', textDecoration: 'none', marginBottom: '2rem' }}>
-          Crear nueva celebracion 🎉
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+          <div>
+            <p style={{ fontSize: 28, margin: '0 0 4px' }}>🥂</p>
+            <h1 style={{ fontSize: 22, fontWeight: 500, color: '#EEEDFE', margin: '0 0 2px' }}>
+              Hola, {usuario?.user_metadata?.name?.split(' ')[0] || 'festejada'}
+            </h1>
+            <p style={{ fontSize: 13, color: '#AFA9EC', margin: 0 }}>{usuario?.email}</p>
+          </div>
+        </div>
+
+        <a href="/nueva" style={{ display: 'block', width: '100%', padding: '0.9rem', background: '#7F77DD', border: 'none', borderRadius: 12, color: '#EEEDFE', fontSize: 15, fontWeight: 500, textAlign: 'center', textDecoration: 'none', marginBottom: '2rem' }}>
+          + Nueva celebración 🎉
         </a>
 
         {celebraciones.length > 0 && (
           <div>
-            <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: 1 }}>Tus celebraciones</p>
+            <p style={{ fontSize: 12, color: '#AFA9EC', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: 1 }}>Tus celebraciones</p>
             {celebraciones.map(cel => (
-              <a key={cel.id} href={`/${cel.slug}`} style={{ display: 'block', background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '1rem', marginBottom: '0.75rem', textDecoration: 'none' }}>
-                <p style={{ fontSize: 24, margin: '0 0 4px' }}>{emojis[cel.tipo] || '✨'}</p>
-                <p style={{ fontSize: 16, fontWeight: 500, color: '#EEEDFE', margin: '0 0 2px' }}>{cel.nombre}</p>
-                <p style={{ fontSize: 13, color: '#AFA9EC', margin: 0 }}>joincheers.app/{cel.slug}</p>
+              <a key={cel.id} href={`/${cel.slug}`} style={{ display: 'block', background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '0.75rem', textDecoration: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 28 }}>{emojis[cel.tipo] || '✨'}</span>
+                    <div>
+                      <p style={{ fontSize: 15, fontWeight: 500, color: '#EEEDFE', margin: '0 0 2px' }}>{cel.nombre}</p>
+                      <p style={{ fontSize: 12, color: '#AFA9EC', margin: 0 }}>joincheers.app/{cel.slug}</p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {conteos[cel.slug] > 0 && (
+                      <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 2px' }}>🥂 {conteos[cel.slug]}</p>
+                    )}
+                    {cel.es_sorpresa && <p style={{ fontSize: 11, color: '#FFD700', margin: 0 }}>🤫 sorpresa</p>}
+                  </div>
+                </div>
               </a>
             ))}
           </div>
         )}
 
         {celebraciones.length === 0 && (
-          <p style={{ fontSize: 14, color: '#AFA9EC', textAlign: 'center' }}>Aun no tienes celebraciones. ¡Crea la primera!</p>
+          <div style={{ textAlign: 'center', padding: '3rem 0' }}>
+            <p style={{ fontSize: 40, margin: '0 0 12px' }}>🎉</p>
+            <p style={{ fontSize: 15, color: '#AFA9EC' }}>Aún no tienes celebraciones.</p>
+            <p style={{ fontSize: 14, color: '#7F77DD' }}>¡Crea la primera!</p>
+          </div>
         )}
+
       </div>
     </main>
   )
