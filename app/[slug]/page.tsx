@@ -6,7 +6,7 @@ import { useLocale } from '../hooks/useLocale'
 import ListaRegalos from '../components/ListaRegalos'
 
 const emojis: Record<string, string> = {
-  cumpleanos: '🎂', boda: '💍', xv: '👑', graduacion: '🎓', babyshower: '🍼', otro: '✨'
+  cumpleanos: '🎂', boda: '💍', xv: '👑', graduacion: '🎓', babyshower: '🍼', bachelorette: '💃', otro: '✨'
 }
 
 export default function EventoPublico({ params }: { params: Promise<{ slug: string }> }) {
@@ -33,29 +33,17 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
   }, [])
 
   async function cargarDatos(s: string) {
-    const { data: cel } = await supabase
-      .from('celebraciones')
-      .select('*')
-      .eq('slug', s)
-      .single()
+    const { data: cel } = await supabase.from('celebraciones').select('*').eq('slug', s).single()
     setCelebracion(cel)
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user && cel && user.id === cel.organizador_id) {
       setEsOrganizador(true)
-      const { data: listaRsvps } = await supabase
-        .from('rsvps')
-        .select('*')
-        .eq('celebracion_slug', s)
-        .order('created_at', { ascending: false })
+      const { data: listaRsvps } = await supabase.from('rsvps').select('*').eq('celebracion_slug', s).order('created_at', { ascending: false })
       setRsvps(listaRsvps || [])
     }
 
-    const { count } = await supabase
-      .from('rsvps')
-      .select('*', { count: 'exact', head: true })
-      .eq('celebracion_slug', s)
-      .eq('asistencia', 'si')
+    const { count } = await supabase.from('rsvps').select('*', { count: 'exact', head: true }).eq('celebracion_slug', s).eq('asistencia', 'si')
     setTotalRsvps(count || 0)
     setCargando(false)
   }
@@ -74,12 +62,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
   async function enviarRsvp() {
     if (!nombre || !asistencia) return
     setEnviando(true)
-    await supabase.from('rsvps').insert({
-      celebracion_slug: slug,
-      nombre,
-      asistencia,
-      mensaje
-    })
+    await supabase.from('rsvps').insert({ celebracion_slug: slug, nombre, asistencia, mensaje })
     setConfirmado(true)
     setEnviando(false)
     if (asistencia === 'si') setTotalRsvps(t => t + 1)
@@ -97,12 +80,14 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
     </main>
   )
 
-  const asistenciaLabel: Record<string, string> = {
-    si: '✅ Va', no: '❌ No puede', talvez: '🤔 Tal vez'
-  }
+  const asistenciaLabel: Record<string, string> = { si: '✅ Va', no: '❌ No puede', talvez: '🤔 Tal vez' }
+  const paradas = celebracion.paradas || []
+  const gifts = celebracion.gifts || []
 
   return (
     <main style={{ minHeight: '100vh', background: '#26215C', fontFamily: 'sans-serif' }}>
+
+      {/* HEADER */}
       <div style={{ background: 'linear-gradient(160deg, #3C3489 0%, #7F77DD 100%)', padding: '2.5rem 1.5rem 2rem', textAlign: 'center' }}>
         <p style={{ fontSize: 52, margin: '0 0 8px' }}>{emojis[celebracion.tipo] || '✨'}</p>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: '#FFFFFF', margin: '0 0 6px' }}>{celebracion.nombre}</h1>
@@ -112,21 +97,62 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
             🥂 {totalRsvps} {totalRsvps === 1 ? t.persona_confirmada : t.personas_confirmadas}
           </p>
         )}
-        <button
-          onClick={compartir}
-          style={{ padding: '0.6rem 1.5rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 20, color: '#EEEDFE', fontSize: 14, cursor: 'pointer' }}
-        >
+        {celebracion.es_sorpresa && (
+          <div style={{ background: 'rgba(255,200,0,0.15)', border: '1px solid rgba(255,200,0,0.4)', borderRadius: 8, padding: '0.5rem 1rem', display: 'inline-block', marginBottom: '1rem' }}>
+            <p style={{ color: '#FFD700', fontSize: 13, margin: 0 }}>🤫 Es sorpresa — no le digas al festejado</p>
+          </div>
+        )}
+        <button onClick={compartir} style={{ padding: '0.6rem 1.5rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 20, color: '#EEEDFE', fontSize: 14, cursor: 'pointer' }}>
           {copiado ? '✅ Link copiado!' : '🔗 Compartir link'}
         </button>
       </div>
 
-      <div style={{ padding: '2rem 1.5rem', maxWidth: 400, margin: '0 auto' }}>
+      <div style={{ padding: '2rem 1.5rem', maxWidth: 440, margin: '0 auto' }}>
+
+        {/* PARADAS */}
+        {paradas.length > 0 && (
+          <div style={{ marginBottom: '2rem' }}>
+            <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: 1 }}>El plan 🗺️</p>
+            {paradas.map((p: any, i: number) => (
+              <div key={i} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '1rem', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <p style={{ fontSize: 16, fontWeight: 500, color: '#EEEDFE', margin: '0 0 2px' }}>📍 {p.lugar}</p>
+                    {p.hora && <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 4px' }}>🕐 {p.hora}</p>}
+                    {p.nota && <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 8px', fontStyle: 'italic' }}>{p.nota}</p>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                  {p.waze && <a href={p.waze} target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '0.4rem 0.8rem', background: 'rgba(127,119,221,0.2)', borderRadius: 6, color: '#AFA9EC', textDecoration: 'none' }}>🗺️ Waze</a>}
+                  {p.maps && <a href={p.maps} target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '0.4rem 0.8rem', background: 'rgba(127,119,221,0.2)', borderRadius: 6, color: '#AFA9EC', textDecoration: 'none' }}>🗺️ Maps</a>}
+                  {p.link && <a href={p.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '0.4rem 0.8rem', background: 'rgba(127,119,221,0.2)', borderRadius: 6, color: '#AFA9EC', textDecoration: 'none' }}>🔗 Ver</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* GIFT IDEAS */}
+        {gifts.length > 0 && (
+          <div style={{ marginBottom: '2rem' }}>
+            <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: 1 }}>🎁 Gift ideas</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+              {gifts.map((g: any, i: number) => (
+                <a key={i} href={g.link} target="_blank" rel="noreferrer" style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.06)', borderRadius: 8, color: '#EEEDFE', fontSize: 14, textDecoration: 'none' }}>
+                  🛍️ {g.nombre || g.link}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* VISTA ORGANIZADOR */}
         {esOrganizador ? (
           <div>
             <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: 1 }}>Respuestas de tus invitados</p>
             {rsvps.length === 0 ? (
               <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '1.5rem', textAlign: 'center' }}>
-                <p style={{ color: '#AFA9EC', fontSize: 14, margin: 0 }}>Aun no hay respuestas. Comparte el link con tus invitados.</p>
+                <p style={{ color: '#AFA9EC', fontSize: 14, margin: 0 }}>Aún no hay respuestas. Comparte el link con tus invitados.</p>
               </div>
             ) : (
               rsvps.map(r => (
@@ -135,9 +161,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
                     <p style={{ fontSize: 15, fontWeight: 500, color: '#EEEDFE', margin: 0 }}>{r.nombre}</p>
                     <span style={{ fontSize: 12, color: '#AFA9EC' }}>{asistenciaLabel[r.asistencia] || r.asistencia}</span>
                   </div>
-                  {r.mensaje && (
-                    <p style={{ fontSize: 13, color: '#AFA9EC', margin: 0, fontStyle: 'italic' }}>"{r.mensaje}"</p>
-                  )}
+                  {r.mensaje && <p style={{ fontSize: 13, color: '#AFA9EC', margin: 0, fontStyle: 'italic' }}>"{r.mensaje}"</p>}
                 </div>
               ))
             )}
