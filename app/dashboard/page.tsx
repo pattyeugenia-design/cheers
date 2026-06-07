@@ -11,69 +11,52 @@ export default function Dashboard() {
   const [usuario, setUsuario] = useState<any>(null)
   const [celebraciones, setCelebraciones] = useState<any[]>([])
   const [conteos, setConteos] = useState<Record<string, number>>({})
-  const [intentos, setIntentos] = useState(0)
+
+  async function cargarCelebraciones(userId: string) {
+    const { data: cels, error } = await supabase
+      .from('celebraciones')
+      .select('*')
+      .eq('organizador_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) console.error('Error cargando celebraciones:', error)
+    console.log('Celebraciones cargadas:', cels, 'para user:', userId)
+    setCelebraciones(cels || [])
+
+    const nuevosConteos: Record<string, number> = {}
+    for (const cel of cels || []) {
+      const { count } = await supabase
+        .from('rsvps')
+        .select('*', { count: 'exact', head: true })
+        .eq('celebracion_slug', cel.slug)
+        .eq('asistencia', 'si')
+      nuevosConteos[cel.slug] = count || 0
+    }
+    setConteos(nuevosConteos)
+  }
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const user = session.user
-        setUsuario(user)
-
-        const { data: cels } = await supabase
-          .from('celebraciones')
-          .select('*')
-          .eq('organizador_id', user.id)
-          .order('created_at', { ascending: false })
-
-        setCelebraciones(cels || [])
-
-        const nuevosConteos: Record<string, number> = {}
-        for (const cel of cels || []) {
-          const { count } = await supabase
-            .from('rsvps')
-            .select('*', { count: 'exact', head: true })
-            .eq('celebracion_slug', cel.slug)
-            .eq('asistencia', 'si')
-          nuevosConteos[cel.slug] = count || 0
-        }
-        setConteos(nuevosConteos)
-      } else if (event === 'SIGNED_OUT') {
-        window.location.href = '/login'
+        setUsuario(session.user)
+        await cargarCelebraciones(session.user.id)
+      } else {
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+          if (user) {
+            setUsuario(user)
+            await cargarCelebraciones(user.id)
+          } else {
+            window.location.href = '/login'
+          }
+        })
       }
     })
-
-    // También intentar con getUser por si la sesión ya existe
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (user && !usuario) {
-        setUsuario(user)
-        const { data: cels } = await supabase
-          .from('celebraciones')
-          .select('*')
-          .eq('organizador_id', user.id)
-          .order('created_at', { ascending: false })
-        setCelebraciones(cels || [])
-
-        const nuevosConteos: Record<string, number> = {}
-        for (const cel of cels || []) {
-          const { count } = await supabase
-            .from('rsvps')
-            .select('*', { count: 'exact', head: true })
-            .eq('celebracion_slug', cel.slug)
-            .eq('asistencia', 'si')
-          nuevosConteos[cel.slug] = count || 0
-        }
-        setConteos(nuevosConteos)
-      }
-    })
-
-    return () => subscription.unsubscribe()
   }, [])
 
-  // Si después de 3 segundos no hay usuario, redirigir a login
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!usuario) window.location.href = '/login'
-    }, 3000)
+    }, 5000)
     return () => clearTimeout(timer)
   }, [usuario])
 
