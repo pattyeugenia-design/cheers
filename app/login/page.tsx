@@ -7,11 +7,21 @@ export default function Login() {
   const [cargando, setCargando] = useState(false)
 
   useEffect(() => {
+    // Si ya hay sesión, ir al dashboard
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         window.location.href = '/dashboard'
       }
     })
+
+    // Escuchar cuando llega el token del hash
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        window.location.href = '/dashboard'
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   async function loginConGoogle() {
@@ -19,11 +29,7 @@ export default function Login() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `https://joincheers.app/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
+        redirectTo: `https://joincheers.app/login`,
       },
     })
   }
