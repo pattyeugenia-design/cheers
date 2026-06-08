@@ -151,12 +151,15 @@ export default function Home() {
     <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f' }}>
 
       <style>{`
-        @keyframes bubble { 0% { transform: translateY(0); opacity: 0.8; } 100% { transform: translateY(-80px); opacity: 0; } }
-        @keyframes sway { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
-        @keyframes sparkle { 0%,100% { opacity:0; transform:scale(0.5); } 50% { opacity:1; transform:scale(1.2); } }
-        @keyframes liquid { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-        .bubble { position:absolute; border-radius:50%; background:rgba(247,215,107,0.5); border:1px solid rgba(247,215,107,0.8); }
-        .sparkle-el { position:absolute; color:#D4537E; animation: sparkle 1.8s ease-in-out infinite; font-size:14px; }
+        @keyframes clink { 0%,100%{transform:rotate(-12deg) translateX(8px)} 40%{transform:rotate(-5deg) translateX(2px)} 50%{transform:rotate(-12deg) translateX(8px)} }
+        @keyframes clinkR { 0%,100%{transform:rotate(12deg) translateX(-8px)} 40%{transform:rotate(5deg) translateX(-2px)} 50%{transform:rotate(12deg) translateX(-8px)} }
+        @keyframes splash { 0%,45%,100%{opacity:0;transform:scale(0)} 50%{opacity:1;transform:scale(1)} 80%{opacity:0;transform:scale(1.4)} }
+        @keyframes drop { 0%{transform:translateY(0) translateX(0);opacity:1} 100%{transform:translateY(40px) translateX(var(--dx,0px));opacity:0} }
+        @keyframes bubble { 0%{transform:translateY(0);opacity:0.8} 100%{transform:translateY(-60px);opacity:0} }
+        @keyframes sparkle { 0%,100%{opacity:0;transform:scale(0.3)} 50%{opacity:1;transform:scale(1.2)} }
+        .sparkle-el{position:absolute;color:#D4537E;animation:sparkle 2s ease-in-out infinite;font-size:16px}
+        .drop{position:absolute;width:4px;height:8px;border-radius:50%;background:#f7d76b;animation:drop 1.2s ease-in infinite}
+        .bubble-el{position:absolute;border-radius:50%;background:rgba(247,215,107,0.5);border:1px solid rgba(247,215,107,0.8);animation:bubble 2s ease-in infinite}
       `}</style>
 
       {/* NAV */}
@@ -200,72 +203,110 @@ export default function Home() {
           </div>
         </div>
 
-        {/* COPA ANIMADA */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', height: 380 }}>
-          <span className="sparkle-el" style={{ left: 40, top: 40, animationDelay: '0s' }}>✦</span>
-          <span className="sparkle-el" style={{ right: 40, top: 60, animationDelay: '0.5s' }}>✦</span>
-          <span className="sparkle-el" style={{ left: 20, top: 180, animationDelay: '1s' }}>✦</span>
-          <span className="sparkle-el" style={{ right: 30, top: 160, animationDelay: '0.8s' }}>✦</span>
-          <span className="sparkle-el" style={{ left: 120, top: 20, animationDelay: '0.3s', fontSize: 10 }}>✦</span>
+        {/* DOS COPAS CHOCANDO */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', height: 400 }}>
+          <span className="sparkle-el" style={{ left: 20, top: 30, animationDelay: '0s' }}>✦</span>
+          <span className="sparkle-el" style={{ right: 20, top: 50, animationDelay: '0.5s' }}>✦</span>
+          <span className="sparkle-el" style={{ left: 60, top: 10, animationDelay: '1s', fontSize: 10 }}>✦</span>
+          <span className="sparkle-el" style={{ right: 60, top: 20, animationDelay: '0.8s', fontSize: 10 }}>✦</span>
+          <span className="sparkle-el" style={{ left: 10, top: 160, animationDelay: '0.3s', fontSize: 12 }}>✦</span>
+          <span className="sparkle-el" style={{ right: 10, top: 140, animationDelay: '1.3s', fontSize: 12 }}>✦</span>
 
-          <div style={{ animation: 'sway 4s ease-in-out infinite', transformOrigin: 'bottom center', position: 'relative', width: 200, height: 340 }}>
-            <svg viewBox="0 0 200 340" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-              <defs>
-                <linearGradient id="champ" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#f5c842" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#f7d76b" />
-                  <stop offset="100%" stopColor="#f5c842" stopOpacity="0.9" />
-                </linearGradient>
-                <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#D4537E" stopOpacity="0.12" />
-                  <stop offset="40%" stopColor="#ffffff" stopOpacity="0.5" />
-                  <stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
-                </linearGradient>
-                <clipPath id="cup">
-                  <path d="M50,50 L70,230 Q100,248 130,230 L150,50 Z" />
-                </clipPath>
-              </defs>
-
-              {/* Glass */}
-              <path d="M50,50 L70,230 Q100,248 130,230 L150,50 Z" fill="url(#glassGrad)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
-
-              {/* Liquid */}
-              <g clipPath="url(#cup)" style={{ animation: 'liquid 2.5s ease-in-out infinite' }}>
-                <rect x="50" y="130" width="100" height="110" fill="url(#champ)" opacity="0.88" />
-                <ellipse cx="100" cy="130" rx="47" ry="6" fill="#f7d76b" opacity="0.7">
-                  <animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="cy" values="130;127;130" dur="2s" repeatCount="indefinite" />
-                </ellipse>
-                <rect x="65" y="135" width="4" height="90" fill="white" opacity="0.25" rx="2" />
-                <rect x="75" y="138" width="2" height="80" fill="white" opacity="0.18" rx="1" />
+          {/* Splash en el centro */}
+          <div style={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', animation: 'splash 3s ease-in-out infinite', zIndex: 10 }}>
+            <svg viewBox="0 0 80 60" width="80" height="60">
+              <g fill="#f7d76b" opacity="0.9">
+                <ellipse cx="40" cy="40" rx="6" ry="3" />
+                <path d="M40,38 L36,20 Q40,15 44,20 Z" />
+                <path d="M40,38 L28,25 Q24,20 30,18 Z" />
+                <path d="M40,38 L52,25 Q56,20 50,18 Z" />
+                <path d="M40,38 L24,35 Q18,32 22,26 Z" />
+                <path d="M40,38 L56,35 Q62,32 58,26 Z" />
               </g>
-
-              {/* Rim */}
-              <line x1="50" y1="50" x2="150" y2="50" stroke="#D4537E" strokeWidth="2.5" strokeOpacity="0.5" strokeLinecap="round" />
-
-              {/* Stem */}
-              <rect x="96" y="230" width="8" height="70" fill="#D4537E" opacity="0.25" rx="4" />
-
-              {/* Base */}
-              <ellipse cx="100" cy="302" rx="38" ry="8" fill="#D4537E" opacity="0.18" />
-              <ellipse cx="100" cy="300" rx="34" ry="6" fill="#D4537E" opacity="0.12" />
             </svg>
-
-            {/* Burbujas */}
-            {[
-              { left: 88, top: 200, size: 7, delay: '0s', dur: '2s' },
-              { left: 100, top: 210, size: 5, delay: '0.6s', dur: '2.4s' },
-              { left: 95, top: 195, size: 6, delay: '1.2s', dur: '1.8s' },
-              { left: 108, top: 205, size: 4, delay: '0.3s', dur: '2.2s' },
-              { left: 92, top: 215, size: 5, delay: '0.9s', dur: '2.6s' },
-            ].map((b, i) => (
-              <div key={i} className="bubble" style={{
-                width: b.size, height: b.size,
-                left: b.left, top: b.top,
-                animation: `bubble ${b.dur} ease-in infinite ${b.delay}`
-              }} />
-            ))}
           </div>
+
+          {/* Gotas salpicando */}
+          {[
+            { left: '45%', top: 90, dx: '-20px', delay: '0.05s' },
+            { left: '55%', top: 85, dx: '20px', delay: '0.1s' },
+            { left: '40%', top: 95, dx: '-30px', delay: '0.15s' },
+            { left: '60%', top: 90, dx: '30px', delay: '0.08s' },
+            { left: '50%', top: 80, dx: '0px', delay: '0.05s' },
+          ].map((d, i) => (
+            <div key={i} className="drop" style={{
+              left: d.left, top: d.top,
+              animationDelay: d.delay,
+              animationDuration: '1.2s',
+              ['--dx' as any]: d.dx,
+              animationIterationCount: 'infinite',
+            }} />
+          ))}
+
+          <svg viewBox="0 0 320 360" style={{ width: 320, height: 360 }}>
+            <defs>
+              <linearGradient id="champ1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" />
+                <stop offset="50%" stopColor="#f7d76b" />
+                <stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
+              </linearGradient>
+              <linearGradient id="glass1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" />
+                <stop offset="40%" stopColor="#ffffff" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
+              </linearGradient>
+              <clipPath id="cup1"><path d="M20,20 L36,160 Q52,172 68,160 L84,20 Z" /></clipPath>
+              <clipPath id="cup2"><path d="M236,20 L252,160 Q268,172 284,160 L300,20 Z" /></clipPath>
+            </defs>
+
+            {/* COPA IZQUIERDA */}
+            <g style={{ animation: 'clink 3s ease-in-out infinite', transformOrigin: '52px 340px' }}>
+              <path d="M20,20 L36,160 Q52,172 68,160 L84,20 Z" fill="url(#glass1)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.4" />
+              <g clipPath="url(#cup1)">
+                <rect x="20" y="90" width="64" height="82" fill="url(#champ1)" opacity="0.88" />
+                <ellipse cx="52" cy="90" rx="30" ry="5" fill="#f7d76b" opacity="0.7">
+                  <animate attributeName="ry" values="5;8;5" dur="2s" repeatCount="indefinite" />
+                </ellipse>
+                <rect x="30" y="94" width="3" height="60" fill="white" opacity="0.25" rx="1.5" />
+              </g>
+              <line x1="20" y1="20" x2="84" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.5" />
+              <rect x="48" y="162" width="8" height="130" fill="#D4537E" opacity="0.2" rx="4" />
+              <ellipse cx="52" cy="294" rx="28" ry="7" fill="#D4537E" opacity="0.15" />
+            </g>
+
+            {/* COPA DERECHA */}
+            <g style={{ animation: 'clinkR 3s ease-in-out infinite', transformOrigin: '268px 340px' }}>
+              <path d="M236,20 L252,160 Q268,172 284,160 L300,20 Z" fill="url(#glass1)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.4" />
+              <g clipPath="url(#cup2)">
+                <rect x="236" y="90" width="64" height="82" fill="url(#champ1)" opacity="0.88" />
+                <ellipse cx="268" cy="90" rx="30" ry="5" fill="#f7d76b" opacity="0.7">
+                  <animate attributeName="ry" values="5;8;5" dur="2s" repeatCount="indefinite" />
+                </ellipse>
+                <rect x="278" y="94" width="3" height="60" fill="white" opacity="0.25" rx="1.5" />
+              </g>
+              <line x1="236" y1="20" x2="300" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.5" />
+              <rect x="264" y="162" width="8" height="130" fill="#D4537E" opacity="0.2" rx="4" />
+              <ellipse cx="268" cy="294" rx="28" ry="7" fill="#D4537E" opacity="0.15" />
+            </g>
+          </svg>
+
+          {/* Burbujas copa izquierda */}
+          {[
+            { left: 95, top: 200, size: 6, delay: '0s', dur: '2s' },
+            { left: 108, top: 215, size: 4, delay: '0.7s', dur: '2.3s' },
+            { left: 100, top: 225, size: 5, delay: '1.4s', dur: '1.9s' },
+          ].map((b, i) => (
+            <div key={i} className="bubble-el" style={{ width: b.size, height: b.size, left: b.left, top: b.top, animationDelay: b.delay, animationDuration: b.dur }} />
+          ))}
+
+          {/* Burbujas copa derecha */}
+          {[
+            { left: 210, top: 200, size: 6, delay: '0.4s', dur: '2.1s' },
+            { left: 222, top: 210, size: 4, delay: '1.1s', dur: '2.4s' },
+            { left: 216, top: 222, size: 5, delay: '0.2s', dur: '1.8s' },
+          ].map((b, i) => (
+            <div key={`r${i}`} className="bubble-el" style={{ width: b.size, height: b.size, left: b.left, top: b.top, animationDelay: b.delay, animationDuration: b.dur }} />
+          ))}
         </div>
       </section>
 
