@@ -41,8 +41,6 @@ const translations = {
     cta_sub: 'Crea tu primera celebración en menos de 2 minutos.',
     cta_btn: 'Empezar gratis',
     coming_soon: 'Próximamente',
-    preview_label: 'ASÍ SE VE CHEERS',
-    preview_title: 'Todo en un solo link',
     tipos: ['🎂 Cumpleaños', '💍 Boda', '👑 XV años', '🎓 Graduación', '🍼 Baby shower', '💃 Bachelorette', '✨ Otro festejo'],
     demo_plan: 'EL PLAN',
     demo_confirmed: 'confirmados',
@@ -91,8 +89,6 @@ const translations = {
     cta_sub: 'Create your first celebration in less than 2 minutes.',
     cta_btn: 'Start free',
     coming_soon: 'Coming soon',
-    preview_label: 'THIS IS CHEERS',
-    preview_title: 'Everything in one link',
     tipos: ['🎂 Birthday', '💍 Wedding', '👑 Quinceañera', '🎓 Graduation', '🍼 Baby shower', '💃 Bachelorette', '✨ Other'],
     demo_plan: 'THE PLAN',
     demo_confirmed: 'confirmed',
@@ -145,16 +141,6 @@ export default function Home() {
     </main>
   )
 
-  const StoreBtn = ({ store }: { store: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '0.5px solid #e0e0e0', borderRadius: 12, background: '#f5f5f7' }}>
-      <span style={{ fontSize: 18 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
-      <div>
-        <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
-        <p style={{ fontSize: 12, fontWeight: 500, color: '#1d1d1f', margin: 0 }}>{store}</p>
-      </div>
-    </div>
-  )
-
   return (
     <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f', position: 'relative', zIndex: 2 }}>
 
@@ -163,154 +149,165 @@ export default function Home() {
         @keyframes clinkR { 0%,100%{transform:rotate(-15deg)} 45%,55%{transform:rotate(-4deg)} }
         @keyframes splash { 0%,40%{opacity:0;transform:scale(0) translateX(-50%)} 50%{opacity:1;transform:scale(1) translateX(-50%)} 80%,100%{opacity:0;transform:scale(1.6) translateX(-50%)} }
         @keyframes bubble { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-55px);opacity:0} }
-        @keyframes sparkle { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1.2)} }
+        @keyframes sparkleLocal { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1.2)} }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
       `}</style>
 
       {/* NAV */}
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 40px', borderBottom: '0.5px solid #e0e0e0', position: 'sticky', top: 0, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', zIndex: 100 }}>
-        <span style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.3px' }}>Cheers</span>
-        <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 48px', borderBottom: '0.5px solid rgba(0,0,0,0.08)', position: 'sticky', top: 0, background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', zIndex: 100 }}>
+        <span style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.5px', background: 'linear-gradient(135deg, #534AB7, #D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</span>
+        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
           <a href="#como-funciona" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_how}</a>
           <a href="#precios" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_prices}</a>
-          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '9px 20px', borderRadius: 22, border: 'none', cursor: 'none' }}>{tx.nav_cta}</button>
+          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '10px 22px', borderRadius: 22, border: 'none', cursor: 'none' }}>{tx.nav_cta}</button>
         </div>
       </nav>
 
-      {/* HERO */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, padding: '80px 60px', maxWidth: 1100, margin: '0 auto', alignItems: 'center' }}>
-        <div>
-          <p style={{ fontSize: 12, fontWeight: 500, color: '#D4537E', letterSpacing: '1px', marginBottom: 16 }}>{tx.eyebrow}</p>
-          <h1 style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-2px', lineHeight: 1.08, marginBottom: 20, color: '#1d1d1f' }}>
-            {tx.h1a}<br />{tx.h1b} <span style={{ color: '#D4537E' }}>{tx.h1c}</span>
-          </h1>
-          <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 36, lineHeight: 1.6 }}>{tx.sub}</p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={loginConGoogle} style={{ fontSize: 15, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '14px 28px', borderRadius: 24, border: 'none', cursor: 'none' }}>{tx.cta}</button>
-            <a href="#como-funciona" style={{ fontSize: 15, fontWeight: 500, color: '#1d1d1f', padding: '14px 28px', borderRadius: 24, border: '0.5px solid #c0c0c0', textDecoration: 'none' }}>{tx.how}</a>
-          </div>
-        </div>
+      {/* HERO — fondo con gradiente sutil */}
+      <section style={{ background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 50%, #faf9ff 100%)', padding: '0 0 60px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', maxWidth: 1200, margin: '0 auto', padding: '80px 60px 40px', gap: 60, alignItems: 'center' }}>
 
-        {/* COPAS */}
-        <div style={{ position: 'relative', height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {[{ left: 10, top: 40, delay: '0s', size: 14 }, { left: 250, top: 50, delay: '0.6s', size: 14 }, { left: 30, top: 130, delay: '1.1s', size: 10 }, { left: 240, top: 110, delay: '0.3s', size: 10 }, { left: 130, top: 15, delay: '0.8s', size: 12 }].map((s, i) => (
-            <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkle 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
-          ))}
-          <div style={{ position: 'absolute', top: 55, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
-            <svg viewBox="0 0 90 70" width="90" height="70">
-              <g fill="#f7d76b" opacity="0.9">
-                <circle cx="45" cy="45" r="5" /><ellipse cx="45" cy="26" rx="4" ry="10" />
-                <ellipse cx="28" cy="32" rx="3" ry="9" transform="rotate(-30 28 32)" />
-                <ellipse cx="62" cy="32" rx="3" ry="9" transform="rotate(30 62 32)" />
-                <ellipse cx="20" cy="46" rx="3" ry="7" transform="rotate(-60 20 46)" />
-                <ellipse cx="70" cy="46" rx="3" ry="7" transform="rotate(60 70 46)" />
-              </g>
-            </svg>
-          </div>
-          <svg viewBox="0 0 360 340" width="320" height="320" style={{ overflow: 'visible' }}>
-            <defs>
-              <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" /><stop offset="50%" stopColor="#f7d76b" /><stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
-              </linearGradient>
-              <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" /><stop offset="40%" stopColor="#fff" stopOpacity="0.5" /><stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
-              </linearGradient>
-              <clipPath id="c1"><path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" /></clipPath>
-              <clipPath id="c2"><path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" /></clipPath>
-            </defs>
-            <g style={{ transformOrigin: '62px 310px', animation: 'clinkL 3s ease-in-out infinite' }}>
-              <path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
-              <g clipPath="url(#c1)">
-                <rect x="20" y="95" width="84" height="88" fill="url(#liq)" opacity="0.88" />
-                <ellipse cx="62" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /><animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" /></ellipse>
-                <rect x="35" y="100" width="3" height="68" fill="white" opacity="0.22" rx="1.5" />
-              </g>
-              <line x1="20" y1="20" x2="104" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
-              <rect x="58" y="176" width="8" height="116" fill="#D4537E" opacity="0.2" rx="4" />
-              <ellipse cx="62" cy="294" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
-            </g>
-            <g style={{ transformOrigin: '298px 310px', animation: 'clinkR 3s ease-in-out infinite' }}>
-              <path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
-              <g clipPath="url(#c2)">
-                <rect x="256" y="95" width="84" height="88" fill="url(#liq)" opacity="0.88" />
-                <ellipse cx="298" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /><animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" /></ellipse>
-                <rect x="310" y="100" width="3" height="68" fill="white" opacity="0.22" rx="1.5" />
-              </g>
-              <line x1="256" y1="20" x2="340" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
-              <rect x="294" y="176" width="8" height="116" fill="#D4537E" opacity="0.2" rx="4" />
-              <ellipse cx="298" cy="294" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
-            </g>
-          </svg>
-          {[{ left: 95, top: 195, size: 6, delay: '0s', dur: '2s' }, { left: 108, top: 212, size: 4, delay: '0.7s', dur: '2.3s' }, { left: 88, top: 222, size: 5, delay: '1.4s', dur: '1.9s' }].map((b, i) => (
-            <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
-          ))}
-          {[{ left: 205, top: 195, size: 6, delay: '0.4s', dur: '2.1s' }, { left: 218, top: 210, size: 4, delay: '1.1s', dur: '2.4s' }, { left: 198, top: 222, size: 5, delay: '0.2s', dur: '1.8s' }].map((b, i) => (
-            <div key={`r${i}`} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
-          ))}
-        </div>
-      </section>
-
-      {/* PREVIEW + STORE BUTTONS */}
-      <section style={{ padding: '0 40px 80px', maxWidth: 700, margin: '0 auto' }}>
-        <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10, textAlign: 'center' }}>{tx.preview_label}</p>
-        <h2 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.6px', color: '#1d1d1f', marginBottom: 32, textAlign: 'center' }}>{tx.preview_title}</h2>
-
-        <div style={{ background: '#f5f5f7', borderRadius: 24, padding: 24, border: '0.5px solid #e0e0e0', marginBottom: 20 }}>
-          <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', borderRadius: 16, padding: '20px 20px 16px', marginBottom: 16, textAlign: 'center', color: '#fff' }}>
-            <p style={{ fontSize: 36, margin: '0 0 6px' }}>🎂</p>
-            <p style={{ fontSize: 20, fontWeight: 500, margin: '0 0 4px' }}>{lang === 'es' ? 'Los 30 de Rodrigo' : "Rodrigo's 30th"}</p>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', margin: '0 0 8px' }}>joincheers.app/los-30-de-rodrigo</p>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', margin: 0 }}>🥂 12 {tx.demo_confirmed}</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: 16 }}>
-              <p style={{ fontSize: 10, color: '#aeaeb2', fontWeight: 500, marginBottom: 12, letterSpacing: '0.5px' }}>🗺️ {tx.demo_plan}</p>
-              {tx.demo_stops.map((p, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 2 ? 10 : 0, paddingBottom: i < 2 ? 10 : 0, borderBottom: i < 2 ? '0.5px solid #f0f0f0' : 'none' }}>
-                  <span style={{ fontSize: 11, color: '#D4537E', fontWeight: 500, minWidth: 28 }}>{p.hora}</span>
+          {/* IZQUIERDA — texto */}
+          <div>
+            <div style={{ display: 'inline-block', background: 'linear-gradient(135deg, rgba(83,74,183,0.1), rgba(212,83,126,0.1))', border: '1px solid rgba(212,83,126,0.2)', borderRadius: 20, padding: '6px 14px', marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1px', margin: 0 }}>{tx.eyebrow}</p>
+            </div>
+            <h1 style={{ fontSize: 64, fontWeight: 700, letterSpacing: '-3px', lineHeight: 1.02, marginBottom: 20, color: '#1d1d1f' }}>
+              {tx.h1a}<br />
+              {tx.h1b} <span style={{ background: 'linear-gradient(135deg, #534AB7, #D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{tx.h1c}</span>
+            </h1>
+            <p style={{ fontSize: 18, color: '#6e6e73', marginBottom: 40, lineHeight: 1.65, maxWidth: 420 }}>{tx.sub}</p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}>
+              <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '15px 30px', borderRadius: 28, border: 'none', cursor: 'none', boxShadow: '0 4px 20px rgba(212,83,126,0.35)' }}>{tx.cta}</button>
+              <a href="#como-funciona" style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', padding: '15px 30px', borderRadius: 28, border: '1.5px solid #e0e0e0', textDecoration: 'none', background: '#fff' }}>{tx.how}</a>
+            </div>
+            {/* Store buttons */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              {['App Store', 'Google Play'].map(store => (
+                <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid #e0e0e0', borderRadius: 14, background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                  <span style={{ fontSize: 20 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#1d1d1f', margin: '0 0 2px' }}>{p.lugar}</p>
-                    <p style={{ fontSize: 11, color: '#aeaeb2', margin: 0 }}>{p.nota}</p>
+                    <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>{store}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ background: '#fff', borderRadius: 12, padding: 16 }}>
-              <p style={{ fontSize: 10, color: '#aeaeb2', fontWeight: 500, marginBottom: 12, letterSpacing: '0.5px' }}>🎁 {tx.demo_gifts}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {tx.demo_gifts_items.map(g => (
-                  <span key={g} style={{ fontSize: 13, padding: '6px 12px', background: '#f5f5f7', borderRadius: 8, color: '#6e6e73', border: '0.5px solid #e0e0e0', display: 'block' }}>{g}</span>
-                ))}
+          </div>
+
+          {/* DERECHA — copas arriba + preview abajo */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+
+            {/* COPAS */}
+            <div style={{ position: 'relative', height: 320, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {[{ left: 20, top: 30, delay: '0s', size: 14 }, { left: 260, top: 40, delay: '0.6s', size: 14 }, { left: 40, top: 110, delay: '1.1s', size: 10 }, { left: 250, top: 100, delay: '0.3s', size: 10 }, { left: 140, top: 10, delay: '0.8s', size: 12 }].map((s, i) => (
+                <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkleLocal 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
+              ))}
+              <div style={{ position: 'absolute', top: 45, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
+                <svg viewBox="0 0 90 70" width="80" height="60">
+                  <g fill="#f7d76b" opacity="0.9">
+                    <circle cx="45" cy="45" r="5" /><ellipse cx="45" cy="26" rx="4" ry="10" />
+                    <ellipse cx="28" cy="32" rx="3" ry="9" transform="rotate(-30 28 32)" />
+                    <ellipse cx="62" cy="32" rx="3" ry="9" transform="rotate(30 62 32)" />
+                    <ellipse cx="20" cy="46" rx="3" ry="7" transform="rotate(-60 20 46)" />
+                    <ellipse cx="70" cy="46" rx="3" ry="7" transform="rotate(60 70 46)" />
+                  </g>
+                </svg>
+              </div>
+              <svg viewBox="0 0 360 280" width="300" height="280" style={{ overflow: 'visible' }}>
+                <defs>
+                  <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" /><stop offset="50%" stopColor="#f7d76b" /><stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
+                  </linearGradient>
+                  <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" /><stop offset="40%" stopColor="#fff" stopOpacity="0.5" /><stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
+                  </linearGradient>
+                  <clipPath id="c1"><path d="M20,20 L42,145 Q62,160 82,145 L104,20 Z" /></clipPath>
+                  <clipPath id="c2"><path d="M256,20 L278,145 Q298,160 318,145 L340,20 Z" /></clipPath>
+                </defs>
+                <g style={{ transformOrigin: '62px 260px', animation: 'clinkL 3s ease-in-out infinite' }}>
+                  <path d="M20,20 L42,145 Q62,160 82,145 L104,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
+                  <g clipPath="url(#c1)">
+                    <rect x="20" y="75" width="84" height="78" fill="url(#liq)" opacity="0.88" />
+                    <ellipse cx="62" cy="75" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /></ellipse>
+                    <rect x="35" y="80" width="3" height="58" fill="white" opacity="0.22" rx="1.5" />
+                  </g>
+                  <line x1="20" y1="20" x2="104" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
+                  <rect x="58" y="146" width="8" height="96" fill="#D4537E" opacity="0.2" rx="4" />
+                  <ellipse cx="62" cy="244" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
+                </g>
+                <g style={{ transformOrigin: '298px 260px', animation: 'clinkR 3s ease-in-out infinite' }}>
+                  <path d="M256,20 L278,145 Q298,160 318,145 L340,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
+                  <g clipPath="url(#c2)">
+                    <rect x="256" y="75" width="84" height="78" fill="url(#liq)" opacity="0.88" />
+                    <ellipse cx="298" cy="75" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /></ellipse>
+                    <rect x="310" y="80" width="3" height="58" fill="white" opacity="0.22" rx="1.5" />
+                  </g>
+                  <line x1="256" y1="20" x2="340" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
+                  <rect x="294" y="146" width="8" height="96" fill="#D4537E" opacity="0.2" rx="4" />
+                  <ellipse cx="298" cy="244" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
+                </g>
+              </svg>
+              {[{ left: 100, top: 160, size: 6, delay: '0s', dur: '2s' }, { left: 113, top: 175, size: 4, delay: '0.7s', dur: '2.3s' }].map((b, i) => (
+                <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
+              ))}
+              {[{ left: 195, top: 160, size: 6, delay: '0.4s', dur: '2.1s' }, { left: 208, top: 175, size: 4, delay: '1.1s', dur: '2.4s' }].map((b, i) => (
+                <div key={`r${i}`} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
+              ))}
+            </div>
+
+            {/* PREVIEW del evento — debajo de las copas, flotando */}
+            <div style={{ width: '100%', animation: 'float 4s ease-in-out infinite', boxShadow: '0 20px 60px rgba(83,74,183,0.15), 0 4px 20px rgba(212,83,126,0.1)', borderRadius: 20, overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', padding: '16px 20px', textAlign: 'center', color: '#fff' }}>
+                <p style={{ fontSize: 28, margin: '0 0 4px' }}>🎂</p>
+                <p style={{ fontSize: 16, fontWeight: 600, margin: '0 0 2px' }}>{lang === 'es' ? 'Los 30 de Rodrigo' : "Rodrigo's 30th"}</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', margin: '0 0 6px' }}>joincheers.app/los-30-de-rodrigo</p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.9)', margin: 0 }}>🥂 12 {tx.demo_confirmed}</p>
+              </div>
+              <div style={{ background: '#f5f5f7', padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ background: '#fff', borderRadius: 10, padding: 12 }}>
+                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 8, letterSpacing: '0.5px' }}>🗺️ {tx.demo_plan}</p>
+                  {tx.demo_stops.map((p, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < 2 ? 8 : 0, paddingBottom: i < 2 ? 8 : 0, borderBottom: i < 2 ? '0.5px solid #f0f0f0' : 'none' }}>
+                      <span style={{ fontSize: 10, color: '#D4537E', fontWeight: 600, minWidth: 24 }}>{p.hora}</span>
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 500, color: '#1d1d1f', margin: '0 0 1px' }}>{p.lugar}</p>
+                        <p style={{ fontSize: 10, color: '#aeaeb2', margin: 0 }}>{p.nota}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: '#fff', borderRadius: 10, padding: 12 }}>
+                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 8, letterSpacing: '0.5px' }}>🎁 {tx.demo_gifts}</p>
+                  {tx.demo_gifts_items.map(g => (
+                    <p key={g} style={{ fontSize: 11, padding: '5px 8px', background: '#f5f5f7', borderRadius: 6, color: '#6e6e73', margin: '0 0 6px' }}>{g}</p>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* STORE BUTTONS — junto al preview */}
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-          <StoreBtn store="App Store" />
-          <StoreBtn store="Google Play" />
-        </div>
       </section>
 
       {/* TIPOS */}
-      <section style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', padding: '0 40px 70px' }}>
+      <section style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', padding: '48px 40px' }}>
         {tx.tipos.map(t => (
-          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 20, border: '0.5px solid #e0e0e0', background: '#f5f5f7', fontSize: 13, color: '#6e6e73' }}>{t}</span>
+          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 22, border: '1px solid #e8e8e8', background: '#fafafa', fontSize: 13, color: '#6e6e73', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>{t}</span>
         ))}
       </section>
 
       {/* CÓMO FUNCIONA */}
-      <section id="como-funciona" style={{ padding: '70px 40px', background: '#f5f5f7' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10 }}>{tx.s1_label}</p>
-          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48 }}>{tx.s1_title}</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
-            {tx.steps.map(s => (
-              <div key={s.n} style={{ padding: 28, background: '#fff', borderRadius: 16, border: '0.5px solid #e0e0e0' }}>
-                <p style={{ fontSize: 11, color: '#aeaeb2', marginBottom: 14 }}>{s.n}</p>
-                <p style={{ fontSize: 28, marginBottom: 14 }}>{s.icon}</p>
-                <h3 style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', marginBottom: 8 }}>{s.title}</h3>
-                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5 }}>{s.desc}</p>
+      <section id="como-funciona" style={{ padding: '80px 48px', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 100%)' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12, textAlign: 'center' }}>{tx.s1_label}</p>
+          <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-1.2px', color: '#1d1d1f', marginBottom: 56, textAlign: 'center' }}>{tx.s1_title}</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24 }}>
+            {tx.steps.map((s, idx) => (
+              <div key={s.n} style={{ padding: 32, background: '#fff', borderRadius: 20, border: '1px solid #f0f0f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 16, right: 20, fontSize: 48, fontWeight: 800, color: idx === 0 ? 'rgba(83,74,183,0.06)' : idx === 1 ? 'rgba(212,83,126,0.06)' : 'rgba(186,117,23,0.06)', letterSpacing: '-2px' }}>{s.n}</div>
+                <p style={{ fontSize: 32, marginBottom: 16 }}>{s.icon}</p>
+                <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', marginBottom: 10 }}>{s.title}</h3>
+                <p style={{ fontSize: 15, color: '#6e6e73', lineHeight: 1.6 }}>{s.desc}</p>
               </div>
             ))}
           </div>
@@ -318,48 +315,48 @@ export default function Home() {
       </section>
 
       {/* TESTIMONIOS */}
-      <section style={{ padding: '70px 40px', background: '#fff' }}>
-        <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10 }}>{tx.s3_label}</p>
-          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48 }}>{tx.s3_title}</h2>
-          <div style={{ background: '#f5f5f7', borderRadius: 20, padding: '40px 40px 32px' }}>
-            <p style={{ fontSize: 48, color: '#D4537E', marginBottom: 8, lineHeight: 1 }}>"</p>
-            <p style={{ fontSize: 18, color: '#1d1d1f', lineHeight: 1.6, marginBottom: 20 }}>{tx.testimonials[testimonioActivo].text}</p>
-            <p style={{ fontSize: 14, fontWeight: 500, color: '#1d1d1f', margin: '0 0 2px' }}>{tx.testimonials[testimonioActivo].name}</p>
-            <p style={{ fontSize: 12, color: '#aeaeb2', margin: 0 }}>{tx.testimonials[testimonioActivo].role}</p>
+      <section style={{ padding: '80px 48px', background: '#fff' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12 }}>{tx.s3_label}</p>
+          <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-1.2px', color: '#1d1d1f', marginBottom: 56 }}>{tx.s3_title}</h2>
+          <div style={{ background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 100%)', borderRadius: 24, padding: '48px 48px 40px', border: '1px solid rgba(212,83,126,0.1)', boxShadow: '0 8px 32px rgba(83,74,183,0.08)' }}>
+            <p style={{ fontSize: 56, background: 'linear-gradient(135deg, #534AB7, #D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8, lineHeight: 1 }}>"</p>
+            <p style={{ fontSize: 20, color: '#1d1d1f', lineHeight: 1.65, marginBottom: 24, fontWeight: 400 }}>{tx.testimonials[testimonioActivo].text}</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', margin: '0 0 4px' }}>{tx.testimonials[testimonioActivo].name}</p>
+            <p style={{ fontSize: 13, color: '#aeaeb2', margin: 0 }}>{tx.testimonials[testimonioActivo].role}</p>
           </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 20 }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 24 }}>
             {tx.testimonials.map((_, i) => (
-              <button key={i} onClick={() => setTestimonioActivo(i)} style={{ width: i === testimonioActivo ? 24 : 8, height: 8, borderRadius: 4, background: i === testimonioActivo ? '#D4537E' : '#e0e0e0', border: 'none', cursor: 'none', transition: 'width 0.3s' }} />
+              <button key={i} onClick={() => setTestimonioActivo(i)} style={{ width: i === testimonioActivo ? 28 : 8, height: 8, borderRadius: 4, background: i === testimonioActivo ? '#D4537E' : '#e0e0e0', border: 'none', cursor: 'none', transition: 'all 0.3s' }} />
             ))}
           </div>
         </div>
       </section>
 
       {/* PRECIOS */}
-      <section id="precios" style={{ padding: '70px 40px', background: '#f5f5f7' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10 }}>{tx.s2_label}</p>
-          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48 }}>{tx.s2_title}</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+      <section id="precios" style={{ padding: '80px 48px', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 100%)' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12, textAlign: 'center' }}>{tx.s2_label}</p>
+          <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-1.2px', color: '#1d1d1f', marginBottom: 56, textAlign: 'center' }}>{tx.s2_title}</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
             {tx.plans.map(p => (
-              <div key={p.name} style={{ padding: '28px 24px', borderRadius: 20, border: p.featured ? '2px solid #007AFF' : '0.5px solid #e0e0e0', background: '#fff', position: 'relative' }}>
+              <div key={p.name} style={{ padding: '32px 28px', borderRadius: 24, border: p.featured ? 'none' : '1px solid #f0f0f0', background: p.featured ? 'linear-gradient(160deg, #534AB7 0%, #D4537E 100%)' : '#fff', position: 'relative', boxShadow: p.featured ? '0 12px 40px rgba(212,83,126,0.3)' : '0 4px 16px rgba(0,0,0,0.05)' }}>
                 {p.featured && 'badge' in p && (
-                  <span style={{ position: 'absolute', top: -12, left: 20, fontSize: 11, fontWeight: 500, background: '#E6F1FB', color: '#185FA5', padding: '4px 12px', borderRadius: 8 }}>{(p as any).badge}</span>
+                  <span style={{ position: 'absolute', top: -14, left: 24, fontSize: 11, fontWeight: 600, background: '#fff', color: '#D4537E', padding: '5px 14px', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>{(p as any).badge}</span>
                 )}
-                <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 6 }}>{p.name}</p>
-                <p style={{ fontSize: 38, fontWeight: 500, letterSpacing: '-1px', color: '#1d1d1f', marginBottom: 4 }}>
-                  {p.price} <span style={{ fontSize: 14, fontWeight: 400, color: '#6e6e73' }}>USD</span>
+                <p style={{ fontSize: 13, color: p.featured ? 'rgba(255,255,255,0.7)' : '#6e6e73', marginBottom: 8 }}>{p.name}</p>
+                <p style={{ fontSize: 44, fontWeight: 700, letterSpacing: '-2px', color: p.featured ? '#fff' : '#1d1d1f', marginBottom: 4, lineHeight: 1 }}>
+                  {p.price} <span style={{ fontSize: 16, fontWeight: 400, color: p.featured ? 'rgba(255,255,255,0.7)' : '#6e6e73' }}>USD</span>
                 </p>
-                <p style={{ fontSize: 12, color: '#aeaeb2', marginBottom: 22 }}>{p.sub}</p>
-                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 9, padding: 0 }}>
+                <p style={{ fontSize: 12, color: p.featured ? 'rgba(255,255,255,0.6)' : '#aeaeb2', marginBottom: 24 }}>{p.sub}</p>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10, padding: 0, marginBottom: 28 }}>
                   {p.features.map(f => (
-                    <li key={f} style={{ fontSize: 13, color: '#6e6e73', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ color: '#1D9E75' }}>✓</span> {f}
+                    <li key={f} style={{ fontSize: 14, color: p.featured ? 'rgba(255,255,255,0.9)' : '#6e6e73', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ color: p.featured ? '#f7d76b' : '#1D9E75', fontSize: 16 }}>✓</span> {f}
                     </li>
                   ))}
                 </ul>
-                <button onClick={loginConGoogle} style={{ width: '100%', marginTop: 24, padding: '12px', background: p.featured ? '#1d1d1f' : 'transparent', color: p.featured ? '#fff' : '#1d1d1f', border: p.featured ? 'none' : '0.5px solid #c0c0c0', borderRadius: 12, fontSize: 14, fontWeight: 500, cursor: 'none' }}>
+                <button onClick={loginConGoogle} style={{ width: '100%', padding: '14px', background: p.featured ? '#fff' : 'linear-gradient(135deg, #534AB7, #D4537E)', color: p.featured ? '#D4537E' : '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: 'none' }}>
                   {p.cta}
                 </button>
               </div>
@@ -369,15 +366,15 @@ export default function Home() {
       </section>
 
       {/* CTA FINAL */}
-      <section style={{ padding: '70px 40px', background: '#fff', textAlign: 'center' }}>
-        <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 14 }}>{tx.cta_title}</h2>
-        <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 32 }}>{tx.cta_sub}</p>
-        <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '15px 36px', borderRadius: 24, border: 'none', cursor: 'none' }}>{tx.cta_btn}</button>
+      <section style={{ padding: '100px 48px', background: '#fff', textAlign: 'center' }}>
+        <h2 style={{ fontSize: 48, fontWeight: 700, letterSpacing: '-2px', color: '#1d1d1f', marginBottom: 16 }}>{tx.cta_title}</h2>
+        <p style={{ fontSize: 18, color: '#6e6e73', marginBottom: 40 }}>{tx.cta_sub}</p>
+        <button onClick={loginConGoogle} style={{ fontSize: 18, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '18px 44px', borderRadius: 32, border: 'none', cursor: 'none', boxShadow: '0 8px 30px rgba(212,83,126,0.35)' }}>{tx.cta_btn}</button>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ padding: '32px 40px', borderTop: '0.5px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <span style={{ fontSize: 15, fontWeight: 500, color: '#1d1d1f' }}>Cheers</span>
+      <footer style={{ padding: '32px 48px', borderTop: '0.5px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <span style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</span>
         <p style={{ fontSize: 12, color: '#aeaeb2' }}>joincheers.app · 2026</p>
       </footer>
 
