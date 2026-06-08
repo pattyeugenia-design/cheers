@@ -94,11 +94,7 @@ export default function Home() {
     const browserLang = navigator.language?.toLowerCase() || 'es'
     setLang(browserLang.startsWith('en') ? 'en' : 'es')
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        window.location.href = '/dashboard'
-      } else {
-        setCargando(false)
-      }
+      if (data.session) { window.location.href = '/dashboard' } else { setCargando(false) }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       if (session) window.location.href = '/dashboard'
@@ -132,29 +128,29 @@ export default function Home() {
 
       <style>{`
         @keyframes clinkL {
-          0%, 100% { transform: rotate(20deg); }
-          45%, 55% { transform: rotate(5deg); }
+          0%, 100% { transform: rotate(15deg); }
+          45%, 55% { transform: rotate(4deg); }
         }
         @keyframes clinkR {
-          0%, 100% { transform: rotate(-20deg); }
-          45%, 55% { transform: rotate(-5deg); }
+          0%, 100% { transform: rotate(-15deg); }
+          45%, 55% { transform: rotate(-4deg); }
         }
         @keyframes splash {
-          0%, 40% { opacity: 0; transform: scale(0); }
-          50% { opacity: 1; transform: scale(1); }
-          80%, 100% { opacity: 0; transform: scale(1.5); }
-        }
-        @keyframes dropFly {
-          0% { transform: translate(0, 0); opacity: 1; }
-          100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+          0%, 40% { opacity: 0; transform: scale(0) translateX(-50%); }
+          50% { opacity: 1; transform: scale(1) translateX(-50%); }
+          80%, 100% { opacity: 0; transform: scale(1.6) translateX(-50%); }
         }
         @keyframes bubble {
           0% { transform: translateY(0); opacity: 0.7; }
-          100% { transform: translateY(-50px); opacity: 0; }
+          100% { transform: translateY(-55px); opacity: 0; }
         }
         @keyframes sparkle {
-          0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
-          50% { opacity: 1; transform: scale(1.2) rotate(20deg); }
+          0%, 100% { opacity: 0; transform: scale(0.3); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
+        @keyframes dropFly {
+          0% { opacity: 1; transform: translate(0,0); }
+          100% { opacity: 0; transform: translate(var(--tx,0px), var(--ty,20px)); }
         }
       `}</style>
 
@@ -164,9 +160,7 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
           <a href="#como-funciona" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_how}</a>
           <a href="#precios" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_prices}</a>
-          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '9px 20px', borderRadius: 22, border: 'none', cursor: 'pointer' }}>
-            {tx.nav_cta}
-          </button>
+          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '9px 20px', borderRadius: 22, border: 'none', cursor: 'pointer' }}>{tx.nav_cta}</button>
         </div>
       </nav>
 
@@ -179,12 +173,8 @@ export default function Home() {
           </h1>
           <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 36, lineHeight: 1.6 }}>{tx.sub}</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={loginConGoogle} style={{ fontSize: 15, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '14px 28px', borderRadius: 24, border: 'none', cursor: 'pointer' }}>
-              {tx.cta}
-            </button>
-            <a href="#como-funciona" style={{ fontSize: 15, fontWeight: 500, color: '#1d1d1f', padding: '14px 28px', borderRadius: 24, border: '0.5px solid #c0c0c0', textDecoration: 'none' }}>
-              {tx.how}
-            </a>
+            <button onClick={loginConGoogle} style={{ fontSize: 15, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '14px 28px', borderRadius: 24, border: 'none', cursor: 'pointer' }}>{tx.cta}</button>
+            <a href="#como-funciona" style={{ fontSize: 15, fontWeight: 500, color: '#1d1d1f', padding: '14px 28px', borderRadius: 24, border: '0.5px solid #c0c0c0', textDecoration: 'none' }}>{tx.how}</a>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 28, flexWrap: 'wrap' }}>
             {['App Store', 'Google Play'].map(store => (
@@ -199,55 +189,54 @@ export default function Home() {
           </div>
         </div>
 
-        {/* COPAS CHOCANDO */}
-        <div style={{ position: 'relative', height: 380, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* COPAS ANIMADAS */}
+        <div style={{ position: 'relative', height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
           {/* Destellos */}
           {[
-            { left: 30, top: 20, delay: '0s' },
-            { left: 220, top: 30, delay: '0.6s' },
-            { left: 15, top: 120, delay: '1.1s' },
-            { left: 235, top: 100, delay: '0.3s' },
-            { left: 120, top: 10, delay: '0.8s' },
+            { left: 10, top: 40, delay: '0s', size: 14 },
+            { left: 250, top: 50, delay: '0.6s', size: 14 },
+            { left: 30, top: 130, delay: '1.1s', size: 10 },
+            { left: 240, top: 110, delay: '0.3s', size: 10 },
+            { left: 130, top: 15, delay: '0.8s', size: 12 },
           ].map((s, i) => (
-            <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: 14, animation: `sparkle 2s ease-in-out infinite ${s.delay}` }}>✦</div>
+            <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkle 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
           ))}
 
-          {/* Splash en el centro — aparece cuando chocan */}
-          <div style={{ position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', animation: 'splash 3s ease-in-out infinite', zIndex: 5, pointerEvents: 'none' }}>
-            <svg viewBox="0 0 100 80" width="100" height="80">
-              <g fill="#f7d76b" opacity="0.95">
-                <circle cx="50" cy="50" r="5" />
-                <ellipse cx="50" cy="30" rx="4" ry="10" />
-                <ellipse cx="32" cy="36" rx="3" ry="9" transform="rotate(-30 32 36)" />
-                <ellipse cx="68" cy="36" rx="3" ry="9" transform="rotate(30 68 36)" />
-                <ellipse cx="22" cy="50" rx="3" ry="8" transform="rotate(-60 22 50)" />
-                <ellipse cx="78" cy="50" rx="3" ry="8" transform="rotate(60 78 50)" />
+          {/* Splash */}
+          <div style={{ position: 'absolute', top: 55, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
+            <svg viewBox="0 0 90 70" width="90" height="70">
+              <g fill="#f7d76b" opacity="0.9">
+                <circle cx="45" cy="45" r="5" />
+                <ellipse cx="45" cy="26" rx="4" ry="10" />
+                <ellipse cx="28" cy="32" rx="3" ry="9" transform="rotate(-30 28 32)" />
+                <ellipse cx="62" cy="32" rx="3" ry="9" transform="rotate(30 62 32)" />
+                <ellipse cx="20" cy="46" rx="3" ry="7" transform="rotate(-60 20 46)" />
+                <ellipse cx="70" cy="46" rx="3" ry="7" transform="rotate(60 70 46)" />
               </g>
             </svg>
           </div>
 
-          {/* Gotas volando */}
+          {/* Gotas */}
           {[
-            { left: '46%', top: 95, tx: '-25px', ty: '-20px', delay: '1.35s' },
-            { left: '54%', top: 90, tx: '25px', ty: '-25px', delay: '1.4s' },
-            { left: '44%', top: 100, tx: '-35px', ty: '10px', delay: '1.45s' },
-            { left: '56%', top: 95, tx: '35px', ty: '10px', delay: '1.38s' },
-            { left: '50%', top: 85, tx: '0px', ty: '-30px', delay: '1.42s' },
+            { left: '44%', top: 95, tx: '-28px', ty: '-18px', delay: '1.4s' },
+            { left: '56%', top: 90, tx: '28px', ty: '-22px', delay: '1.45s' },
+            { left: '42%', top: 102, tx: '-38px', ty: '8px', delay: '1.5s' },
+            { left: '58%', top: 98, tx: '38px', ty: '8px', delay: '1.42s' },
+            { left: '50%', top: 82, tx: '0px', ty: '-32px', delay: '1.47s' },
           ].map((d, i) => (
             <div key={i} style={{
               position: 'absolute', left: d.left, top: d.top,
-              width: 5, height: 9, borderRadius: '50%',
-              background: '#f7d76b',
-              animation: `dropFly 0.8s ease-out infinite 3s`,
+              width: 5, height: 8, borderRadius: '50%', background: '#f7d76b',
+              animation: `dropFly 0.9s ease-out infinite`,
+              animationDelay: d.delay,
               ['--tx' as any]: d.tx,
               ['--ty' as any]: d.ty,
-              animationDelay: d.delay,
             }} />
           ))}
 
-          {/* SVG con las dos copas */}
-          <svg viewBox="0 0 280 340" width="280" height="340" style={{ overflow: 'visible' }}>
+          {/* SVG copas — más separadas */}
+          <svg viewBox="0 0 360 340" width="320" height="320" style={{ overflow: 'visible' }}>
             <defs>
               <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" />
@@ -256,60 +245,60 @@ export default function Home() {
               </linearGradient>
               <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" />
-                <stop offset="40%" stopColor="#fff" stopOpacity="0.45" />
+                <stop offset="40%" stopColor="#fff" stopOpacity="0.5" />
                 <stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
               </linearGradient>
-              <clipPath id="c1"><path d="M30,30 L50,170 Q68,185 86,170 L106,30 Z" /></clipPath>
-              <clipPath id="c2"><path d="M174,30 L194,170 Q212,185 230,170 L250,30 Z" /></clipPath>
+              <clipPath id="c1"><path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" /></clipPath>
+              <clipPath id="c2"><path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" /></clipPath>
             </defs>
 
-            {/* COPA IZQUIERDA — rota hacia la derecha (hacia el centro) */}
-            <g style={{ transformOrigin: '68px 300px', animation: 'clinkL 3s ease-in-out infinite' }}>
-              <path d="M30,30 L50,170 Q68,185 86,170 L106,30 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
+            {/* COPA IZQUIERDA — pivota desde la base, se inclina hacia la derecha */}
+            <g style={{ transformOrigin: '62px 310px', animation: 'clinkL 3s ease-in-out infinite' }}>
+              <path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
               <g clipPath="url(#c1)">
-                <rect x="30" y="95" width="76" height="84" fill="url(#liq)" opacity="0.88" />
-                <ellipse cx="68" cy="95" rx="36" ry="6" fill="#f7d76b" opacity="0.7">
+                <rect x="20" y="95" width="84" height="88" fill="url(#liq)" opacity="0.88" />
+                <ellipse cx="62" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7">
                   <animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" />
                   <animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" />
                 </ellipse>
-                <rect x="42" y="100" width="3" height="65" fill="white" opacity="0.22" rx="1.5" />
+                <rect x="35" y="100" width="3" height="68" fill="white" opacity="0.22" rx="1.5" />
               </g>
-              <line x1="30" y1="30" x2="106" y2="30" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
-              <rect x="64" y="172" width="8" height="110" fill="#D4537E" opacity="0.2" rx="4" />
-              <ellipse cx="68" cy="284" rx="30" ry="7" fill="#D4537E" opacity="0.14" />
+              <line x1="20" y1="20" x2="104" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
+              <rect x="58" y="176" width="8" height="116" fill="#D4537E" opacity="0.2" rx="4" />
+              <ellipse cx="62" cy="294" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
             </g>
 
-            {/* COPA DERECHA — rota hacia la izquierda (hacia el centro) */}
-            <g style={{ transformOrigin: '212px 300px', animation: 'clinkR 3s ease-in-out infinite' }}>
-              <path d="M174,30 L194,170 Q212,185 230,170 L250,30 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
+            {/* COPA DERECHA — pivota desde la base, se inclina hacia la izquierda */}
+            <g style={{ transformOrigin: '298px 310px', animation: 'clinkR 3s ease-in-out infinite' }}>
+              <path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
               <g clipPath="url(#c2)">
-                <rect x="174" y="95" width="76" height="84" fill="url(#liq)" opacity="0.88" />
-                <ellipse cx="212" cy="95" rx="36" ry="6" fill="#f7d76b" opacity="0.7">
+                <rect x="256" y="95" width="84" height="88" fill="url(#liq)" opacity="0.88" />
+                <ellipse cx="298" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7">
                   <animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" />
                   <animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" />
                 </ellipse>
-                <rect x="222" y="100" width="3" height="65" fill="white" opacity="0.22" rx="1.5" />
+                <rect x="310" y="100" width="3" height="68" fill="white" opacity="0.22" rx="1.5" />
               </g>
-              <line x1="174" y1="30" x2="250" y2="30" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
-              <rect x="208" y="172" width="8" height="110" fill="#D4537E" opacity="0.2" rx="4" />
-              <ellipse cx="212" cy="284" rx="30" ry="7" fill="#D4537E" opacity="0.14" />
+              <line x1="256" y1="20" x2="340" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
+              <rect x="294" y="176" width="8" height="116" fill="#D4537E" opacity="0.2" rx="4" />
+              <ellipse cx="298" cy="294" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
             </g>
           </svg>
 
           {/* Burbujas izquierda */}
           {[
-            { left: 85, top: 195, size: 6, delay: '0s', dur: '2s' },
-            { left: 95, top: 210, size: 4, delay: '0.7s', dur: '2.3s' },
-            { left: 78, top: 220, size: 5, delay: '1.4s', dur: '1.9s' },
+            { left: 95, top: 195, size: 6, delay: '0s', dur: '2s' },
+            { left: 108, top: 212, size: 4, delay: '0.7s', dur: '2.3s' },
+            { left: 88, top: 222, size: 5, delay: '1.4s', dur: '1.9s' },
           ].map((b, i) => (
             <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
           ))}
 
           {/* Burbujas derecha */}
           {[
-            { left: 175, top: 195, size: 6, delay: '0.4s', dur: '2.1s' },
-            { left: 185, top: 210, size: 4, delay: '1.1s', dur: '2.4s' },
-            { left: 168, top: 220, size: 5, delay: '0.2s', dur: '1.8s' },
+            { left: 205, top: 195, size: 6, delay: '0.4s', dur: '2.1s' },
+            { left: 218, top: 210, size: 4, delay: '1.1s', dur: '2.4s' },
+            { left: 198, top: 222, size: 5, delay: '0.2s', dur: '1.8s' },
           ].map((b, i) => (
             <div key={`r${i}`} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
           ))}
@@ -319,9 +308,7 @@ export default function Home() {
       {/* TIPOS */}
       <section style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', padding: '0 40px 70px' }}>
         {tx.tipos.map(t => (
-          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 20, border: '0.5px solid #e0e0e0', background: '#f5f5f7', fontSize: 13, color: '#6e6e73' }}>
-            {t}
-          </span>
+          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 20, border: '0.5px solid #e0e0e0', background: '#f5f5f7', fontSize: 13, color: '#6e6e73' }}>{t}</span>
         ))}
       </section>
 
@@ -371,9 +358,7 @@ export default function Home() {
             {tx.plans.map(p => (
               <div key={p.name} style={{ padding: '28px 24px', borderRadius: 20, border: p.featured ? '2px solid #007AFF' : '0.5px solid #e0e0e0', background: '#fff', position: 'relative' }}>
                 {p.featured && 'badge' in p && (
-                  <span style={{ position: 'absolute', top: -12, left: 20, fontSize: 11, fontWeight: 500, background: '#E6F1FB', color: '#185FA5', padding: '4px 12px', borderRadius: 8 }}>
-                    {(p as any).badge}
-                  </span>
+                  <span style={{ position: 'absolute', top: -12, left: 20, fontSize: 11, fontWeight: 500, background: '#E6F1FB', color: '#185FA5', padding: '4px 12px', borderRadius: 8 }}>{(p as any).badge}</span>
                 )}
                 <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 6 }}>{p.name}</p>
                 <p style={{ fontSize: 38, fontWeight: 500, letterSpacing: '-1px', color: '#1d1d1f', marginBottom: 4 }}>
@@ -400,9 +385,7 @@ export default function Home() {
       <section style={{ padding: '70px 40px', background: '#fff', textAlign: 'center' }}>
         <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 14 }}>{tx.cta_title}</h2>
         <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 32 }}>{tx.cta_sub}</p>
-        <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '15px 36px', borderRadius: 24, border: 'none', cursor: 'pointer' }}>
-          {tx.cta_btn}
-        </button>
+        <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '15px 36px', borderRadius: 24, border: 'none', cursor: 'pointer' }}>{tx.cta_btn}</button>
       </section>
 
       {/* FOOTER */}
