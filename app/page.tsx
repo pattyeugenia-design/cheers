@@ -41,9 +41,17 @@ const translations = {
     cta_sub: 'Crea tu primera celebración en menos de 2 minutos.',
     cta_btn: 'Empezar gratis',
     coming_soon: 'Próximamente',
-    demo_plan: 'El plan',
-    demo_confirmed: 'confirmados',
-    demo_gifts: 'Gift ideas',
+    demo_titulo: 'Los 30 de Rodrigo',
+    demo_confirmed: '12 confirmados',
+    demo_plan_label: 'EL PLAN',
+    demo_stops: [
+      { hora: '7pm', lugar: '🏠 Pre en casa de Diego', nota: 'BYOB' },
+      { hora: '9pm', lugar: '🍽️ Cena en Mochomos', nota: 'Reservación hecha' },
+      { hora: '11pm', lugar: '🎉 Pepper Nightclub', nota: 'Lista VIP' },
+    ],
+    demo_gifts_label: 'GIFT IDEAS',
+    demo_gifts: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
+    tipos: ['🎂 Cumpleaños', '💍 Boda', '👑 XV años', '🎓 Graduación', '🍼 Baby shower', '💃 Bachelorette', '✨ Otro festejo'],
   },
   en: {
     eyebrow: 'FOR EVERY CELEBRATION',
@@ -82,98 +90,19 @@ const translations = {
     cta_sub: 'Create your first celebration in less than 2 minutes.',
     cta_btn: 'Start free',
     coming_soon: 'Coming soon',
-    demo_plan: 'The plan',
-    demo_confirmed: 'confirmed',
-    demo_gifts: 'Gift ideas',
+    demo_titulo: 'Rodrigo\'s 30th',
+    demo_confirmed: '12 confirmed',
+    demo_plan_label: 'THE PLAN',
+    demo_stops: [
+      { hora: '7pm', lugar: '🏠 Diego\'s Home', nota: 'BYOB' },
+      { hora: '9pm', lugar: '🍽️ Dinner at Mochomos', nota: 'Reservation made' },
+      { hora: '11pm', lugar: '🎉 Pepper Nightclub', nota: 'VIP list' },
+    ],
+    demo_gifts_label: 'GIFT IDEAS',
+    demo_gifts: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
+    tipos: ['🎂 Birthday', '💍 Wedding', '👑 Quinceañera', '🎓 Graduation', '🍼 Baby shower', '💃 Bachelorette', '✨ Other'],
   }
 }
-
-const ChampagneAnimation = () => (
-  <div style={{ position: 'relative', width: 280, height: 340, margin: '0 auto' }}>
-    <style>{`
-      @keyframes bubble1 { 0% { transform: translateY(0) translateX(0); opacity: 0.8; } 100% { transform: translateY(-120px) translateX(4px); opacity: 0; } }
-      @keyframes bubble2 { 0% { transform: translateY(0) translateX(0); opacity: 0.6; } 100% { transform: translateY(-100px) translateX(-6px); opacity: 0; } }
-      @keyframes bubble3 { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(-140px) translateX(8px); opacity: 0; } }
-      @keyframes pour { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.04); } }
-      @keyframes sparkle { 0%, 100% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } }
-      @keyframes sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
-      @keyframes liquid { 0%, 100% { d: path("M60,180 Q80,175 100,180 Q120,185 140,180 L140,240 Q120,238 100,240 Q80,242 60,240 Z"); } 50% { d: path("M60,180 Q80,185 100,178 Q120,172 140,180 L140,240 Q120,242 100,238 Q80,234 60,240 Z"); } }
-      .bubble { position: absolute; border-radius: 50%; background: rgba(212,83,126,0.3); border: 1px solid rgba(212,83,126,0.5); }
-      .b1 { width: 8px; height: 8px; left: 115px; top: 220px; animation: bubble1 2s ease-in infinite; }
-      .b2 { width: 5px; height: 5px; left: 128px; top: 230px; animation: bubble2 2.4s ease-in infinite 0.6s; }
-      .b3 { width: 6px; height: 6px; left: 105px; top: 210px; animation: bubble3 1.8s ease-in infinite 1.2s; }
-      .b4 { width: 4px; height: 4px; left: 135px; top: 225px; animation: bubble1 2.2s ease-in infinite 0.3s; }
-      .b5 { width: 7px; height: 7px; left: 110px; top: 235px; animation: bubble2 2.6s ease-in infinite 0.9s; }
-      .b6 { width: 5px; height: 5px; left: 122px; top: 215px; animation: bubble3 2s ease-in infinite 1.5s; }
-      .sparkle { position: absolute; color: #D4537E; animation: sparkle 1.5s ease-in-out infinite; font-size: 16px; }
-      .s1 { left: 50px; top: 60px; animation-delay: 0s; }
-      .s2 { left: 200px; top: 80px; animation-delay: 0.5s; }
-      .s3 { left: 30px; top: 150px; animation-delay: 1s; }
-      .s4 { left: 220px; top: 140px; animation-delay: 0.8s; }
-      .s5 { left: 160px; top: 40px; animation-delay: 0.3s; }
-      .glass { animation: sway 4s ease-in-out infinite; transform-origin: bottom center; }
-    `}</style>
-
-    <span className="sparkle s1">✦</span>
-    <span className="sparkle s2">✦</span>
-    <span className="sparkle s3">✦</span>
-    <span className="sparkle s4">✦</span>
-    <span className="sparkle s5">✦</span>
-
-    <svg className="glass" viewBox="0 0 200 320" style={{ width: '100%', height: '100%' }}>
-      <defs>
-        <linearGradient id="champagne" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#f5c842" stopOpacity="0.9" />
-          <stop offset="50%" stopColor="#f7d76b" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#f5c842" stopOpacity="0.9" />
-        </linearGradient>
-        <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#D4537E" stopOpacity="0.15" />
-          <stop offset="30%" stopColor="#ffffff" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#D4537E" stopOpacity="0.1" />
-        </linearGradient>
-        <clipPath id="glassClip">
-          <path d="M55,60 L75,230 Q100,245 125,230 L145,60 Z" />
-        </clipPath>
-      </defs>
-
-      {/* Stem */}
-      <rect x="95" y="230" width="10" height="60" fill="#D4537E" opacity="0.3" rx="3" />
-      {/* Base */}
-      <ellipse cx="100" cy="292" rx="35" ry="8" fill="#D4537E" opacity="0.2" />
-      <ellipse cx="100" cy="290" rx="32" ry="6" fill="#D4537E" opacity="0.15" rx="4" />
-
-      {/* Glass body */}
-      <path d="M55,60 L75,230 Q100,245 125,230 L145,60 Z" fill="url(#glass)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.4" />
-
-      {/* Liquid fill */}
-      <g clipPath="url(#glassClip)">
-        <rect x="55" y="140" width="90" height="100" fill="url(#champagne)" opacity="0.85" />
-        {/* Liquid surface animation */}
-        <ellipse cx="100" cy="140" rx="42" ry="5" fill="#f7d76b" opacity="0.6">
-          <animate attributeName="ry" values="5;7;5" dur="2s" repeatCount="indefinite" />
-          <animate attributeName="cy" values="140;138;140" dur="2s" repeatCount="indefinite" />
-        </ellipse>
-        {/* Shimmer */}
-        <rect x="68" y="145" width="4" height="80" fill="white" opacity="0.2" rx="2" />
-        <rect x="78" y="148" width="2" height="70" fill="white" opacity="0.15" rx="1" />
-      </g>
-
-      {/* Glass outline top */}
-      <path d="M55,60 L145,60" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.5" strokeLinecap="round" />
-
-      {/* Rim glow */}
-      <ellipse cx="100" cy="60" rx="45" ry="4" fill="none" stroke="#D4537E" strokeWidth="1" strokeOpacity="0.3" />
-    </svg>
-
-    <div className="bubble b1" />
-    <div className="bubble b2" />
-    <div className="bubble b3" />
-    <div className="bubble b4" />
-    <div className="bubble b5" />
-    <div className="bubble b6" />
-  </div>
-)
 
 export default function Home() {
   const [cargando, setCargando] = useState(true)
@@ -184,7 +113,6 @@ export default function Home() {
   useEffect(() => {
     const browserLang = navigator.language?.toLowerCase() || 'es'
     setLang(browserLang.startsWith('en') ? 'en' : 'es')
-
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         window.location.href = '/dashboard'
@@ -192,11 +120,9 @@ export default function Home() {
         setCargando(false)
       }
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) window.location.href = '/dashboard'
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
@@ -223,6 +149,15 @@ export default function Home() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f' }}>
+
+      <style>{`
+        @keyframes bubble { 0% { transform: translateY(0); opacity: 0.8; } 100% { transform: translateY(-80px); opacity: 0; } }
+        @keyframes sway { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+        @keyframes sparkle { 0%,100% { opacity:0; transform:scale(0.5); } 50% { opacity:1; transform:scale(1.2); } }
+        @keyframes liquid { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        .bubble { position:absolute; border-radius:50%; background:rgba(247,215,107,0.5); border:1px solid rgba(247,215,107,0.8); }
+        .sparkle-el { position:absolute; color:#D4537E; animation: sparkle 1.8s ease-in-out infinite; font-size:14px; }
+      `}</style>
 
       {/* NAV */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 40px', borderBottom: '0.5px solid #e0e0e0', position: 'sticky', top: 0, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', zIndex: 100 }}>
@@ -265,25 +200,80 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ANIMACIÓN CHAMPAGNE */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
-          <ChampagneAnimation />
+        {/* COPA ANIMADA */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', height: 380 }}>
+          <span className="sparkle-el" style={{ left: 40, top: 40, animationDelay: '0s' }}>✦</span>
+          <span className="sparkle-el" style={{ right: 40, top: 60, animationDelay: '0.5s' }}>✦</span>
+          <span className="sparkle-el" style={{ left: 20, top: 180, animationDelay: '1s' }}>✦</span>
+          <span className="sparkle-el" style={{ right: 30, top: 160, animationDelay: '0.8s' }}>✦</span>
+          <span className="sparkle-el" style={{ left: 120, top: 20, animationDelay: '0.3s', fontSize: 10 }}>✦</span>
+
+          <div style={{ animation: 'sway 4s ease-in-out infinite', transformOrigin: 'bottom center', position: 'relative', width: 200, height: 340 }}>
+            <svg viewBox="0 0 200 340" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+              <defs>
+                <linearGradient id="champ" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#f5c842" stopOpacity="0.9" />
+                  <stop offset="50%" stopColor="#f7d76b" />
+                  <stop offset="100%" stopColor="#f5c842" stopOpacity="0.9" />
+                </linearGradient>
+                <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#D4537E" stopOpacity="0.12" />
+                  <stop offset="40%" stopColor="#ffffff" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
+                </linearGradient>
+                <clipPath id="cup">
+                  <path d="M50,50 L70,230 Q100,248 130,230 L150,50 Z" />
+                </clipPath>
+              </defs>
+
+              {/* Glass */}
+              <path d="M50,50 L70,230 Q100,248 130,230 L150,50 Z" fill="url(#glassGrad)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
+
+              {/* Liquid */}
+              <g clipPath="url(#cup)" style={{ animation: 'liquid 2.5s ease-in-out infinite' }}>
+                <rect x="50" y="130" width="100" height="110" fill="url(#champ)" opacity="0.88" />
+                <ellipse cx="100" cy="130" rx="47" ry="6" fill="#f7d76b" opacity="0.7">
+                  <animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="cy" values="130;127;130" dur="2s" repeatCount="indefinite" />
+                </ellipse>
+                <rect x="65" y="135" width="4" height="90" fill="white" opacity="0.25" rx="2" />
+                <rect x="75" y="138" width="2" height="80" fill="white" opacity="0.18" rx="1" />
+              </g>
+
+              {/* Rim */}
+              <line x1="50" y1="50" x2="150" y2="50" stroke="#D4537E" strokeWidth="2.5" strokeOpacity="0.5" strokeLinecap="round" />
+
+              {/* Stem */}
+              <rect x="96" y="230" width="8" height="70" fill="#D4537E" opacity="0.25" rx="4" />
+
+              {/* Base */}
+              <ellipse cx="100" cy="302" rx="38" ry="8" fill="#D4537E" opacity="0.18" />
+              <ellipse cx="100" cy="300" rx="34" ry="6" fill="#D4537E" opacity="0.12" />
+            </svg>
+
+            {/* Burbujas */}
+            {[
+              { left: 88, top: 200, size: 7, delay: '0s', dur: '2s' },
+              { left: 100, top: 210, size: 5, delay: '0.6s', dur: '2.4s' },
+              { left: 95, top: 195, size: 6, delay: '1.2s', dur: '1.8s' },
+              { left: 108, top: 205, size: 4, delay: '0.3s', dur: '2.2s' },
+              { left: 92, top: 215, size: 5, delay: '0.9s', dur: '2.6s' },
+            ].map((b, i) => (
+              <div key={i} className="bubble" style={{
+                width: b.size, height: b.size,
+                left: b.left, top: b.top,
+                animation: `bubble ${b.dur} ease-in infinite ${b.delay}`
+              }} />
+            ))}
+          </div>
         </div>
       </section>
 
       {/* TIPOS */}
       <section style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', padding: '0 40px 70px' }}>
-        {[
-          { icon: '🎂', label: lang === 'es' ? 'Cumpleaños' : 'Birthday' },
-          { icon: '💍', label: lang === 'es' ? 'Boda' : 'Wedding' },
-          { icon: '👑', label: lang === 'es' ? 'XV años' : 'Quinceañera' },
-          { icon: '🎓', label: lang === 'es' ? 'Graduación' : 'Graduation' },
-          { icon: '🍼', label: 'Baby shower' },
-          { icon: '💃', label: 'Bachelorette' },
-          { icon: '✨', label: lang === 'es' ? 'Otro festejo' : 'Other' },
-        ].map(t => (
-          <span key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 20, border: '0.5px solid #e0e0e0', background: '#f5f5f7', fontSize: 13, color: '#6e6e73' }}>
-            {t.icon} {t.label}
+        {tx.tipos.map(t => (
+          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 20, border: '0.5px solid #e0e0e0', background: '#f5f5f7', fontSize: 13, color: '#6e6e73' }}>
+            {t}
           </span>
         ))}
       </section>
@@ -292,7 +282,7 @@ export default function Home() {
       <section id="como-funciona" style={{ padding: '70px 40px', background: '#f5f5f7' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10 }}>{tx.s1_label}</p>
-          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48, lineHeight: 1.2 }}>{tx.s1_title}</h2>
+          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48 }}>{tx.s1_title}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
             {tx.steps.map(s => (
               <div key={s.n} style={{ padding: 28, background: '#fff', borderRadius: 16, border: '0.5px solid #e0e0e0' }}>
@@ -310,12 +300,10 @@ export default function Home() {
       <section style={{ padding: '70px 40px', background: '#fff' }}>
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10 }}>{tx.s3_label}</p>
-          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48, lineHeight: 1.2 }}>{tx.s3_title}</h2>
+          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48 }}>{tx.s3_title}</h2>
           <div style={{ background: '#f5f5f7', borderRadius: 20, padding: '40px 40px 32px' }}>
             <p style={{ fontSize: 48, color: '#D4537E', marginBottom: 8, lineHeight: 1 }}>"</p>
-            <p style={{ fontSize: 18, color: '#1d1d1f', lineHeight: 1.6, marginBottom: 20 }}>
-              {tx.testimonials[testimonioActivo].text}
-            </p>
+            <p style={{ fontSize: 18, color: '#1d1d1f', lineHeight: 1.6, marginBottom: 20 }}>{tx.testimonials[testimonioActivo].text}</p>
             <p style={{ fontSize: 14, fontWeight: 500, color: '#1d1d1f', margin: '0 0 2px' }}>{tx.testimonials[testimonioActivo].name}</p>
             <p style={{ fontSize: 12, color: '#aeaeb2', margin: 0 }}>{tx.testimonials[testimonioActivo].role}</p>
           </div>
@@ -331,7 +319,7 @@ export default function Home() {
       <section id="precios" style={{ padding: '70px 40px', background: '#f5f5f7' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10 }}>{tx.s2_label}</p>
-          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48, lineHeight: 1.2 }}>{tx.s2_title}</h2>
+          <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 48 }}>{tx.s2_title}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
             {tx.plans.map(p => (
               <div key={p.name} style={{ padding: '28px 24px', borderRadius: 20, border: p.featured ? '2px solid #007AFF' : '0.5px solid #e0e0e0', background: '#fff', position: 'relative' }}>
