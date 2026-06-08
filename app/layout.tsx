@@ -49,18 +49,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <ClientEffects />
 
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
-          {destellos.map((d, i) => (
-            <span key={i} style={{
-              position: 'absolute',
-              color: '#D4537E',
-              left: d.left,
-              top: d.top,
-              fontSize: d.size,
-              animation: `destelloFijo ${d.dur} ease-in-out infinite ${d.delay}`,
-            }}>✦</span>
-          ))}
-        </div>
+        {destellos.map((d, i) => (
+          <span key={i} style={{
+            position: 'fixed',
+            pointerEvents: 'none',
+            zIndex: 1,
+            color: '#D4537E',
+            left: d.left,
+            top: d.top,
+            fontSize: d.size,
+            animation: `destelloFijo ${d.dur} ease-in-out infinite ${d.delay}`,
+          }}>✦</span>
+        ))}
 
         {children}
       </body>
