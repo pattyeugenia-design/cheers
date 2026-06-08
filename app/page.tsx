@@ -41,7 +41,18 @@ const translations = {
     cta_sub: 'Crea tu primera celebración en menos de 2 minutos.',
     cta_btn: 'Empezar gratis',
     coming_soon: 'Próximamente',
+    preview_label: 'ASÍ SE VE CHEERS',
+    preview_title: 'Todo en un solo link',
     tipos: ['🎂 Cumpleaños', '💍 Boda', '👑 XV años', '🎓 Graduación', '🍼 Baby shower', '💃 Bachelorette', '✨ Otro festejo'],
+    demo_plan: 'EL PLAN',
+    demo_confirmed: 'confirmados',
+    demo_gifts: 'GIFT IDEAS',
+    demo_stops: [
+      { hora: '7pm', lugar: '🏠 Pre en casa de Diego', nota: 'BYOB' },
+      { hora: '9pm', lugar: '🍽️ Cena en Mochomos', nota: 'Reservación hecha' },
+      { hora: '11pm', lugar: '🎉 Pepper Nightclub', nota: 'Lista VIP' },
+    ],
+    demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
   },
   en: {
     eyebrow: 'FOR EVERY CELEBRATION',
@@ -80,7 +91,18 @@ const translations = {
     cta_sub: 'Create your first celebration in less than 2 minutes.',
     cta_btn: 'Start free',
     coming_soon: 'Coming soon',
+    preview_label: 'THIS IS CHEERS',
+    preview_title: 'Everything in one link',
     tipos: ['🎂 Birthday', '💍 Wedding', '👑 Quinceañera', '🎓 Graduation', '🍼 Baby shower', '💃 Bachelorette', '✨ Other'],
+    demo_plan: 'THE PLAN',
+    demo_confirmed: 'confirmed',
+    demo_gifts: 'GIFT IDEAS',
+    demo_stops: [
+      { hora: '7pm', lugar: '🏠 Diego\'s Home', nota: 'BYOB' },
+      { hora: '9pm', lugar: '🍽️ Dinner at Mochomos', nota: 'Reservation made' },
+      { hora: '11pm', lugar: '🎉 Pepper Nightclub', nota: 'VIP list' },
+    ],
+    demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
   }
 }
 
@@ -124,7 +146,7 @@ export default function Home() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f' }}>
+    <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f', position: 'relative', zIndex: 2 }}>
 
       <style>{`
         @keyframes clinkL {
@@ -148,10 +170,6 @@ export default function Home() {
           0%, 100% { opacity: 0; transform: scale(0.3); }
           50% { opacity: 1; transform: scale(1.2); }
         }
-        @keyframes dropFly {
-          0% { opacity: 1; transform: translate(0,0); }
-          100% { opacity: 0; transform: translate(var(--tx,0px), var(--ty,20px)); }
-        }
       `}</style>
 
       {/* NAV */}
@@ -160,7 +178,7 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
           <a href="#como-funciona" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_how}</a>
           <a href="#precios" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_prices}</a>
-          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '9px 20px', borderRadius: 22, border: 'none', cursor: 'pointer' }}>{tx.nav_cta}</button>
+          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '9px 20px', borderRadius: 22, border: 'none', cursor: 'none' }}>{tx.nav_cta}</button>
         </div>
       </nav>
 
@@ -173,7 +191,7 @@ export default function Home() {
           </h1>
           <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 36, lineHeight: 1.6 }}>{tx.sub}</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={loginConGoogle} style={{ fontSize: 15, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '14px 28px', borderRadius: 24, border: 'none', cursor: 'pointer' }}>{tx.cta}</button>
+            <button onClick={loginConGoogle} style={{ fontSize: 15, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '14px 28px', borderRadius: 24, border: 'none', cursor: 'none' }}>{tx.cta}</button>
             <a href="#como-funciona" style={{ fontSize: 15, fontWeight: 500, color: '#1d1d1f', padding: '14px 28px', borderRadius: 24, border: '0.5px solid #c0c0c0', textDecoration: 'none' }}>{tx.how}</a>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 28, flexWrap: 'wrap' }}>
@@ -189,21 +207,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* COPAS ANIMADAS */}
+        {/* COPAS */}
         <div style={{ position: 'relative', height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-
-          {/* Destellos */}
-          {[
-            { left: 10, top: 40, delay: '0s', size: 14 },
-            { left: 250, top: 50, delay: '0.6s', size: 14 },
-            { left: 30, top: 130, delay: '1.1s', size: 10 },
-            { left: 240, top: 110, delay: '0.3s', size: 10 },
-            { left: 130, top: 15, delay: '0.8s', size: 12 },
-          ].map((s, i) => (
+          {[{ left: 10, top: 40, delay: '0s', size: 14 }, { left: 250, top: 50, delay: '0.6s', size: 14 }, { left: 30, top: 130, delay: '1.1s', size: 10 }, { left: 240, top: 110, delay: '0.3s', size: 10 }, { left: 130, top: 15, delay: '0.8s', size: 12 }].map((s, i) => (
             <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkle 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
           ))}
 
-          {/* Splash */}
           <div style={{ position: 'absolute', top: 55, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
             <svg viewBox="0 0 90 70" width="90" height="70">
               <g fill="#f7d76b" opacity="0.9">
@@ -217,25 +226,6 @@ export default function Home() {
             </svg>
           </div>
 
-          {/* Gotas */}
-          {[
-            { left: '44%', top: 95, tx: '-28px', ty: '-18px', delay: '1.4s' },
-            { left: '56%', top: 90, tx: '28px', ty: '-22px', delay: '1.45s' },
-            { left: '42%', top: 102, tx: '-38px', ty: '8px', delay: '1.5s' },
-            { left: '58%', top: 98, tx: '38px', ty: '8px', delay: '1.42s' },
-            { left: '50%', top: 82, tx: '0px', ty: '-32px', delay: '1.47s' },
-          ].map((d, i) => (
-            <div key={i} style={{
-              position: 'absolute', left: d.left, top: d.top,
-              width: 5, height: 8, borderRadius: '50%', background: '#f7d76b',
-              animation: `dropFly 0.9s ease-out infinite`,
-              animationDelay: d.delay,
-              ['--tx' as any]: d.tx,
-              ['--ty' as any]: d.ty,
-            }} />
-          ))}
-
-          {/* SVG copas — más separadas */}
           <svg viewBox="0 0 360 340" width="320" height="320" style={{ overflow: 'visible' }}>
             <defs>
               <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -251,8 +241,6 @@ export default function Home() {
               <clipPath id="c1"><path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" /></clipPath>
               <clipPath id="c2"><path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" /></clipPath>
             </defs>
-
-            {/* COPA IZQUIERDA — pivota desde la base, se inclina hacia la derecha */}
             <g style={{ transformOrigin: '62px 310px', animation: 'clinkL 3s ease-in-out infinite' }}>
               <path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
               <g clipPath="url(#c1)">
@@ -267,8 +255,6 @@ export default function Home() {
               <rect x="58" y="176" width="8" height="116" fill="#D4537E" opacity="0.2" rx="4" />
               <ellipse cx="62" cy="294" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
             </g>
-
-            {/* COPA DERECHA — pivota desde la base, se inclina hacia la izquierda */}
             <g style={{ transformOrigin: '298px 310px', animation: 'clinkR 3s ease-in-out infinite' }}>
               <path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
               <g clipPath="url(#c2)">
@@ -285,23 +271,51 @@ export default function Home() {
             </g>
           </svg>
 
-          {/* Burbujas izquierda */}
-          {[
-            { left: 95, top: 195, size: 6, delay: '0s', dur: '2s' },
-            { left: 108, top: 212, size: 4, delay: '0.7s', dur: '2.3s' },
-            { left: 88, top: 222, size: 5, delay: '1.4s', dur: '1.9s' },
-          ].map((b, i) => (
+          {[{ left: 95, top: 195, size: 6, delay: '0s', dur: '2s' }, { left: 108, top: 212, size: 4, delay: '0.7s', dur: '2.3s' }, { left: 88, top: 222, size: 5, delay: '1.4s', dur: '1.9s' }].map((b, i) => (
             <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
           ))}
-
-          {/* Burbujas derecha */}
-          {[
-            { left: 205, top: 195, size: 6, delay: '0.4s', dur: '2.1s' },
-            { left: 218, top: 210, size: 4, delay: '1.1s', dur: '2.4s' },
-            { left: 198, top: 222, size: 5, delay: '0.2s', dur: '1.8s' },
-          ].map((b, i) => (
+          {[{ left: 205, top: 195, size: 6, delay: '0.4s', dur: '2.1s' }, { left: 218, top: 210, size: 4, delay: '1.1s', dur: '2.4s' }, { left: 198, top: 222, size: 5, delay: '0.2s', dur: '1.8s' }].map((b, i) => (
             <div key={`r${i}`} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
           ))}
+        </div>
+      </section>
+
+      {/* PREVIEW DEL EVENTO */}
+      <section style={{ padding: '0 40px 80px', maxWidth: 700, margin: '0 auto' }}>
+        <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10, textAlign: 'center' }}>{tx.preview_label}</p>
+        <h2 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.6px', color: '#1d1d1f', marginBottom: 32, textAlign: 'center' }}>{tx.preview_title}</h2>
+
+        <div style={{ background: '#f5f5f7', borderRadius: 24, padding: 24, border: '0.5px solid #e0e0e0' }}>
+          <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', borderRadius: 16, padding: '20px 20px 16px', marginBottom: 16, textAlign: 'center', color: '#fff' }}>
+            <p style={{ fontSize: 36, margin: '0 0 6px' }}>🎂</p>
+            <p style={{ fontSize: 20, fontWeight: 500, margin: '0 0 4px' }}>{lang === 'es' ? 'Los 30 de Rodrigo' : "Rodrigo's 30th"}</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', margin: '0 0 8px' }}>joincheers.app/los-30-de-rodrigo</p>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', margin: 0 }}>🥂 12 {tx.demo_confirmed}</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: 16 }}>
+              <p style={{ fontSize: 10, color: '#aeaeb2', fontWeight: 500, marginBottom: 12, letterSpacing: '0.5px' }}>🗺️ {tx.demo_plan}</p>
+              {tx.demo_stops.map((p, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 2 ? 10 : 0, paddingBottom: i < 2 ? 10 : 0, borderBottom: i < 2 ? '0.5px solid #f0f0f0' : 'none' }}>
+                  <span style={{ fontSize: 11, color: '#D4537E', fontWeight: 500, minWidth: 28 }}>{p.hora}</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#1d1d1f', margin: '0 0 2px' }}>{p.lugar}</p>
+                    <p style={{ fontSize: 11, color: '#aeaeb2', margin: 0 }}>{p.nota}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: '#fff', borderRadius: 12, padding: 16 }}>
+              <p style={{ fontSize: 10, color: '#aeaeb2', fontWeight: 500, marginBottom: 12, letterSpacing: '0.5px' }}>🎁 {tx.demo_gifts}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {tx.demo_gifts_items.map(g => (
+                  <span key={g} style={{ fontSize: 13, padding: '6px 12px', background: '#f5f5f7', borderRadius: 8, color: '#6e6e73', border: '0.5px solid #e0e0e0', display: 'block' }}>{g}</span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -343,7 +357,7 @@ export default function Home() {
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 20 }}>
             {tx.testimonials.map((_, i) => (
-              <button key={i} onClick={() => setTestimonioActivo(i)} style={{ width: i === testimonioActivo ? 24 : 8, height: 8, borderRadius: 4, background: i === testimonioActivo ? '#D4537E' : '#e0e0e0', border: 'none', cursor: 'pointer', transition: 'width 0.3s' }} />
+              <button key={i} onClick={() => setTestimonioActivo(i)} style={{ width: i === testimonioActivo ? 24 : 8, height: 8, borderRadius: 4, background: i === testimonioActivo ? '#D4537E' : '#e0e0e0', border: 'none', cursor: 'none', transition: 'width 0.3s' }} />
             ))}
           </div>
         </div>
@@ -372,7 +386,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={loginConGoogle} style={{ width: '100%', marginTop: 24, padding: '12px', background: p.featured ? '#1d1d1f' : 'transparent', color: p.featured ? '#fff' : '#1d1d1f', border: p.featured ? 'none' : '0.5px solid #c0c0c0', borderRadius: 12, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+                <button onClick={loginConGoogle} style={{ width: '100%', marginTop: 24, padding: '12px', background: p.featured ? '#1d1d1f' : 'transparent', color: p.featured ? '#fff' : '#1d1d1f', border: p.featured ? 'none' : '0.5px solid #c0c0c0', borderRadius: 12, fontSize: 14, fontWeight: 500, cursor: 'none' }}>
                   {p.cta}
                 </button>
               </div>
@@ -385,7 +399,7 @@ export default function Home() {
       <section style={{ padding: '70px 40px', background: '#fff', textAlign: 'center' }}>
         <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.8px', color: '#1d1d1f', marginBottom: 14 }}>{tx.cta_title}</h2>
         <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 32 }}>{tx.cta_sub}</p>
-        <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '15px 36px', borderRadius: 24, border: 'none', cursor: 'pointer' }}>{tx.cta_btn}</button>
+        <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '15px 36px', borderRadius: 24, border: 'none', cursor: 'none' }}>{tx.cta_btn}</button>
       </section>
 
       {/* FOOTER */}
