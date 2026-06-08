@@ -145,31 +145,25 @@ export default function Home() {
     </main>
   )
 
+  const StoreBtn = ({ store }: { store: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '0.5px solid #e0e0e0', borderRadius: 12, background: '#f5f5f7' }}>
+      <span style={{ fontSize: 18 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
+      <div>
+        <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
+        <p style={{ fontSize: 12, fontWeight: 500, color: '#1d1d1f', margin: 0 }}>{store}</p>
+      </div>
+    </div>
+  )
+
   return (
     <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f', position: 'relative', zIndex: 2 }}>
 
       <style>{`
-        @keyframes clinkL {
-          0%, 100% { transform: rotate(15deg); }
-          45%, 55% { transform: rotate(4deg); }
-        }
-        @keyframes clinkR {
-          0%, 100% { transform: rotate(-15deg); }
-          45%, 55% { transform: rotate(-4deg); }
-        }
-        @keyframes splash {
-          0%, 40% { opacity: 0; transform: scale(0) translateX(-50%); }
-          50% { opacity: 1; transform: scale(1) translateX(-50%); }
-          80%, 100% { opacity: 0; transform: scale(1.6) translateX(-50%); }
-        }
-        @keyframes bubble {
-          0% { transform: translateY(0); opacity: 0.7; }
-          100% { transform: translateY(-55px); opacity: 0; }
-        }
-        @keyframes sparkle {
-          0%, 100% { opacity: 0; transform: scale(0.3); }
-          50% { opacity: 1; transform: scale(1.2); }
-        }
+        @keyframes clinkL { 0%,100%{transform:rotate(15deg)} 45%,55%{transform:rotate(4deg)} }
+        @keyframes clinkR { 0%,100%{transform:rotate(-15deg)} 45%,55%{transform:rotate(-4deg)} }
+        @keyframes splash { 0%,40%{opacity:0;transform:scale(0) translateX(-50%)} 50%{opacity:1;transform:scale(1) translateX(-50%)} 80%,100%{opacity:0;transform:scale(1.6) translateX(-50%)} }
+        @keyframes bubble { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-55px);opacity:0} }
+        @keyframes sparkle { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1.2)} }
       `}</style>
 
       {/* NAV */}
@@ -194,17 +188,6 @@ export default function Home() {
             <button onClick={loginConGoogle} style={{ fontSize: 15, fontWeight: 500, background: '#1d1d1f', color: '#fff', padding: '14px 28px', borderRadius: 24, border: 'none', cursor: 'none' }}>{tx.cta}</button>
             <a href="#como-funciona" style={{ fontSize: 15, fontWeight: 500, color: '#1d1d1f', padding: '14px 28px', borderRadius: 24, border: '0.5px solid #c0c0c0', textDecoration: 'none' }}>{tx.how}</a>
           </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 28, flexWrap: 'wrap' }}>
-            {['App Store', 'Google Play'].map(store => (
-              <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '0.5px solid #e0e0e0', borderRadius: 12, background: '#f5f5f7' }}>
-                <span style={{ fontSize: 18 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
-                <div>
-                  <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
-                  <p style={{ fontSize: 12, fontWeight: 500, color: '#1d1d1f', margin: 0 }}>{store}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* COPAS */}
@@ -212,12 +195,10 @@ export default function Home() {
           {[{ left: 10, top: 40, delay: '0s', size: 14 }, { left: 250, top: 50, delay: '0.6s', size: 14 }, { left: 30, top: 130, delay: '1.1s', size: 10 }, { left: 240, top: 110, delay: '0.3s', size: 10 }, { left: 130, top: 15, delay: '0.8s', size: 12 }].map((s, i) => (
             <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkle 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
           ))}
-
           <div style={{ position: 'absolute', top: 55, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
             <svg viewBox="0 0 90 70" width="90" height="70">
               <g fill="#f7d76b" opacity="0.9">
-                <circle cx="45" cy="45" r="5" />
-                <ellipse cx="45" cy="26" rx="4" ry="10" />
+                <circle cx="45" cy="45" r="5" /><ellipse cx="45" cy="26" rx="4" ry="10" />
                 <ellipse cx="28" cy="32" rx="3" ry="9" transform="rotate(-30 28 32)" />
                 <ellipse cx="62" cy="32" rx="3" ry="9" transform="rotate(30 62 32)" />
                 <ellipse cx="20" cy="46" rx="3" ry="7" transform="rotate(-60 20 46)" />
@@ -225,18 +206,13 @@ export default function Home() {
               </g>
             </svg>
           </div>
-
           <svg viewBox="0 0 360 340" width="320" height="320" style={{ overflow: 'visible' }}>
             <defs>
               <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" />
-                <stop offset="50%" stopColor="#f7d76b" />
-                <stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
+                <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" /><stop offset="50%" stopColor="#f7d76b" /><stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
               </linearGradient>
               <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" />
-                <stop offset="40%" stopColor="#fff" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
+                <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" /><stop offset="40%" stopColor="#fff" stopOpacity="0.5" /><stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
               </linearGradient>
               <clipPath id="c1"><path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" /></clipPath>
               <clipPath id="c2"><path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" /></clipPath>
@@ -245,10 +221,7 @@ export default function Home() {
               <path d="M20,20 L42,175 Q62,192 82,175 L104,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
               <g clipPath="url(#c1)">
                 <rect x="20" y="95" width="84" height="88" fill="url(#liq)" opacity="0.88" />
-                <ellipse cx="62" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7">
-                  <animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" />
-                </ellipse>
+                <ellipse cx="62" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /><animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" /></ellipse>
                 <rect x="35" y="100" width="3" height="68" fill="white" opacity="0.22" rx="1.5" />
               </g>
               <line x1="20" y1="20" x2="104" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
@@ -259,10 +232,7 @@ export default function Home() {
               <path d="M256,20 L278,175 Q298,192 318,175 L340,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
               <g clipPath="url(#c2)">
                 <rect x="256" y="95" width="84" height="88" fill="url(#liq)" opacity="0.88" />
-                <ellipse cx="298" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7">
-                  <animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" />
-                </ellipse>
+                <ellipse cx="298" cy="95" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /><animate attributeName="cy" values="95;92;95" dur="2s" repeatCount="indefinite" /></ellipse>
                 <rect x="310" y="100" width="3" height="68" fill="white" opacity="0.22" rx="1.5" />
               </g>
               <line x1="256" y1="20" x2="340" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
@@ -270,7 +240,6 @@ export default function Home() {
               <ellipse cx="298" cy="294" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
             </g>
           </svg>
-
           {[{ left: 95, top: 195, size: 6, delay: '0s', dur: '2s' }, { left: 108, top: 212, size: 4, delay: '0.7s', dur: '2.3s' }, { left: 88, top: 222, size: 5, delay: '1.4s', dur: '1.9s' }].map((b, i) => (
             <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
           ))}
@@ -280,19 +249,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PREVIEW DEL EVENTO */}
+      {/* PREVIEW + STORE BUTTONS */}
       <section style={{ padding: '0 40px 80px', maxWidth: 700, margin: '0 auto' }}>
         <p style={{ fontSize: 11, fontWeight: 500, color: '#6e6e73', letterSpacing: '1px', marginBottom: 10, textAlign: 'center' }}>{tx.preview_label}</p>
         <h2 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.6px', color: '#1d1d1f', marginBottom: 32, textAlign: 'center' }}>{tx.preview_title}</h2>
 
-        <div style={{ background: '#f5f5f7', borderRadius: 24, padding: 24, border: '0.5px solid #e0e0e0' }}>
+        <div style={{ background: '#f5f5f7', borderRadius: 24, padding: 24, border: '0.5px solid #e0e0e0', marginBottom: 20 }}>
           <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', borderRadius: 16, padding: '20px 20px 16px', marginBottom: 16, textAlign: 'center', color: '#fff' }}>
             <p style={{ fontSize: 36, margin: '0 0 6px' }}>🎂</p>
             <p style={{ fontSize: 20, fontWeight: 500, margin: '0 0 4px' }}>{lang === 'es' ? 'Los 30 de Rodrigo' : "Rodrigo's 30th"}</p>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', margin: '0 0 8px' }}>joincheers.app/los-30-de-rodrigo</p>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', margin: 0 }}>🥂 12 {tx.demo_confirmed}</p>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ background: '#fff', borderRadius: 12, padding: 16 }}>
               <p style={{ fontSize: 10, color: '#aeaeb2', fontWeight: 500, marginBottom: 12, letterSpacing: '0.5px' }}>🗺️ {tx.demo_plan}</p>
@@ -306,7 +274,6 @@ export default function Home() {
                 </div>
               ))}
             </div>
-
             <div style={{ background: '#fff', borderRadius: 12, padding: 16 }}>
               <p style={{ fontSize: 10, color: '#aeaeb2', fontWeight: 500, marginBottom: 12, letterSpacing: '0.5px' }}>🎁 {tx.demo_gifts}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -316,6 +283,12 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* STORE BUTTONS — junto al preview */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <StoreBtn store="App Store" />
+          <StoreBtn store="Google Play" />
         </div>
       </section>
 
