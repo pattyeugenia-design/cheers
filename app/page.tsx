@@ -104,7 +104,7 @@ const translations = {
     demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
     preview_label: 'WHAT CHEERS LOOKS LIKE',
     preview_title: 'The whole plan in one link',
-    preview_sub: "Your guests open the link and see exactly what's happening, where, and when.",
+    preview_sub: 'Your guests open the link and see exactly what's happening, where, and when.',
   }
 }
 
@@ -148,7 +148,7 @@ export default function Home() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f', position: 'relative', zIndex: 2 }}>
+    <main style={{ minHeight: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1d1d1f', position: 'relative', zIndex: 0 }}>
 
       <style>{`
         @keyframes clinkL { 0%,100%{transform:rotate(15deg)} 45%,55%{transform:rotate(4deg)} }
@@ -187,6 +187,7 @@ export default function Home() {
               <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '15px 30px', borderRadius: 28, border: 'none', cursor: 'none', boxShadow: '0 4px 20px rgba(212,83,126,0.35)' }}>{tx.cta}</button>
               <a href="#como-funciona" style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', padding: '15px 30px', borderRadius: 28, border: '1.5px solid #e0e0e0', textDecoration: 'none', background: '#fff' }}>{tx.how}</a>
             </div>
+            {/* Store buttons */}
             <div style={{ display: 'flex', gap: 10 }}>
               {(['App Store', 'Google Play'] as const).map(store => (
                 <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid #e0e0e0', borderRadius: 14, background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
@@ -203,6 +204,7 @@ export default function Home() {
           {/* DERECHA — solo copas, grandes, con todo su espacio */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ position: 'relative', height: 380, width: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* Sparkles locales */}
               {[
                 { left: 10,  top: 20,  delay: '0s',   size: 16 },
                 { left: 310, top: 30,  delay: '0.6s', size: 16 },
@@ -215,6 +217,7 @@ export default function Home() {
                 <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkleLocal 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
               ))}
 
+              {/* Splash al clink */}
               <div style={{ position: 'absolute', top: 40, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
                 <svg viewBox="0 0 90 70" width="90" height="70">
                   <g fill="#f7d76b" opacity="0.9">
@@ -228,6 +231,7 @@ export default function Home() {
                 </svg>
               </div>
 
+              {/* Copas SVG — más grandes */}
               <svg viewBox="0 0 360 300" width="340" height="300" style={{ overflow: 'visible' }}>
                 <defs>
                   <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -243,6 +247,8 @@ export default function Home() {
                   <clipPath id="c1"><path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" /></clipPath>
                   <clipPath id="c2"><path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" /></clipPath>
                 </defs>
+
+                {/* Copa izquierda */}
                 <g style={{ transformOrigin: '62px 280px', animation: 'clinkL 3s ease-in-out infinite' }}>
                   <path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
                   <g clipPath="url(#c1)">
@@ -256,6 +262,8 @@ export default function Home() {
                   <rect x="58" y="159" width="9" height="106" fill="#D4537E" opacity="0.18" rx="4.5" />
                   <ellipse cx="62" cy="267" rx="36" ry="8" fill="#D4537E" opacity="0.12" />
                 </g>
+
+                {/* Copa derecha */}
                 <g style={{ transformOrigin: '298px 280px', animation: 'clinkR 3s ease-in-out infinite' }}>
                   <path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
                   <g clipPath="url(#c2)">
@@ -271,6 +279,7 @@ export default function Home() {
                 </g>
               </svg>
 
+              {/* Burbujas copa izq */}
               {[
                 { left: 94,  top: 185, size: 7, delay: '0s',   dur: '2s'   },
                 { left: 108, top: 202, size: 5, delay: '0.7s', dur: '2.3s' },
@@ -278,6 +287,8 @@ export default function Home() {
               ].map((b, i) => (
                 <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
               ))}
+
+              {/* Burbujas copa der */}
               {[
                 { left: 250, top: 185, size: 7, delay: '0.4s', dur: '2.1s' },
                 { left: 265, top: 202, size: 5, delay: '1.1s', dur: '2.4s' },
@@ -291,29 +302,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── PREVIEW DEL EVENTO ───────────────────────────────────────────── */}
+      {/* ── PREVIEW DEL EVENTO — sección propia, centrada ────────────────── */}
       <section style={{ background: '#fff', padding: '80px 48px' }}>
         <div style={{ maxWidth: 960, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12 }}>{tx.preview_label}</p>
           <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-1.2px', color: '#1d1d1f', marginBottom: 12 }}>{tx.preview_title}</h2>
           <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 52, lineHeight: 1.6 }}>{tx.preview_sub}</p>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32 }}>
-
-            {/* Store buttons izquierda */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {(['App Store', 'Google Play'] as const).map(store => (
-                <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', border: '1px solid #e0e0e0', borderRadius: 16, background: '#fafafa', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', minWidth: 148 }}>
-                  <span style={{ fontSize: 24 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
-                  <div style={{ textAlign: 'left' }}>
-                    <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>{store}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Preview card centro */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ animation: 'float 4s ease-in-out infinite', boxShadow: '0 32px 80px rgba(83,74,183,0.18), 0 8px 24px rgba(212,83,126,0.14)', borderRadius: 24, overflow: 'hidden', width: 420, flexShrink: 0 }}>
               <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', padding: '24px 28px', textAlign: 'center', color: '#fff' }}>
                 <p style={{ fontSize: 36, margin: '0 0 6px' }}>🎂</p>
@@ -345,10 +341,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
-            {/* Balance visual derecha */}
-            <div style={{ width: 148 }} />
-
           </div>
         </div>
       </section>
