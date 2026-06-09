@@ -38,7 +38,7 @@ const destellos = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body style={{ margin: 0, padding: 0, cursor: 'none' }}>
+      <body style={{ margin: 0, padding: 0, cursor: 'none', background: '#fff' }}>
         <style>{`
           @keyframes destelloFijo {
             0%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); }
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span key={i} style={{
             position: 'fixed',
             pointerEvents: 'none',
-            zIndex: -1,
+            zIndex: 9,
             color: '#D4537E',
             left: d.left,
             top: d.top,
