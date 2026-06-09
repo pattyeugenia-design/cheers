@@ -4,7 +4,7 @@ import ClientEffects from './components/ClientEffects'
 
 export const metadata: Metadata = {
   title: 'Cheers — Organízate para cualquier celebración',
-  description: 'Sin grupos de WhatsApp. Sin regalos duplicados. El festejado en control, los invitados siempre informados.',
+  description: 'Sin grupos de chat. Sin regalos duplicados. El festejado en control, los invitados siempre informados.',
 }
 
 const destellos = [
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span key={i} style={{
             position: 'fixed',
             pointerEvents: 'none',
-            zIndex: 1,
+            zIndex: -1,
             color: '#D4537E',
             left: d.left,
             top: d.top,
