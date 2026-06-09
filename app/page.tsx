@@ -51,6 +51,9 @@ const translations = {
       { hora: '11pm', lugar: '🎉 Pepper Nightclub', nota: 'Lista VIP' },
     ],
     demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
+    preview_label: 'ASÍ SE VE CHEERS',
+    preview_title: 'Todo el plan en un link',
+    preview_sub: 'Tus invitados abren el link y ven exactamente qué pasa, dónde y a qué hora.',
   },
   en: {
     eyebrow: 'FOR EVERY CELEBRATION',
@@ -79,8 +82,8 @@ const translations = {
     ],
     testimonials: [
       { name: 'Andrea M.', text: 'My 30th birthday was so organized. Everyone knew where to go and what to bring. 🥂', role: 'Birthday girl' },
-      { name: 'Carlos R.', text: 'I organized my girlfriend\'s birthday with zero WhatsApp messages. Impossible but real.', role: 'Organizer' },
-      { name: 'Sofia L.', text: 'As a guest it\'s amazing — you see the full plan, confirm, and that\'s it.', role: 'Guest' },
+      { name: 'Carlos R.', text: "I organized my girlfriend's birthday with zero WhatsApp messages. Impossible but real.", role: 'Organizer' },
+      { name: 'Sofia L.', text: "As a guest it's amazing — you see the full plan, confirm, and that's it.", role: 'Guest' },
       { name: 'Diego P.', text: 'The gift list is a game changer. No more duplicate gifts.', role: 'Guest' },
     ],
     s3_label: 'WHAT THEY SAY',
@@ -94,11 +97,14 @@ const translations = {
     demo_confirmed: 'confirmed',
     demo_gifts: 'GIFT IDEAS',
     demo_stops: [
-      { hora: '7pm', lugar: '🏠 Diego\'s Home', nota: 'BYOB' },
+      { hora: '7pm', lugar: "🏠 Diego's Home", nota: 'BYOB' },
       { hora: '9pm', lugar: '🍽️ Dinner at Mochomos', nota: 'Reservation made' },
       { hora: '11pm', lugar: '🎉 Pepper Nightclub', nota: 'VIP list' },
     ],
     demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
+    preview_label: 'WHAT CHEERS LOOKS LIKE',
+    preview_title: 'The whole plan in one link',
+    preview_sub: "Your guests open the link and see exactly what's happening, where, and when.",
   }
 }
 
@@ -150,7 +156,7 @@ export default function Home() {
         @keyframes splash { 0%,40%{opacity:0;transform:scale(0) translateX(-50%)} 50%{opacity:1;transform:scale(1) translateX(-50%)} 80%,100%{opacity:0;transform:scale(1.6) translateX(-50%)} }
         @keyframes bubble { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-55px);opacity:0} }
         @keyframes sparkleLocal { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1.2)} }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
       `}</style>
 
       {/* NAV */}
@@ -163,9 +169,9 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* HERO — fondo con gradiente sutil */}
-      <section style={{ background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 50%, #faf9ff 100%)', padding: '0 0 60px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', maxWidth: 1200, margin: '0 auto', padding: '80px 60px 40px', gap: 60, alignItems: 'center' }}>
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section style={{ background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 50%, #faf9ff 100%)', padding: '80px 0 70px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', maxWidth: 1200, margin: '0 auto', padding: '0 60px', gap: 60, alignItems: 'center' }}>
 
           {/* IZQUIERDA — texto */}
           <div>
@@ -181,9 +187,8 @@ export default function Home() {
               <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '15px 30px', borderRadius: 28, border: 'none', cursor: 'none', boxShadow: '0 4px 20px rgba(212,83,126,0.35)' }}>{tx.cta}</button>
               <a href="#como-funciona" style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', padding: '15px 30px', borderRadius: 28, border: '1.5px solid #e0e0e0', textDecoration: 'none', background: '#fff' }}>{tx.how}</a>
             </div>
-            {/* Store buttons */}
             <div style={{ display: 'flex', gap: 10 }}>
-              {['App Store', 'Google Play'].map(store => (
+              {(['App Store', 'Google Play'] as const).map(store => (
                 <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid #e0e0e0', borderRadius: 14, background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
                   <span style={{ fontSize: 20 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
                   <div>
@@ -195,108 +200,167 @@ export default function Home() {
             </div>
           </div>
 
-          {/* DERECHA — copas arriba + preview abajo */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-
-            {/* COPAS */}
-            <div style={{ position: 'relative', height: 320, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {[{ left: 20, top: 30, delay: '0s', size: 14 }, { left: 260, top: 40, delay: '0.6s', size: 14 }, { left: 40, top: 110, delay: '1.1s', size: 10 }, { left: 250, top: 100, delay: '0.3s', size: 10 }, { left: 140, top: 10, delay: '0.8s', size: 12 }].map((s, i) => (
+          {/* DERECHA — solo copas, grandes, con todo su espacio */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'relative', height: 380, width: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {[
+                { left: 10,  top: 20,  delay: '0s',   size: 16 },
+                { left: 310, top: 30,  delay: '0.6s', size: 16 },
+                { left: 30,  top: 130, delay: '1.1s', size: 11 },
+                { left: 300, top: 120, delay: '0.3s', size: 11 },
+                { left: 160, top: 0,   delay: '0.8s', size: 14 },
+                { left: 60,  top: 300, delay: '1.4s', size: 9  },
+                { left: 280, top: 310, delay: '0.5s', size: 9  },
+              ].map((s, i) => (
                 <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkleLocal 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
               ))}
-              <div style={{ position: 'absolute', top: 45, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
-                <svg viewBox="0 0 90 70" width="80" height="60">
+
+              <div style={{ position: 'absolute', top: 40, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
+                <svg viewBox="0 0 90 70" width="90" height="70">
                   <g fill="#f7d76b" opacity="0.9">
-                    <circle cx="45" cy="45" r="5" /><ellipse cx="45" cy="26" rx="4" ry="10" />
-                    <ellipse cx="28" cy="32" rx="3" ry="9" transform="rotate(-30 28 32)" />
-                    <ellipse cx="62" cy="32" rx="3" ry="9" transform="rotate(30 62 32)" />
-                    <ellipse cx="20" cy="46" rx="3" ry="7" transform="rotate(-60 20 46)" />
-                    <ellipse cx="70" cy="46" rx="3" ry="7" transform="rotate(60 70 46)" />
+                    <circle cx="45" cy="45" r="5.5" />
+                    <ellipse cx="45" cy="24" rx="4" ry="11" />
+                    <ellipse cx="27" cy="31" rx="3.5" ry="10" transform="rotate(-30 27 31)" />
+                    <ellipse cx="63" cy="31" rx="3.5" ry="10" transform="rotate(30 63 31)" />
+                    <ellipse cx="18" cy="47" rx="3" ry="8" transform="rotate(-60 18 47)" />
+                    <ellipse cx="72" cy="47" rx="3" ry="8" transform="rotate(60 72 47)" />
                   </g>
                 </svg>
               </div>
-              <svg viewBox="0 0 360 280" width="300" height="280" style={{ overflow: 'visible' }}>
+
+              <svg viewBox="0 0 360 300" width="340" height="300" style={{ overflow: 'visible' }}>
                 <defs>
                   <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" /><stop offset="50%" stopColor="#f7d76b" /><stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
+                    <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" />
+                    <stop offset="50%" stopColor="#f7d76b" />
+                    <stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
                   </linearGradient>
                   <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" /><stop offset="40%" stopColor="#fff" stopOpacity="0.5" /><stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
+                    <stop offset="0%" stopColor="#D4537E" stopOpacity="0.1" />
+                    <stop offset="40%" stopColor="#fff" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="#D4537E" stopOpacity="0.08" />
                   </linearGradient>
-                  <clipPath id="c1"><path d="M20,20 L42,145 Q62,160 82,145 L104,20 Z" /></clipPath>
-                  <clipPath id="c2"><path d="M256,20 L278,145 Q298,160 318,145 L340,20 Z" /></clipPath>
+                  <clipPath id="c1"><path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" /></clipPath>
+                  <clipPath id="c2"><path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" /></clipPath>
                 </defs>
-                <g style={{ transformOrigin: '62px 260px', animation: 'clinkL 3s ease-in-out infinite' }}>
-                  <path d="M20,20 L42,145 Q62,160 82,145 L104,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
+                <g style={{ transformOrigin: '62px 280px', animation: 'clinkL 3s ease-in-out infinite' }}>
+                  <path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
                   <g clipPath="url(#c1)">
-                    <rect x="20" y="75" width="84" height="78" fill="url(#liq)" opacity="0.88" />
-                    <ellipse cx="62" cy="75" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /></ellipse>
-                    <rect x="35" y="80" width="3" height="58" fill="white" opacity="0.22" rx="1.5" />
+                    <rect x="14" y="80" width="96" height="86" fill="url(#liq)" opacity="0.88" />
+                    <ellipse cx="62" cy="80" rx="46" ry="7" fill="#f7d76b" opacity="0.7">
+                      <animate attributeName="ry" values="7;10;7" dur="2s" repeatCount="indefinite" />
+                    </ellipse>
+                    <rect x="36" y="86" width="3.5" height="68" fill="white" opacity="0.22" rx="1.5" />
                   </g>
-                  <line x1="20" y1="20" x2="104" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
-                  <rect x="58" y="146" width="8" height="96" fill="#D4537E" opacity="0.2" rx="4" />
-                  <ellipse cx="62" cy="244" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
+                  <line x1="14" y1="16" x2="110" y2="16" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
+                  <rect x="58" y="159" width="9" height="106" fill="#D4537E" opacity="0.18" rx="4.5" />
+                  <ellipse cx="62" cy="267" rx="36" ry="8" fill="#D4537E" opacity="0.12" />
                 </g>
-                <g style={{ transformOrigin: '298px 260px', animation: 'clinkR 3s ease-in-out infinite' }}>
-                  <path d="M256,20 L278,145 Q298,160 318,145 L340,20 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
+                <g style={{ transformOrigin: '298px 280px', animation: 'clinkR 3s ease-in-out infinite' }}>
+                  <path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
                   <g clipPath="url(#c2)">
-                    <rect x="256" y="75" width="84" height="78" fill="url(#liq)" opacity="0.88" />
-                    <ellipse cx="298" cy="75" rx="40" ry="6" fill="#f7d76b" opacity="0.7"><animate attributeName="ry" values="6;9;6" dur="2s" repeatCount="indefinite" /></ellipse>
-                    <rect x="310" y="80" width="3" height="58" fill="white" opacity="0.22" rx="1.5" />
+                    <rect x="250" y="80" width="96" height="86" fill="url(#liq)" opacity="0.88" />
+                    <ellipse cx="298" cy="80" rx="46" ry="7" fill="#f7d76b" opacity="0.7">
+                      <animate attributeName="ry" values="7;10;7" dur="2s" repeatCount="indefinite" />
+                    </ellipse>
+                    <rect x="316" y="86" width="3.5" height="68" fill="white" opacity="0.22" rx="1.5" />
                   </g>
-                  <line x1="256" y1="20" x2="340" y2="20" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
-                  <rect x="294" y="146" width="8" height="96" fill="#D4537E" opacity="0.2" rx="4" />
-                  <ellipse cx="298" cy="244" rx="32" ry="7" fill="#D4537E" opacity="0.14" />
+                  <line x1="250" y1="16" x2="346" y2="16" stroke="#D4537E" strokeWidth="2" strokeOpacity="0.45" strokeLinecap="round" />
+                  <rect x="294" y="159" width="9" height="106" fill="#D4537E" opacity="0.18" rx="4.5" />
+                  <ellipse cx="298" cy="267" rx="36" ry="8" fill="#D4537E" opacity="0.12" />
                 </g>
               </svg>
-              {[{ left: 100, top: 160, size: 6, delay: '0s', dur: '2s' }, { left: 113, top: 175, size: 4, delay: '0.7s', dur: '2.3s' }].map((b, i) => (
+
+              {[
+                { left: 94,  top: 185, size: 7, delay: '0s',   dur: '2s'   },
+                { left: 108, top: 202, size: 5, delay: '0.7s', dur: '2.3s' },
+                { left: 80,  top: 200, size: 4, delay: '1.2s', dur: '1.9s' },
+              ].map((b, i) => (
                 <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
               ))}
-              {[{ left: 195, top: 160, size: 6, delay: '0.4s', dur: '2.1s' }, { left: 208, top: 175, size: 4, delay: '1.1s', dur: '2.4s' }].map((b, i) => (
+              {[
+                { left: 250, top: 185, size: 7, delay: '0.4s', dur: '2.1s' },
+                { left: 265, top: 202, size: 5, delay: '1.1s', dur: '2.4s' },
+                { left: 238, top: 200, size: 4, delay: '0.9s', dur: '2.0s' },
+              ].map((b, i) => (
                 <div key={`r${i}`} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
               ))}
             </div>
+          </div>
 
-            {/* PREVIEW del evento — debajo de las copas, flotando */}
-            <div style={{ width: '100%', animation: 'float 4s ease-in-out infinite', boxShadow: '0 20px 60px rgba(83,74,183,0.15), 0 4px 20px rgba(212,83,126,0.1)', borderRadius: 20, overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', padding: '16px 20px', textAlign: 'center', color: '#fff' }}>
-                <p style={{ fontSize: 28, margin: '0 0 4px' }}>🎂</p>
-                <p style={{ fontSize: 16, fontWeight: 600, margin: '0 0 2px' }}>{lang === 'es' ? 'Los 30 de Rodrigo' : "Rodrigo's 30th"}</p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', margin: '0 0 6px' }}>joincheers.app/los-30-de-rodrigo</p>
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.9)', margin: 0 }}>🥂 12 {tx.demo_confirmed}</p>
+        </div>
+      </section>
+
+      {/* ── PREVIEW DEL EVENTO ───────────────────────────────────────────── */}
+      <section style={{ background: '#fff', padding: '80px 48px' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12 }}>{tx.preview_label}</p>
+          <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-1.2px', color: '#1d1d1f', marginBottom: 12 }}>{tx.preview_title}</h2>
+          <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 52, lineHeight: 1.6 }}>{tx.preview_sub}</p>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32 }}>
+
+            {/* Store buttons izquierda */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {(['App Store', 'Google Play'] as const).map(store => (
+                <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', border: '1px solid #e0e0e0', borderRadius: 16, background: '#fafafa', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', minWidth: 148 }}>
+                  <span style={{ fontSize: 24 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>{store}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Preview card centro */}
+            <div style={{ animation: 'float 4s ease-in-out infinite', boxShadow: '0 32px 80px rgba(83,74,183,0.18), 0 8px 24px rgba(212,83,126,0.14)', borderRadius: 24, overflow: 'hidden', width: 420, flexShrink: 0 }}>
+              <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', padding: '24px 28px', textAlign: 'center', color: '#fff' }}>
+                <p style={{ fontSize: 36, margin: '0 0 6px' }}>🎂</p>
+                <p style={{ fontSize: 20, fontWeight: 600, margin: '0 0 4px' }}>{lang === 'es' ? 'Los 30 de Rodrigo' : "Rodrigo's 30th"}</p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', margin: '0 0 8px' }}>joincheers.app/los-30-de-rodrigo</p>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', margin: 0 }}>🥂 12 {tx.demo_confirmed}</p>
               </div>
-              <div style={{ background: '#f5f5f7', padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div style={{ background: '#fff', borderRadius: 10, padding: 12 }}>
-                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 8, letterSpacing: '0.5px' }}>🗺️ {tx.demo_plan}</p>
+              <div style={{ background: '#f5f5f7', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ background: '#fff', borderRadius: 14, padding: '14px' }}>
+                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 10, letterSpacing: '0.5px' }}>🗺️ {tx.demo_plan}</p>
                   {tx.demo_stops.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < 2 ? 8 : 0, paddingBottom: i < 2 ? 8 : 0, borderBottom: i < 2 ? '0.5px solid #f0f0f0' : 'none' }}>
-                      <span style={{ fontSize: 10, color: '#D4537E', fontWeight: 600, minWidth: 24 }}>{p.hora}</span>
+                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < 2 ? 10 : 0, paddingBottom: i < 2 ? 10 : 0, borderBottom: i < 2 ? '0.5px solid #f0f0f0' : 'none' }}>
+                      <span style={{ fontSize: 11, color: '#D4537E', fontWeight: 600, minWidth: 28 }}>{p.hora}</span>
                       <div>
-                        <p style={{ fontSize: 11, fontWeight: 500, color: '#1d1d1f', margin: '0 0 1px' }}>{p.lugar}</p>
-                        <p style={{ fontSize: 10, color: '#aeaeb2', margin: 0 }}>{p.nota}</p>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: '#1d1d1f', margin: '0 0 2px' }}>{p.lugar}</p>
+                        <p style={{ fontSize: 11, color: '#aeaeb2', margin: 0 }}>{p.nota}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div style={{ background: '#fff', borderRadius: 10, padding: 12 }}>
-                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 8, letterSpacing: '0.5px' }}>🎁 {tx.demo_gifts}</p>
+                <div style={{ background: '#fff', borderRadius: 14, padding: '14px' }}>
+                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 10, letterSpacing: '0.5px' }}>🎁 {tx.demo_gifts}</p>
                   {tx.demo_gifts_items.map(g => (
-                    <p key={g} style={{ fontSize: 11, padding: '5px 8px', background: '#f5f5f7', borderRadius: 6, color: '#6e6e73', margin: '0 0 6px' }}>{g}</p>
+                    <p key={g} style={{ fontSize: 12, padding: '7px 10px', background: '#f5f5f7', borderRadius: 8, color: '#6e6e73', margin: '0 0 8px' }}>{g}</p>
                   ))}
+                  <button onClick={loginConGoogle} style={{ width: '100%', marginTop: 4, padding: '9px', background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'none' }}>
+                    {lang === 'es' ? 'Confirmar asistencia' : 'RSVP'}
+                  </button>
                 </div>
               </div>
             </div>
+
+            {/* Balance visual derecha */}
+            <div style={{ width: 148 }} />
+
           </div>
         </div>
       </section>
 
-      {/* TIPOS */}
-      <section style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', padding: '48px 40px' }}>
+      {/* ── TIPOS ────────────────────────────────────────────────────────── */}
+      <section style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', padding: '48px 40px', background: '#faf9ff' }}>
         {tx.tipos.map(t => (
-          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 22, border: '1px solid #e8e8e8', background: '#fafafa', fontSize: 13, color: '#6e6e73', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>{t}</span>
+          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 22, border: '1px solid #e8e8e8', background: '#fff', fontSize: 13, color: '#6e6e73', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>{t}</span>
         ))}
       </section>
 
-      {/* CÓMO FUNCIONA */}
+      {/* ── CÓMO FUNCIONA ────────────────────────────────────────────────── */}
       <section id="como-funciona" style={{ padding: '80px 48px', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 100%)' }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12, textAlign: 'center' }}>{tx.s1_label}</p>
@@ -314,7 +378,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TESTIMONIOS */}
+      {/* ── TESTIMONIOS ──────────────────────────────────────────────────── */}
       <section style={{ padding: '80px 48px', background: '#fff' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12 }}>{tx.s3_label}</p>
@@ -333,7 +397,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PRECIOS */}
+      {/* ── PRECIOS ──────────────────────────────────────────────────────── */}
       <section id="precios" style={{ padding: '80px 48px', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 100%)' }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12, textAlign: 'center' }}>{tx.s2_label}</p>
@@ -365,14 +429,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA FINAL */}
+      {/* ── CTA FINAL ────────────────────────────────────────────────────── */}
       <section style={{ padding: '100px 48px', background: '#fff', textAlign: 'center' }}>
         <h2 style={{ fontSize: 48, fontWeight: 700, letterSpacing: '-2px', color: '#1d1d1f', marginBottom: 16 }}>{tx.cta_title}</h2>
         <p style={{ fontSize: 18, color: '#6e6e73', marginBottom: 40 }}>{tx.cta_sub}</p>
         <button onClick={loginConGoogle} style={{ fontSize: 18, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '18px 44px', borderRadius: 32, border: 'none', cursor: 'none', boxShadow: '0 8px 30px rgba(212,83,126,0.35)' }}>{tx.cta_btn}</button>
       </section>
 
-      {/* FOOTER */}
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
       <footer style={{ padding: '32px 48px', borderTop: '0.5px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <span style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</span>
         <p style={{ fontSize: 12, color: '#aeaeb2' }}>joincheers.app · 2026</p>
