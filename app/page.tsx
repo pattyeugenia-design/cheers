@@ -183,21 +183,9 @@ export default function Home() {
               {tx.h1b} <span style={{ background: 'linear-gradient(135deg, #534AB7, #D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{tx.h1c}</span>
             </h1>
             <p style={{ fontSize: 18, color: '#6e6e73', marginBottom: 40, lineHeight: 1.65, maxWidth: 420 }}>{tx.sub}</p>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '15px 30px', borderRadius: 28, border: 'none', cursor: 'none', boxShadow: '0 4px 20px rgba(212,83,126,0.35)' }}>{tx.cta}</button>
               <a href="#como-funciona" style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', padding: '15px 30px', borderRadius: 28, border: '1.5px solid #e0e0e0', textDecoration: 'none', background: '#fff' }}>{tx.how}</a>
-            </div>
-            {/* Store buttons */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              {(['App Store', 'Google Play'] as const).map(store => (
-                <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid #e0e0e0', borderRadius: 14, background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                  <span style={{ fontSize: 20 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
-                  <div>
-                    <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>{store}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -309,7 +297,22 @@ export default function Home() {
           <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-1.2px', color: '#1d1d1f', marginBottom: 12 }}>{tx.preview_title}</h2>
           <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 52, lineHeight: 1.6 }}>{tx.preview_sub}</p>
 
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32 }}>
+
+            {/* Store buttons izquierda, centrados verticalmente */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {(['App Store', 'Google Play'] as const).map(store => (
+                <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', border: '1px solid #e0e0e0', borderRadius: 16, background: '#fafafa', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', minWidth: 148 }}>
+                  <span style={{ fontSize: 24 }}>{store === 'App Store' ? '🍎' : '▶️'}</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ fontSize: 9, color: '#aeaeb2', margin: 0 }}>{tx.coming_soon}</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>{store}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Preview card derecha */}
             <div style={{ animation: 'float 4s ease-in-out infinite', boxShadow: '0 32px 80px rgba(83,74,183,0.18), 0 8px 24px rgba(212,83,126,0.14)', borderRadius: 24, overflow: 'hidden', width: 420, flexShrink: 0 }}>
               <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', padding: '24px 28px', textAlign: 'center', color: '#fff' }}>
                 <p style={{ fontSize: 36, margin: '0 0 6px' }}>🎂</p>
@@ -341,6 +344,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </section>
