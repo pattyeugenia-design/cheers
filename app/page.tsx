@@ -104,7 +104,7 @@ const translations = {
     demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
     preview_label: 'WHAT CHEERS LOOKS LIKE',
     preview_title: 'The whole plan in one link',
-    preview_sub: 'Your guests open the link and see exactly what's happening, where, and when.',
+    preview_sub: "Your guests open the link and see exactly what is happening, where, and when.",
   }
 }
 
