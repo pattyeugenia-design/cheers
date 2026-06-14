@@ -30,6 +30,11 @@ export default function NuevaCelebracion() {
     setGifts(nuevos)
   }
 
+  function elegirRol(rol: string) {
+    setRolOrganizador(rol)
+    setEsSorpresa(rol === 'sorpresa')
+  }
+
   async function crear() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -100,23 +105,18 @@ export default function NuevaCelebracion() {
           <div>
             <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 4px' }}>Paso 1 de 3</p>
             <h1 style={{ fontSize: 20, fontWeight: 600, color: '#3C3489', margin: '0 0 1.5rem' }}>¿Para quién es la celebración?</h1>
-            <button style={btnRol(rolOrganizador === 'yo')} onClick={() => setRolOrganizador('yo')}>
+            <button style={btnRol(rolOrganizador === 'yo')} onClick={() => elegirRol('yo')}>
               🎂 Es mi celebración
               <p style={{ fontSize: 12, color: rolOrganizador === 'yo' ? '#CECBF6' : '#AFA9EC', margin: '4px 0 0', fontWeight: 400 }}>Yo soy el festejado y organizo mi propio evento</p>
             </button>
-            <button style={btnRol(rolOrganizador === 'otro')} onClick={() => setRolOrganizador('otro')}>
+            <button style={btnRol(rolOrganizador === 'otro')} onClick={() => elegirRol('otro')}>
               🎁 Organizo para alguien más
-              <p style={{ fontSize: 12, color: rolOrganizador === 'otro' ? '#CECBF6' : '#AFA9EC', margin: '4px 0 0', fontWeight: 400 }}>Organizo el evento de otra persona</p>
+              <p style={{ fontSize: 12, color: rolOrganizador === 'otro' ? '#CECBF6' : '#AFA9EC', margin: '4px 0 0', fontWeight: 400 }}>Organizo el evento de otra persona — ya sabe</p>
             </button>
-            {rolOrganizador === 'otro' && (
-              <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(127,119,221,0.1)', borderRadius: 10 }}>
-                <label style={{ fontSize: 13, color: '#534AB7', display: 'block', marginBottom: 8 }}>¿Es sorpresa?</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setEsSorpresa(false)} style={{ flex: 1, padding: '0.6rem', background: !esSorpresa ? '#7F77DD' : '#EEEDFE', border: `1px solid ${!esSorpresa ? '#7F77DD' : '#AFA9EC'}`, borderRadius: 8, color: !esSorpresa ? '#EEEDFE' : '#3C3489', fontSize: 13, cursor: 'pointer' }}>No, sabe</button>
-                  <button onClick={() => setEsSorpresa(true)} style={{ flex: 1, padding: '0.6rem', background: esSorpresa ? '#7F77DD' : '#EEEDFE', border: `1px solid ${esSorpresa ? '#7F77DD' : '#AFA9EC'}`, borderRadius: 8, color: esSorpresa ? '#EEEDFE' : '#3C3489', fontSize: 13, cursor: 'pointer' }}>🤫 Es sorpresa</button>
-                </div>
-              </div>
-            )}
+            <button style={btnRol(rolOrganizador === 'sorpresa')} onClick={() => elegirRol('sorpresa')}>
+              🤫 Organizo para alguien más — es sorpresa
+              <p style={{ fontSize: 12, color: rolOrganizador === 'sorpresa' ? '#CECBF6' : '#AFA9EC', margin: '4px 0 0', fontWeight: 400 }}>Organizo el evento de otra persona — no debe saber</p>
+            </button>
             <button onClick={() => setPaso(2)} disabled={!rolOrganizador} style={{ width: '100%', padding: '0.9rem', background: rolOrganizador ? '#7F77DD' : '#AFA9EC', border: 'none', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, cursor: rolOrganizador ? 'pointer' : 'not-allowed', marginTop: '1.5rem' }}>
               Siguiente →
             </button>
@@ -133,7 +133,6 @@ export default function NuevaCelebracion() {
             <select value={tipo} onChange={e => setTipo(e.target.value)} style={{ ...input, marginBottom: '1rem' }}>
               <option value="cumpleanos">🎂 Cumpleaños</option>
               <option value="boda">💍 Boda</option>
-              <option value="xv">👑 XV años</option>
               <option value="graduacion">🎓 Graduación</option>
               <option value="babyshower">🍼 Baby shower</option>
               <option value="bachelorette">💃 Bachelorette</option>
@@ -143,7 +142,7 @@ export default function NuevaCelebracion() {
             <label style={{ fontSize: 13, color: '#534AB7', display: 'block', marginBottom: 4 }}>Nombre del evento</label>
             <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder='Ej: "Los 30 de Rodrigo"' style={{ ...input, marginBottom: '1rem' }} />
 
-            {rolOrganizador === 'otro' && (
+            {(rolOrganizador === 'otro' || rolOrganizador === 'sorpresa') && (
               <>
                 <label style={{ fontSize: 13, color: '#534AB7', display: 'block', marginBottom: 4 }}>¿Quién es el festejado?</label>
                 <input value={festejado} onChange={e => setFestejado(e.target.value)} placeholder='Nombre del festejado' style={{ ...input, marginBottom: '1rem' }} />
