@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span key={i} style={{
             position: 'fixed',
             pointerEvents: 'none',
-            zIndex: 9999,
+            zIndex: -1,
             color: '#D4537E',
             left: d.left,
             top: d.top,
