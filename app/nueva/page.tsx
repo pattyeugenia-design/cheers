@@ -150,8 +150,11 @@ export default function NuevaCelebracion() {
 
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.5px', margin: '0.5rem 0 0.5rem' }}>¡Celebración creada!</h1>
         <p style={{ color: '#AFA9EC', marginBottom: '2rem', fontSize: 15 }}>{nombre}</p>
-        <a href={`/${slug}`} style={{ display: 'block', padding: '1rem 2rem', background: 'linear-gradient(135deg, #534AB7, #D4537E)', borderRadius: 14, color: '#fff', fontSize: 15, fontWeight: 600, textDecoration: 'none', boxShadow: '0 8px 24px rgba(212,83,126,0.3)' }}>
+        <a href={`/${slug}`} style={{ display: 'block', padding: '1rem 2rem', background: 'linear-gradient(135deg, #534AB7, #D4537E)', borderRadius: 14, color: '#fff', fontSize: 15, fontWeight: 600, textDecoration: 'none', boxShadow: '0 8px 24px rgba(212,83,126,0.3)', marginBottom: '0.75rem' }}>
           Ver mi celebración →
+        </a>
+        <a href="/dashboard" style={{ display: 'block', padding: '0.85rem 2rem', background: 'rgba(255,255,255,0.06)', borderRadius: 14, color: '#AFA9EC', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
+          Ir al dashboard
         </a>
       </div>
     </main>
@@ -193,15 +196,15 @@ export default function NuevaCelebracion() {
           <div>
             <p style={{ fontSize: 12, fontWeight: 600, color: '#D4537E', letterSpacing: '1px', margin: '0 0 6px' }}>PASO 1 DE 3</p>
             <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px', color: '#1d1d1f', margin: '0 0 1.75rem' }}>¿Para quién es la celebración?</h1>
-            <button style={btnRol(rolOrganizador === 'yo')} onClick={() => elegirRol('yo')}>
+            <button style={btnRol(rolOrganizador === 'yo')} onClick={() => elegirRol('yo')} onDoubleClick={() => { elegirRol('yo'); setPaso(2) }}>
               🎂 Es mi celebración
               <p style={{ fontSize: 13, color: rolOrganizador === 'yo' ? 'rgba(255,255,255,0.8)' : '#6e6e73', margin: '4px 0 0', fontWeight: 400 }}>Yo soy el festejado y organizo mi propio evento</p>
             </button>
-            <button style={btnRol(rolOrganizador === 'otro')} onClick={() => elegirRol('otro')}>
+            <button style={btnRol(rolOrganizador === 'otro')} onClick={() => elegirRol('otro')} onDoubleClick={() => { elegirRol('otro'); setPaso(2) }}>
               🎁 Organizo para alguien más
               <p style={{ fontSize: 13, color: rolOrganizador === 'otro' ? 'rgba(255,255,255,0.8)' : '#6e6e73', margin: '4px 0 0', fontWeight: 400 }}>Organizo el evento de otra persona — ya sabe</p>
             </button>
-            <button style={btnRol(rolOrganizador === 'sorpresa')} onClick={() => elegirRol('sorpresa')}>
+            <button style={btnRol(rolOrganizador === 'sorpresa')} onClick={() => elegirRol('sorpresa')} onDoubleClick={() => { elegirRol('sorpresa'); setPaso(2) }}>
               🤫 Organizo para alguien más — es sorpresa
               <p style={{ fontSize: 13, color: rolOrganizador === 'sorpresa' ? 'rgba(255,255,255,0.8)' : '#6e6e73', margin: '4px 0 0', fontWeight: 400 }}>Organizo el evento de otra persona — no debe saber</p>
             </button>
@@ -228,12 +231,12 @@ export default function NuevaCelebracion() {
             </select>
 
             <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 6 }}>Nombre del evento</label>
-            <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder='Ej: "Los 30 de Rodrigo"' style={{ ...input, marginBottom: '1.25rem' }} />
+            <input value={nombre} onChange={e => setNombre(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && nombre) setPaso(3) }} placeholder='Ej: "Los 30 de Rodrigo"' style={{ ...input, marginBottom: '1.25rem' }} />
 
             {(rolOrganizador === 'otro' || rolOrganizador === 'sorpresa') && (
               <>
                 <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 6 }}>¿Quién es el festejado?</label>
-                <input value={festejado} onChange={e => setFestejado(e.target.value)} placeholder='Nombre del festejado' style={{ ...input, marginBottom: '1.25rem' }} />
+                <input value={festejado} onChange={e => setFestejado(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && nombre) setPaso(3) }} placeholder='Nombre del festejado' style={{ ...input, marginBottom: '1.25rem' }} />
               </>
             )}
 
