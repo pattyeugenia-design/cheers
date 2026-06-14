@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import { supabase } from '../supabase'
 
@@ -13,6 +14,7 @@ declare global {
 }
 
 export default function NuevaCelebracion() {
+  const router = useRouter()
   const [paso, setPaso] = useState(1)
   const [rolOrganizador, setRolOrganizador] = useState('')
   const [esSorpresa, setEsSorpresa] = useState(false)
@@ -26,8 +28,20 @@ export default function NuevaCelebracion() {
   const [slug, setSlug] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [mapsListo, setMapsListo] = useState(false)
+  const [verificandoSesion, setVerificandoSesion] = useState(true)
 
   const lugarRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  // Requiere sesión activa: si no hay usuario logueado, redirige a /login
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.push('/login')
+      } else {
+        setVerificandoSesion(false)
+      }
+    })
+  }, [router])
 
   function actualizarParada(i: number, campo: keyof Parada, valor: string) {
     const nuevas = [...paradas]
@@ -106,6 +120,12 @@ export default function NuevaCelebracion() {
       setErrorMsg('Algo salió mal al crear la celebración. Intenta de nuevo.')
     }
   }
+
+  if (verificandoSesion) return (
+    <main style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 50%, #faf9ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+      <p style={{ color: '#aeaeb2', fontSize: 14 }}>Cargando...</p>
+    </main>
+  )
 
   if (listo) return (
     <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
