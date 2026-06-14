@@ -35,14 +35,14 @@ export default function Login() {
   }
 
   const piezas = [
-    { left: -30, top: -60,  size: 22, delay: '0s',    dur: '2.4s', emoji: '✦' },
-    { left: 40,  top: -90,  size: 16, delay: '0.3s',  dur: '2.8s', emoji: '✦' },
-    { left: -70, top: -10,  size: 14, delay: '0.6s',  dur: '2.2s', emoji: '✦' },
-    { left: 80,  top: -30,  size: 20, delay: '0.9s',  dur: '2.6s', emoji: '✦' },
-    { left: -10, top: -110, size: 18, delay: '1.2s',  dur: '2.5s', emoji: '✦' },
-    { left: 60,  top: -80,  size: 12, delay: '0.4s',  dur: '2.3s', emoji: '✦' },
-    { left: -50, top: -90,  size: 16, delay: '1.5s',  dur: '2.7s', emoji: '✦' },
-    { left: 20,  top: -50,  size: 14, delay: '0.8s',  dur: '2.4s', emoji: '✦' },
+    { left: -60,  top: -120, size: 32, delay: '0s',    dur: '2.4s', emoji: '✦' },
+    { left: 80,   top: -180, size: 24, delay: '0.3s',  dur: '2.8s', emoji: '✦' },
+    { left: -140, top: -20,  size: 20, delay: '0.6s',  dur: '2.2s', emoji: '✦' },
+    { left: 160,  top: -60,  size: 30, delay: '0.9s',  dur: '2.6s', emoji: '✦' },
+    { left: -20,  top: -220, size: 26, delay: '1.2s',  dur: '2.5s', emoji: '✦' },
+    { left: 120,  top: -160, size: 18, delay: '0.4s',  dur: '2.3s', emoji: '✦' },
+    { left: -100, top: -180, size: 24, delay: '1.5s',  dur: '2.7s', emoji: '✦' },
+    { left: 40,   top: -100, size: 20, delay: '0.8s',  dur: '2.4s', emoji: '✦' },
   ]
 
   if (cargando) return (
@@ -78,8 +78,8 @@ export default function Login() {
         </div>
 
         {/* Popper animado con confetti - derecha */}
-        <div style={{ position: 'relative', width: 220, height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 90, animation: 'popperShake 1.8s ease-in-out infinite', transformOrigin: '70% 90%' }}>
+        <div style={{ position: 'relative', width: 320, height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontSize: 180, animation: 'popperShake 1.8s ease-in-out infinite', transformOrigin: '70% 90%' }}>
             🎉
           </div>
           {piezas.map((p, i) => (
