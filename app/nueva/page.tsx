@@ -65,12 +65,92 @@ export default function NuevaCelebracion() {
   }
 
   if (listo) return (
-    <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
+    <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+      <style>{`
+        @keyframes clinkL { 0%,100%{transform:rotate(15deg)} 45%,55%{transform:rotate(4deg)} }
+        @keyframes clinkR { 0%,100%{transform:rotate(-15deg)} 45%,55%{transform:rotate(-4deg)} }
+        @keyframes splash { 0%,40%{opacity:0;transform:scale(0) translateX(-50%)} 50%{opacity:1;transform:scale(1) translateX(-50%)} 80%,100%{opacity:0;transform:scale(1.6) translateX(-50%)} }
+        @keyframes bubble { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-55px);opacity:0} }
+      `}</style>
       <div style={{ textAlign: 'center', color: '#EEEDFE', padding: '2rem' }}>
-        <p style={{ fontSize: 48 }}>🥂</p>
-        <h1 style={{ fontSize: 28, fontWeight: 500 }}>¡Celebración creada!</h1>
-        <p style={{ color: '#AFA9EC', marginBottom: '2rem' }}>{nombre}</p>
-        <a href={`/${slug}`} style={{ display: 'block', padding: '0.9rem 2rem', background: '#7F77DD', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, textDecoration: 'none' }}>
+
+        {/* Copas SVG animadas chocando */}
+        <div style={{ position: 'relative', height: 220, width: 280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'absolute', top: 24, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
+            <svg viewBox="0 0 90 70" width="70" height="55">
+              <g fill="#f7d76b" opacity="0.9">
+                <circle cx="45" cy="45" r="4.5" />
+                <ellipse cx="45" cy="24" rx="3.5" ry="9" />
+                <ellipse cx="27" cy="31" rx="3" ry="8" transform="rotate(-30 27 31)" />
+                <ellipse cx="63" cy="31" rx="3" ry="8" transform="rotate(30 63 31)" />
+                <ellipse cx="18" cy="47" rx="2.5" ry="6.5" transform="rotate(-60 18 47)" />
+                <ellipse cx="72" cy="47" rx="2.5" ry="6.5" transform="rotate(60 72 47)" />
+              </g>
+            </svg>
+          </div>
+
+          <svg viewBox="0 0 360 300" width="260" height="220" style={{ overflow: 'visible' }}>
+            <defs>
+              <linearGradient id="liqExito" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" />
+                <stop offset="50%" stopColor="#f7d76b" />
+                <stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
+              </linearGradient>
+              <linearGradient id="glExito" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#7F77DD" stopOpacity="0.15" />
+                <stop offset="40%" stopColor="#fff" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#7F77DD" stopOpacity="0.12" />
+              </linearGradient>
+              <clipPath id="c1Exito"><path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" /></clipPath>
+              <clipPath id="c2Exito"><path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" /></clipPath>
+            </defs>
+            <g style={{ transformOrigin: '62px 280px', animation: 'clinkL 3s ease-in-out infinite' }}>
+              <path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" fill="url(#glExito)" stroke="#AFA9EC" strokeWidth="1.5" strokeOpacity="0.5" />
+              <g clipPath="url(#c1Exito)">
+                <rect x="14" y="80" width="96" height="86" fill="url(#liqExito)" opacity="0.88" />
+                <ellipse cx="62" cy="80" rx="46" ry="7" fill="#f7d76b" opacity="0.7">
+                  <animate attributeName="ry" values="7;10;7" dur="2s" repeatCount="indefinite" />
+                </ellipse>
+                <rect x="36" y="86" width="3.5" height="68" fill="white" opacity="0.22" rx="1.5" />
+              </g>
+              <line x1="14" y1="16" x2="110" y2="16" stroke="#AFA9EC" strokeWidth="2" strokeOpacity="0.6" strokeLinecap="round" />
+              <rect x="58" y="159" width="9" height="106" fill="#AFA9EC" opacity="0.25" rx="4.5" />
+              <ellipse cx="62" cy="267" rx="36" ry="8" fill="#AFA9EC" opacity="0.15" />
+            </g>
+            <g style={{ transformOrigin: '298px 280px', animation: 'clinkR 3s ease-in-out infinite' }}>
+              <path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" fill="url(#glExito)" stroke="#AFA9EC" strokeWidth="1.5" strokeOpacity="0.5" />
+              <g clipPath="url(#c2Exito)">
+                <rect x="250" y="80" width="96" height="86" fill="url(#liqExito)" opacity="0.88" />
+                <ellipse cx="298" cy="80" rx="46" ry="7" fill="#f7d76b" opacity="0.7">
+                  <animate attributeName="ry" values="7;10;7" dur="2s" repeatCount="indefinite" />
+                </ellipse>
+                <rect x="316" y="86" width="3.5" height="68" fill="white" opacity="0.22" rx="1.5" />
+              </g>
+              <line x1="250" y1="16" x2="346" y2="16" stroke="#AFA9EC" strokeWidth="2" strokeOpacity="0.6" strokeLinecap="round" />
+              <rect x="294" y="159" width="9" height="106" fill="#AFA9EC" opacity="0.25" rx="4.5" />
+              <ellipse cx="298" cy="267" rx="36" ry="8" fill="#AFA9EC" opacity="0.15" />
+            </g>
+          </svg>
+
+          {[
+            { left: 64,  top: 130, size: 6, delay: '0s',   dur: '2s'   },
+            { left: 76,  top: 145, size: 4, delay: '0.7s', dur: '2.3s' },
+            { left: 56,  top: 142, size: 3, delay: '1.2s', dur: '1.9s' },
+          ].map((b, i) => (
+            <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
+          ))}
+          {[
+            { left: 178, top: 130, size: 6, delay: '0.4s', dur: '2.1s' },
+            { left: 190, top: 145, size: 4, delay: '1.1s', dur: '2.4s' },
+            { left: 168, top: 142, size: 3, delay: '0.9s', dur: '2.0s' },
+          ].map((b, i) => (
+            <div key={`r${i}`} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
+          ))}
+        </div>
+
+        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.5px', margin: '0.5rem 0 0.5rem' }}>¡Celebración creada!</h1>
+        <p style={{ color: '#AFA9EC', marginBottom: '2rem', fontSize: 15 }}>{nombre}</p>
+        <a href={`/${slug}`} style={{ display: 'block', padding: '1rem 2rem', background: 'linear-gradient(135deg, #534AB7, #D4537E)', borderRadius: 14, color: '#fff', fontSize: 15, fontWeight: 600, textDecoration: 'none', boxShadow: '0 8px 24px rgba(212,83,126,0.3)' }}>
           Ver mi celebración →
         </a>
       </div>
