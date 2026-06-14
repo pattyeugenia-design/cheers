@@ -5,12 +5,12 @@ import { supabase } from './supabase'
 
 const translations = {
   es: {
-    eyebrow: 'PARA CADA CELEBRACIÓN',
+    eyebrow: 'CELEBRA TODO, EN UN SOLO LUGAR',
     h1a: 'Organízate para',
     h1b: 'cualquier',
     h1c: 'celebración',
-    sub: 'Sin grupos de WhatsApp. Sin regalos duplicados. El festejado en control, los invitados siempre informados.',
-    cta: 'Crear mi celebración',
+    sub: 'Cero grupos, cero drama. El festejado en control, los invitados siempre al tanto.',
+    cta: 'Armar mi celebración',
     how: 'Ver cómo funciona',
     nav_how: 'Cómo funciona',
     nav_prices: 'Precios',
@@ -25,13 +25,13 @@ const translations = {
     s2_label: 'PRECIOS',
     s2_title: 'Simple y sin sorpresas',
     plans: [
-      { name: 'Free', price: '$0', sub: 'Para invitados', features: ['Ver el evento', 'Confirmar asistencia', 'Ver lista de regalos'], cta: 'Entrar gratis', featured: false },
+      { name: 'Free', price: '$0', sub: 'Solo para asistir', features: ['Ver el evento', 'Confirmar asistencia', 'Ver lista de regalos'], cta: 'Entrar gratis', featured: false },
       { name: 'Event', price: '$9', sub: '1er mes · +$3 USD/mes adicional', features: ['1 evento activo', 'Hasta 50 invitados', 'Notificaciones por email', 'Recordatorios automáticos', 'Personalización del evento'], cta: 'Empezar', featured: true, badge: 'Más popular' },
       { name: 'Lifetime', price: '$49', sub: 'Pago único · para siempre', features: ['Eventos ilimitados', 'Todo incluido', 'Acceso de por vida'], cta: 'Empezar', featured: false },
     ],
     testimonials: [
       { name: 'Andrea M.', text: 'Mis 30 nunca estuvieron tan organizados. Todos sabían dónde ir y qué traer. 🥂', role: 'Festejada' },
-      { name: 'Carlos R.', text: 'Organicé el bday de mi novia sin un solo mensaje de WhatsApp. Imposible pero real.', role: 'Organizador' },
+      { name: 'Carlos R.', text: 'Organicé el bday de mi novia sin un solo mensaje. Imposible pero real.', role: 'Organizador' },
       { name: 'Sofía L.', text: 'Como invitada es increíble — ves todo el plan, confirmas y listo. Nada más.', role: 'Invitada' },
       { name: 'Diego P.', text: 'La lista de regalos es un game changer. Ya no hay regalos duplicados.', role: 'Invitado' },
     ],
@@ -41,7 +41,7 @@ const translations = {
     cta_sub: 'Crea tu primera celebración en menos de 2 minutos.',
     cta_btn: 'Empezar gratis',
     coming_soon: 'Próximamente',
-    tipos: ['🎂 Cumpleaños', '💍 Boda', '👑 XV años', '🎓 Graduación', '🍼 Baby shower', '💃 Bachelorette', '✨ Otro festejo'],
+    tipos_texto: 'Cumpleaños, graduaciones y más',
     demo_plan: 'EL PLAN',
     demo_confirmed: 'confirmados',
     demo_gifts: 'GIFT IDEAS',
@@ -52,16 +52,16 @@ const translations = {
     ],
     demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
     preview_label: 'ASÍ SE VE CHEERS',
-    preview_title: 'Todo el plan en un link',
-    preview_sub: 'Tus invitados abren el link y ven exactamente qué pasa, dónde y a qué hora.',
+    preview_title: 'Todo en un link. Sin drama.',
+    preview_sub: 'Tus invitados abren el link y saben exactamente dónde, cuándo y qué traer.',
   },
   en: {
-    eyebrow: 'FOR EVERY CELEBRATION',
+    eyebrow: 'CELEBRATE EVERYTHING, ONE PLACE',
     h1a: 'Get organized for',
     h1b: 'any',
     h1c: 'celebration',
-    sub: 'No WhatsApp groups. No duplicate gifts. The guest of honor in control, guests always informed.',
-    cta: 'Create my celebration',
+    sub: 'Skip the group chat chaos. One link, everyone knows the plan.',
+    cta: 'Plan my celebration',
     how: 'See how it works',
     nav_how: 'How it works',
     nav_prices: 'Pricing',
@@ -76,13 +76,13 @@ const translations = {
     s2_label: 'PRICING',
     s2_title: 'Simple and no surprises',
     plans: [
-      { name: 'Free', price: '$0', sub: 'For guests', features: ['View the event', 'Confirm attendance', 'View gift list'], cta: 'Join free', featured: false },
+      { name: 'Free', price: '$0', sub: 'Just here to attend', features: ['View the event', 'Confirm attendance', 'View gift list'], cta: 'Join free', featured: false },
       { name: 'Event', price: '$9', sub: '1st month · +$3 USD/month after', features: ['1 active event', 'Up to 50 guests', 'Email notifications', 'Automatic reminders', 'Event personalization'], cta: 'Get started', featured: true, badge: 'Most popular' },
       { name: 'Lifetime', price: '$49', sub: 'One-time payment · forever', features: ['Unlimited events', 'Everything included', 'Lifetime access'], cta: 'Get started', featured: false },
     ],
     testimonials: [
       { name: 'Andrea M.', text: 'My 30th birthday was so organized. Everyone knew where to go and what to bring. 🥂', role: 'Birthday girl' },
-      { name: 'Carlos R.', text: "I organized my girlfriend's birthday with zero WhatsApp messages. Impossible but real.", role: 'Organizer' },
+      { name: 'Carlos R.', text: "Planned my girlfriend's birthday with zero texts. Actually zero.", role: 'Organizer' },
       { name: 'Sofia L.', text: "As a guest it's amazing — you see the full plan, confirm, and that's it.", role: 'Guest' },
       { name: 'Diego P.', text: 'The gift list is a game changer. No more duplicate gifts.', role: 'Guest' },
     ],
@@ -92,7 +92,7 @@ const translations = {
     cta_sub: 'Create your first celebration in less than 2 minutes.',
     cta_btn: 'Start free',
     coming_soon: 'Coming soon',
-    tipos: ['🎂 Birthday', '💍 Wedding', '👑 Quinceañera', '🎓 Graduation', '🍼 Baby shower', '💃 Bachelorette', '✨ Other'],
+    tipos_texto: 'Birthdays, graduations, and more',
     demo_plan: 'THE PLAN',
     demo_confirmed: 'confirmed',
     demo_gifts: 'GIFT IDEAS',
@@ -103,8 +103,8 @@ const translations = {
     ],
     demo_gifts_items: ['🛍️ Liverpool', '📦 Amazon', '🌸 EnviaFlores'],
     preview_label: 'WHAT CHEERS LOOKS LIKE',
-    preview_title: 'The whole plan in one link',
-    preview_sub: "Your guests open the link and see exactly what is happening, where, and when.",
+    preview_title: 'Everything they need, one link.',
+    preview_sub: "Your guests open it and instantly know where to be, when, and what to bring.",
   }
 }
 
@@ -350,10 +350,8 @@ export default function Home() {
       </section>
 
       {/* ── TIPOS ────────────────────────────────────────────────────────── */}
-      <section style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', padding: '48px 40px', background: '#faf9ff', position: 'relative', zIndex: 1 }}>
-        {tx.tipos.map(t => (
-          <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 22, border: '1px solid #e8e8e8', background: '#fff', fontSize: 13, color: '#6e6e73', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>{t}</span>
-        ))}
+      <section style={{ padding: '32px 40px', background: '#faf9ff', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+        <p style={{ fontSize: 14, color: '#aeaeb2', letterSpacing: '0.5px', margin: 0 }}>{tx.tipos_texto}</p>
       </section>
 
       {/* ── CÓMO FUNCIONA ────────────────────────────────────────────────── */}
