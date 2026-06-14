@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style>{`
           @keyframes destelloFijo {
             0%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); }
-            50% { opacity: 1; transform: scale(1) rotate(15deg); }
+            50% { opacity: 0.35; transform: scale(1) rotate(15deg); }
           }
           a, button { cursor: none; }
         `}</style>
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span key={i} style={{
             position: 'fixed',
             pointerEvents: 'none',
-            zIndex: 0,
+            zIndex: 5,
             color: '#D4537E',
             left: d.left,
             top: d.top,
