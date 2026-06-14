@@ -6,7 +6,7 @@ import { useLocale } from '../hooks/useLocale'
 import ListaRegalos from '../components/ListaRegalos'
 
 const emojis: Record<string, string> = {
-  cumpleanos: '🎂', boda: '💍', xv: '👑', graduacion: '🎓', babyshower: '🍼', bachelorette: '💃', otro: '✨'
+  cumpleanos: '🎂', boda: '💍', graduacion: '🎓', babyshower: '🍼', bachelorette: '💃', otro: '✨'
 }
 
 export default function EventoPublico({ params }: { params: Promise<{ slug: string }> }) {
@@ -97,7 +97,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
             🥂 {totalRsvps} {totalRsvps === 1 ? t.persona_confirmada : t.personas_confirmadas}
           </p>
         )}
-        {celebracion.es_sorpresa && (
+        {celebracion.es_sorpresa && !esOrganizador && (
           <div style={{ background: 'rgba(255,200,0,0.15)', border: '1px solid rgba(255,200,0,0.4)', borderRadius: 8, padding: '0.5rem 1rem', display: 'inline-block', marginBottom: '1rem' }}>
             <p style={{ color: '#FFD700', fontSize: 13, margin: 0 }}>🤫 Es sorpresa — no le digas al festejado</p>
           </div>
