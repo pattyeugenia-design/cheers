@@ -17,6 +17,7 @@ export default function NuevaCelebracion() {
   const [loading, setLoading] = useState(false)
   const [listo, setListo] = useState(false)
   const [slug, setSlug] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
   function actualizarParada(i: number, campo: keyof Parada, valor: string) {
     const nuevas = [...paradas]
@@ -37,6 +38,7 @@ export default function NuevaCelebracion() {
 
   async function crear() {
     setLoading(true)
+    setErrorMsg('')
     const { data: { user } } = await supabase.auth.getUser()
     const nuevoSlug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
     const paradasLimpias = paradas.filter(p => p.lugar.trim())
@@ -55,6 +57,10 @@ export default function NuevaCelebracion() {
     if (!error) {
       setSlug(nuevoSlug)
       setListo(true)
+    } else if (error.code === '23505') {
+      setErrorMsg('Ya existe una celebración con ese nombre. Usa un nombre distinto (ej: agrega un año o detalle extra).')
+    } else {
+      setErrorMsg('Algo salió mal al crear la celebración. Intenta de nuevo.')
     }
   }
 
@@ -197,6 +203,12 @@ export default function NuevaCelebracion() {
             <button onClick={() => setGifts([...gifts, { nombre: '', link: '' }])} style={{ width: '100%', padding: '0.8rem', background: 'none', border: '2px dashed #D4537E', borderRadius: 12, color: '#D4537E', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: '1.5rem' }}>
               + Agregar gift idea
             </button>
+
+            {errorMsg && (
+              <div style={{ background: 'rgba(212,83,126,0.08)', border: '1px solid rgba(212,83,126,0.25)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '1rem' }}>
+                <p style={{ fontSize: 13, color: '#D4537E', margin: 0, fontWeight: 500 }}>⚠️ {errorMsg}</p>
+              </div>
+            )}
 
             <button onClick={crear} disabled={loading} style={{ width: '100%', padding: '1rem', background: 'linear-gradient(135deg, #534AB7, #D4537E)', border: 'none', borderRadius: 14, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', boxShadow: '0 8px 24px rgba(212,83,126,0.3)' }}>
               {loading ? 'Creando...' : 'Crear celebración 🥂'}
