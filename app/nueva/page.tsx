@@ -246,7 +246,7 @@ export default function NuevaCelebracion() {
 
         {/* ===== FLUJO PRINCIPAL (type → role → celebrating → success) ===== */}
         {(step === 'type' || step === 'role' || step === 'celebrating' || step === 'success') && (
-          <div style={{ width:'100%', maxWidth:468, display:'flex', flexDirection:'column', alignItems:'center', gap:22 }}>
+          <div style={{ width:'100%', maxWidth:468, display:'flex', flexDirection:'column', alignItems:'center', gap: (step === 'success' || step === 'celebrating') ? 0 : 22 }}>
 
             <div style={{ fontSize:23, fontWeight:800, letterSpacing:'-.5px', color:'#fff', textShadow:'0 2px 14px rgba(40,20,70,.35)' }}>Cheers</div>
 
@@ -460,7 +460,7 @@ export default function NuevaCelebracion() {
               <h1 style={{ fontSize:26, fontWeight:850, letterSpacing:'-.6px', margin:'0 0 4px', color:'#2a2440' }}>Invita a tus personas 🎉</h1>
               <p style={{ fontSize:14.5, color:'#6b6585', margin:'0 0 18px' }}>Agrega a tus invitados por email o nombre.</p>
 
-              <div style={{ display:'flex', alignItems:'center', gap:8, background:'#F5F4FB', border:'1.5px solid #EEEDFE', borderRadius:14, padding:'10px 14px', marginBottom:16 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, background:'#F5F4FB', border:'1.5px solid #EEEDFE', borderRadius:14, padding:'10px 14px', marginBottom:6 }}>
                 <span style={{ fontSize:15, color:'#a39ec0' }}>🔍</span>
                 <input
                   value={inviteQuery}
@@ -473,9 +473,19 @@ export default function NuevaCelebracion() {
                       setInviteQuery('')
                     }
                   }}
-                  placeholder="Nombre o email — Enter para agregar"
+                  placeholder="Nombre o email — presiona Enter para agregar"
                   style={{ flex:1, border:'none', background:'transparent', fontFamily:F, fontSize:14.5, fontWeight:600, color:'#2a2440', outline:'none' }}
                 />
+                {inviteQuery.trim() && (
+                  <button onClick={() => {
+                    const id = 'm' + Date.now()
+                    setInvitados(prev => [...prev, { id, name: inviteQuery.trim(), email: inviteQuery.trim() }])
+                    setInvited(prev => ({ ...prev, [id]: true }))
+                    setInviteQuery('')
+                  }} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:12, fontWeight:700, padding:'6px 12px', borderRadius:99, cursor:'pointer', fontFamily:F, flexShrink:0 }}>
+                    + Agregar
+                  </button>
+                )}
               </div>
 
               {invitados.length > 0 && (
@@ -497,9 +507,9 @@ export default function NuevaCelebracion() {
 
               <button
                 onClick={() => router.push(`/${userSlug}/${eventSlug}`)}
-                style={btnPrimary(invitedCount === 0)}
+                style={btnPrimary(false)}
               >
-                {invitedCount > 0 ? `Listo, ver mi celebración (${invitedCount} invitados) →` : 'Ver mi celebración →'}
+                {invitedCount > 0 ? `Ver mi celebración (${invitedCount} invitados) →` : 'Ver mi celebración →'}
               </button>
             </div>
           </div>
