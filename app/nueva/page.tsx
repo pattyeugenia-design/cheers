@@ -270,7 +270,7 @@ export default function NuevaCelebracion() {
                       <div key={t.key}
                         style={cardStyle(tipo === t.key)}
                         onClick={() => setTipo(t.key as TipoEvento)}
-                        onDoubleClick={() => { setTipo(t.key as TipoEvento); /* avanza al hacer doble clic */ }}
+                        onDoubleClick={() => { setTipo(t.key as TipoEvento); setStep('role') }}
                       >
                         {tipo === t.key && (
                           <div style={{ position:'absolute', top:10, right:10, width:22, height:22, borderRadius:'50%', background:'rgba(255,255,255,.3)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✓</div>
@@ -302,7 +302,7 @@ export default function NuevaCelebracion() {
                   {tipo === 'cena' && (
                     <div style={{ display:'flex', flexDirection:'column' }}>
                       {CENA_ROLES.map(r => (
-                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)} onDoubleClick={() => { setRol(r.key as Rol) }}>
+                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)} onDoubleClick={() => { setRol(r.key as Rol); document.querySelector<HTMLInputElement>('input[placeholder*="Ej:"]')?.focus() }}>
                           <div style={{ fontSize:28 }}>{r.emoji}</div>
                           <div style={{ flex:1 }}>
                             <div style={{ fontSize:16, fontWeight:650, color: rol === r.key ? '#fff' : '#2a2440' }}>{r.title}</div>
@@ -318,7 +318,7 @@ export default function NuevaCelebracion() {
                   {!step2cfg.open && tipo !== 'cena' && (
                     <div style={{ display:'flex', flexDirection:'column' }}>
                       {ROLES.map(r => (
-                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)} onDoubleClick={() => { setRol(r.key as Rol) }}>
+                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)} onDoubleClick={() => { setRol(r.key as Rol); document.querySelector<HTMLInputElement>('input[placeholder*="Ej:"]')?.focus() }}>
                           <div style={{ fontSize:28 }}>{r.emoji}</div>
                           <div style={{ flex:1 }}>
                             <div style={{ fontSize:16, fontWeight:650, color: rol === r.key ? '#fff' : '#2a2440' }}>{r.title}</div>
