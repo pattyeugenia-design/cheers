@@ -1,380 +1,510 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import { supabase } from '../supabase'
 
-type Parada = { lugar: string; hora: string; nota: string; waze: string; maps: string; link: string }
-type Gift = { nombre: string; link: string }
+declare global { interface Window { google: any } }
 
-declare global {
-  interface Window {
-    google: any
-  }
+type Step = 'type' | 'role' | 'celebrating' | 'success' | 'invite'
+type TipoEvento = 'cumple' | 'cena' | 'viaje' | 'reunion' | 'evento' | 'otro' | null
+type Rol = 'yo' | 'otro' | 'sorpresa' | null
+
+const TIPOS = [
+  { key: 'cumple',  emoji: '🎂', label: 'Cumpleaños' },
+  { key: 'cena',    emoji: '🍽️', label: 'Cena' },
+  { key: 'viaje',   emoji: '✈️', label: 'Viaje' },
+  { key: 'reunion', emoji: '🤝', label: 'Reunión' },
+  { key: 'evento',  emoji: '🎉', label: 'Evento grande' },
+  { key: 'otro',    emoji: '✨', label: 'Otro' },
+]
+
+const STEP2: Record<string, { title: string; sub: string; open?: boolean; placeholder?: string }> = {
+  viaje:   { title: '¿Qué tipo de viaje?', sub: 'Cuéntanos para personalizar tu plan.', open: true, placeholder: 'Ej: escapada a la playa, aventura en la montaña…' },
+  cena:    { title: '¿Dónde va a ser la cena?', sub: 'Elige el tipo de cena que organizas.' },
+  otro:    { title: '¿Qué van a celebrar?', sub: 'Escríbelo con tus palabras.', open: true, placeholder: 'Ej: reunión de trabajo, despedida de soltera…' },
+  cumple:  { title: '¿Para quién es?', sub: 'Elige tu rol en la celebración.' },
+  reunion: { title: '¿Para quién es?', sub: 'Elige tu rol en la celebración.' },
+  evento:  { title: '¿Para quién es?', sub: 'Elige tu rol en la celebración.' },
+}
+
+const ROLES = [
+  { key: 'yo',       emoji: '🎂', title: 'Es mi celebración',                  sub: 'Yo soy el festejado y organizo mi propio evento' },
+  { key: 'otro',     emoji: '🎁', title: 'Organizo para alguien más',           sub: 'Organizo el evento de otra persona — ya sabe' },
+  { key: 'sorpresa', emoji: '🤫', title: 'Organizo para alguien más — sorpresa', sub: 'Organizo el evento de otra persona — no debe saber' },
+]
+
+const CENA_ROLES = [
+  { key: 'casa',        emoji: '🏠', title: 'En casa',       sub: 'Cena en casa, potluck o preparada en casa' },
+  { key: 'restaurante', emoji: '🍴', title: 'En restaurante', sub: 'Reservación o salida a comer fuera' },
+]
+
+function slugify(str: string) {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40)
 }
 
 export default function NuevaCelebracion() {
   const router = useRouter()
-  const [paso, setPaso] = useState(1)
-  const [rolOrganizador, setRolOrganizador] = useState('')
-  const [esSorpresa, setEsSorpresa] = useState(false)
-  const [nombre, setNombre] = useState('')
-  const [tipo, setTipo] = useState('cumpleanos')
+  const [step, setStep] = useState<Step>('type')
+  const [tipo, setTipo] = useState<TipoEvento>(null)
+  const [rol, setRol] = useState<Rol>(null)
+  const [customEvent, setCustomEvent] = useState('')
+  const [titulo, setTitulo] = useState('')
   const [festejado, setFestejado] = useState('')
-  const [paradas, setParadas] = useState<Parada[]>([{ lugar: '', hora: '', nota: '', waze: '', maps: '', link: '' }])
-  const [gifts, setGifts] = useState<Gift[]>([{ nombre: '', link: '' }])
-  const [loading, setLoading] = useState(false)
-  const [listo, setListo] = useState(false)
-  const [slug, setSlug] = useState('')
+  const [fecha, setFecha] = useState('')
+  const [lugar, setLugar] = useState('')
+  const [userSlug, setUserSlug] = useState('')
+  const [eventSlug, setEventSlug] = useState('')
+  const [linkConfirmed, setLinkConfirmed] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [inviteQuery, setInviteQuery] = useState('')
+  const [invitados, setInvitados] = useState<{id:string;name:string;email:string}[]>([])
+  const [invited, setInvited] = useState<Record<string,boolean>>({})
+  const [verificando, setVerificando] = useState(true)
   const [mapsListo, setMapsListo] = useState(false)
-  const [verificandoSesion, setVerificandoSesion] = useState(true)
+  const [userNombre, setUserNombre] = useState('')
+  const lugarRef = useRef<HTMLInputElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const lugarRefs = useRef<(HTMLInputElement | null)[]>([])
-
-  // Requiere sesión activa: si no hay usuario logueado, redirige a /login
+  // Auth check
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push('/login')
-      } else {
-        setVerificandoSesion(false)
-      }
+      if (!user) { router.push('/login'); return }
+      const nombre = user.user_metadata?.name?.split(' ')[0] || 'tu'
+      setUserNombre(nombre)
+      setUserSlug(slugify(nombre))
+      setVerificando(false)
     })
   }, [router])
 
-  function actualizarParada(i: number, campo: keyof Parada, valor: string) {
-    const nuevas = [...paradas]
-    nuevas[i][campo] = valor
-    setParadas(nuevas)
-  }
-
-  function actualizarGift(i: number, campo: keyof Gift, valor: string) {
-    const nuevos = [...gifts]
-    nuevos[i][campo] = valor
-    setGifts(nuevos)
-  }
-
-  function elegirRol(rol: string) {
-    setRolOrganizador(rol)
-    setEsSorpresa(rol === 'sorpresa')
-  }
-
-  // Inicializa el autocomplete de Google Places en cada input de "lugar" del paso 3
+  // Cursor sparkle trail
   useEffect(() => {
-    if (!mapsListo || paso !== 3) return
-    if (!window.google?.maps?.places) return
-
-    paradas.forEach((_, i) => {
-      const inputEl = lugarRefs.current[i]
-      if (!inputEl || inputEl.dataset.autocompleteInit) return
-
-      const autocomplete = new window.google.maps.places.Autocomplete(inputEl, {
-        fields: ['name', 'formatted_address', 'place_id', 'geometry'],
-      })
-
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace()
-        if (!place) return
-        const nombreLugar = place.name || inputEl.value
-        const direccion = place.formatted_address || ''
-        const mapsLink = place.place_id
-          ? `https://www.google.com/maps/place/?q=place_id:${place.place_id}`
-          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nombreLugar + ' ' + direccion)}`
-
-        setParadas(prev => {
-          const nuevas = [...prev]
-          nuevas[i] = { ...nuevas[i], lugar: nombreLugar, maps: mapsLink }
-          return nuevas
-        })
-      })
-
-      inputEl.dataset.autocompleteInit = 'true'
-    })
-  }, [mapsListo, paso, paradas.length])
-
-  async function crear() {
-    setLoading(true)
-    setErrorMsg('')
-    const { data: { user } } = await supabase.auth.getUser()
-    const nuevoSlug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-    const paradasLimpias = paradas.filter(p => p.lugar.trim())
-    const giftsLimpios = gifts.filter(g => g.link.trim())
-    const { error } = await supabase.from('celebraciones').insert({
-      nombre,
-      tipo,
-      festejado_nombre: rolOrganizador === 'yo' ? user?.user_metadata?.name?.split(' ')[0] : festejado,
-      organizador_id: user?.id || 'anonimo',
-      slug: nuevoSlug,
-      es_sorpresa: esSorpresa,
-      paradas: paradasLimpias,
-      gifts: giftsLimpios,
-    })
-    setLoading(false)
-    if (!error) {
-      setSlug(nuevoSlug)
-      setListo(true)
-    } else if (error.code === '23505') {
-      setErrorMsg('Ya existe una celebración con ese nombre. Usa un nombre distinto (ej: agrega un año o detalle extra).')
-    } else {
-      setErrorMsg('Algo salió mal al crear la celebración. Intenta de nuevo.')
+    const COLORS = ['#D4537E', '#534AB7', '#7F77DD']
+    let last = 0
+    const sparkle = (e: MouseEvent) => {
+      const now = performance.now()
+      if (now - last < 22) return
+      last = now
+      const el = document.createElement('div')
+      el.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;pointer-events:none;z-index:9999;font-size:${Math.random()*10+10}px;color:${COLORS[Math.floor(Math.random()*3)]};animation:destello 0.6s ease-out forwards;`
+      el.textContent = '✦'
+      document.body.appendChild(el)
+      setTimeout(() => el.remove(), 600)
     }
+    document.addEventListener('mousemove', sparkle)
+    return () => document.removeEventListener('mousemove', sparkle)
+  }, [])
+
+  // Google Places autocomplete en campo lugar
+  useEffect(() => {
+    if (!mapsListo || !lugarRef.current || lugarRef.current.dataset.init) return
+    const ac = new window.google.maps.places.Autocomplete(lugarRef.current, { fields: ['name', 'place_id', 'formatted_address'] })
+    ac.addListener('place_changed', () => {
+      const p = ac.getPlace()
+      if (!p) return
+      setLugar(p.name || lugarRef.current?.value || '')
+    })
+    lugarRef.current.dataset.init = 'true'
+  }, [mapsListo, step])
+
+  // Auto-slug del evento desde el título
+  useEffect(() => {
+    if (!linkConfirmed && titulo) setEventSlug(slugify(titulo))
+  }, [titulo, linkConfirmed])
+
+  // Fire confetti al llegar a 'celebrating'
+  useEffect(() => {
+    if (step !== 'celebrating') return
+    fireConfetti(0)
+    fireConfetti(550)
+    setTimeout(() => setStep('success'), 1800)
+  }, [step])
+
+  function fireConfetti(delay: number) {
+    setTimeout(() => {
+      const cv = canvasRef.current; if (!cv) return
+      const ctx = cv.getContext('2d'); if (!ctx) return
+      const dpr = window.devicePixelRatio || 1
+      const W = cv.offsetWidth, H = cv.offsetHeight
+      cv.width = W * dpr; cv.height = H * dpr
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      const colors = ['#534AB7','#D4537E','#EEEDFE','#F5C04E','#fff','#8b7fe8']
+      const parts: any[] = []
+      for (let i = 0; i < 150; i++) {
+        const a = Math.random() * Math.PI * 2
+        const sp = 4 + Math.random() * 9
+        parts.push({ x: W/2, y: H*0.4, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 4,
+          color: colors[Math.floor(Math.random()*colors.length)],
+          w: 6+Math.random()*8, h: 3+Math.random()*5, rot: Math.random()*360,
+          rsp: (Math.random()-0.5)*8, life: 1 })
+      }
+      let raf: number
+      const draw = () => {
+        ctx.clearRect(0,0,W,H)
+        let alive = false
+        for (const p of parts) {
+          p.vy += 0.18; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.rot += p.rsp; p.life -= 0.012
+          if (p.life <= 0) continue; alive = true
+          ctx.save(); ctx.globalAlpha = Math.max(0, p.life)
+          ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI/180)
+          ctx.fillStyle = p.color; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h)
+          ctx.restore()
+        }
+        if (alive) raf = requestAnimationFrame(draw)
+      }
+      raf = requestAnimationFrame(draw)
+      setTimeout(() => cancelAnimationFrame(raf), 4000)
+    }, delay)
   }
 
-  if (verificandoSesion) return (
-    <main style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 50%, #faf9ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      <p style={{ color: '#aeaeb2', fontSize: 14 }}>Cargando...</p>
+  async function guardar() {
+    setSaving(true); setErrorMsg('')
+    const { data: { user } } = await supabase.auth.getUser()
+    const slug = linkConfirmed ? `${userSlug}/${eventSlug}` : slugify(titulo || customEvent || tipo || 'celebracion')
+    const { error } = await supabase.from('celebraciones').insert({
+      nombre: titulo || customEvent || tipo,
+      tipo,
+      festejado_nombre: rol === 'yo' ? userNombre : festejado,
+      organizador_id: user?.id || 'anonimo',
+      slug,
+      es_sorpresa: rol === 'sorpresa',
+      paradas: lugar ? [{ lugar, hora: '', nota: '', waze: '', maps: '', link: '' }] : [],
+      gifts: [],
+      created_at: new Date().toISOString(),
+    })
+    setSaving(false)
+    if (!error) { setStep('celebrating') }
+    else if (error.code === '23505') setErrorMsg('Ya existe una celebración con ese nombre. Cambia el título.')
+    else setErrorMsg('Algo salió mal. Intenta de nuevo.')
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(`https://joincheers.app/${userSlug}/${eventSlug}`)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+
+  const chosenTipo = TIPOS.find(t => t.key === tipo)
+  const step2cfg = tipo ? STEP2[tipo] : null
+  const shareUrl = `joincheers.app/${userSlug}/${eventSlug || 'mi-evento'}`
+  const invitedCount = Object.values(invited).filter(Boolean).length
+
+  if (verificando) return (
+    <main style={{ minHeight:'100vh', background:'linear-gradient(160deg,#faf9ff,#fff5f8)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'-apple-system,sans-serif' }}>
+      <p style={{ color:'#aeaeb2', fontSize:14 }}>Cargando...</p>
     </main>
   )
 
-  if (listo) return (
-    <main style={{ minHeight: '100vh', background: '#26215C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      <style>{`
-        @keyframes clinkL { 0%,100%{transform:rotate(15deg)} 45%,55%{transform:rotate(4deg)} }
-        @keyframes clinkR { 0%,100%{transform:rotate(-15deg)} 45%,55%{transform:rotate(-4deg)} }
-        @keyframes splash { 0%,40%{opacity:0;transform:scale(0) translateX(-50%)} 50%{opacity:1;transform:scale(1) translateX(-50%)} 80%,100%{opacity:0;transform:scale(1.6) translateX(-50%)} }
-        @keyframes bubble { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-55px);opacity:0} }
-      `}</style>
-      <div style={{ textAlign: 'center', color: '#EEEDFE', padding: '2rem' }}>
+  const F = '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif'
+  const bg = 'radial-gradient(circle at 12% 18%,rgba(127,119,221,.55),transparent 45%),radial-gradient(circle at 88% 82%,rgba(212,83,126,.5),transparent 50%),linear-gradient(160deg,#534AB7 0%,#7b46a8 52%,#D4537E 100%)'
 
-        {/* Copas SVG animadas chocando */}
-        <div style={{ position: 'relative', height: 220, width: 280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'absolute', top: 24, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
-            <svg viewBox="0 0 90 70" width="70" height="55">
-              <g fill="#f7d76b" opacity="0.9">
-                <circle cx="45" cy="45" r="4.5" />
-                <ellipse cx="45" cy="24" rx="3.5" ry="9" />
-                <ellipse cx="27" cy="31" rx="3" ry="8" transform="rotate(-30 27 31)" />
-                <ellipse cx="63" cy="31" rx="3" ry="8" transform="rotate(30 63 31)" />
-                <ellipse cx="18" cy="47" rx="2.5" ry="6.5" transform="rotate(-60 18 47)" />
-                <ellipse cx="72" cy="47" rx="2.5" ry="6.5" transform="rotate(60 72 47)" />
-              </g>
-            </svg>
-          </div>
-
-          <svg viewBox="0 0 360 300" width="260" height="220" style={{ overflow: 'visible' }}>
-            <defs>
-              <linearGradient id="liqExito" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#f5c842" stopOpacity="0.85" />
-                <stop offset="50%" stopColor="#f7d76b" />
-                <stop offset="100%" stopColor="#f5c842" stopOpacity="0.85" />
-              </linearGradient>
-              <linearGradient id="glExito" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#7F77DD" stopOpacity="0.15" />
-                <stop offset="40%" stopColor="#fff" stopOpacity="0.45" />
-                <stop offset="100%" stopColor="#7F77DD" stopOpacity="0.12" />
-              </linearGradient>
-              <clipPath id="c1Exito"><path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" /></clipPath>
-              <clipPath id="c2Exito"><path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" /></clipPath>
-            </defs>
-            <g style={{ transformOrigin: '62px 280px', animation: 'clinkL 3s ease-in-out infinite' }}>
-              <path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" fill="url(#glExito)" stroke="#AFA9EC" strokeWidth="1.5" strokeOpacity="0.5" />
-              <g clipPath="url(#c1Exito)">
-                <rect x="14" y="80" width="96" height="86" fill="url(#liqExito)" opacity="0.88" />
-                <ellipse cx="62" cy="80" rx="46" ry="7" fill="#f7d76b" opacity="0.7">
-                  <animate attributeName="ry" values="7;10;7" dur="2s" repeatCount="indefinite" />
-                </ellipse>
-                <rect x="36" y="86" width="3.5" height="68" fill="white" opacity="0.22" rx="1.5" />
-              </g>
-              <line x1="14" y1="16" x2="110" y2="16" stroke="#AFA9EC" strokeWidth="2" strokeOpacity="0.6" strokeLinecap="round" />
-              <rect x="58" y="159" width="9" height="106" fill="#AFA9EC" opacity="0.25" rx="4.5" />
-              <ellipse cx="62" cy="267" rx="36" ry="8" fill="#AFA9EC" opacity="0.15" />
-            </g>
-            <g style={{ transformOrigin: '298px 280px', animation: 'clinkR 3s ease-in-out infinite' }}>
-              <path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" fill="url(#glExito)" stroke="#AFA9EC" strokeWidth="1.5" strokeOpacity="0.5" />
-              <g clipPath="url(#c2Exito)">
-                <rect x="250" y="80" width="96" height="86" fill="url(#liqExito)" opacity="0.88" />
-                <ellipse cx="298" cy="80" rx="46" ry="7" fill="#f7d76b" opacity="0.7">
-                  <animate attributeName="ry" values="7;10;7" dur="2s" repeatCount="indefinite" />
-                </ellipse>
-                <rect x="316" y="86" width="3.5" height="68" fill="white" opacity="0.22" rx="1.5" />
-              </g>
-              <line x1="250" y1="16" x2="346" y2="16" stroke="#AFA9EC" strokeWidth="2" strokeOpacity="0.6" strokeLinecap="round" />
-              <rect x="294" y="159" width="9" height="106" fill="#AFA9EC" opacity="0.25" rx="4.5" />
-              <ellipse cx="298" cy="267" rx="36" ry="8" fill="#AFA9EC" opacity="0.15" />
-            </g>
-          </svg>
-
-          {[
-            { left: 64,  top: 130, size: 6, delay: '0s',   dur: '2s'   },
-            { left: 76,  top: 145, size: 4, delay: '0.7s', dur: '2.3s' },
-            { left: 56,  top: 142, size: 3, delay: '1.2s', dur: '1.9s' },
-          ].map((b, i) => (
-            <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
-          ))}
-          {[
-            { left: 178, top: 130, size: 6, delay: '0.4s', dur: '2.1s' },
-            { left: 190, top: 145, size: 4, delay: '1.1s', dur: '2.4s' },
-            { left: 168, top: 142, size: 3, delay: '0.9s', dur: '2.0s' },
-          ].map((b, i) => (
-            <div key={`r${i}`} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
-          ))}
-        </div>
-
-        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.5px', margin: '0.5rem 0 0.5rem' }}>¡Celebración creada!</h1>
-        <p style={{ color: '#AFA9EC', marginBottom: '2rem', fontSize: 15 }}>{nombre}</p>
-        <a href={`/${slug}`} style={{ display: 'block', padding: '1rem 2rem', background: 'linear-gradient(135deg, #534AB7, #D4537E)', borderRadius: 14, color: '#fff', fontSize: 15, fontWeight: 600, textDecoration: 'none', boxShadow: '0 8px 24px rgba(212,83,126,0.3)', marginBottom: '0.75rem' }}>
-          Ver mi celebración →
-        </a>
-        <a href="/dashboard" style={{ display: 'block', padding: '0.85rem 2rem', background: 'rgba(255,255,255,0.06)', borderRadius: 14, color: '#AFA9EC', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
-          Ir al dashboard
-        </a>
-      </div>
-    </main>
-  )
-
-  const input = {
-    width: '100%',
-    marginBottom: '0.5rem',
-    padding: '0.65rem',
-    borderRadius: 8,
-    border: '1px solid #e0e0e0',
-    fontSize: 13,
-    boxSizing: 'border-box' as const,
-    color: '#1d1d1f',
-    background: '#FFFFFF',
-  }
-
-  const btnRol = (activo: boolean) => ({
-    width: '100%',
-    padding: '1.1rem',
-    background: activo ? 'linear-gradient(135deg, #534AB7, #D4537E)' : '#fff',
-    border: activo ? 'none' : '1.5px solid #f0f0f0',
-    borderRadius: 14,
-    color: activo ? '#fff' : '#1d1d1f',
-    fontSize: 15,
-    fontWeight: 600,
-    cursor: 'pointer',
-    marginBottom: '0.75rem',
-    textAlign: 'left' as const,
-    boxShadow: activo ? '0 8px 24px rgba(212,83,126,0.3)' : '0 2px 8px rgba(0,0,0,0.04)',
-    transition: 'all 0.2s',
+  const btnPrimary = (disabled=false): React.CSSProperties => ({
+    width:'100%', border:'none', borderRadius:18, padding:'17px', fontSize:17, fontWeight:700,
+    fontFamily:F, cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#a79fc4' : '#fff',
+    background: disabled ? '#EAE7F6' : 'linear-gradient(135deg,#534AB7,#D4537E)',
+    boxShadow: disabled ? 'none' : '0 12px 28px rgba(83,74,183,.32)',
   })
+
+  const cardStyle = (sel: boolean): React.CSSProperties => ({
+    position:'relative', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+    gap:10, padding:'20px 12px', borderRadius:20, cursor:'pointer', transition:'all .15s',
+    background: sel ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff',
+    border: sel ? 'none' : '1.5px solid #f0f0f0',
+    boxShadow: sel ? '0 8px 24px rgba(212,83,126,.3)' : '0 2px 8px rgba(0,0,0,.04)',
+    color: sel ? '#fff' : '#2a2440',
+  })
+
+  const roleCardStyle = (sel: boolean): React.CSSProperties => ({
+    display:'flex', alignItems:'center', gap:14, padding:'16px', borderRadius:16, cursor:'pointer',
+    transition:'all .15s', marginBottom:12,
+    background: sel ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff',
+    border: sel ? 'none' : '1.5px solid #f0f0f0',
+    boxShadow: sel ? '0 8px 24px rgba(212,83,126,.3)' : '0 2px 8px rgba(0,0,0,.04)',
+  })
+
+  const inputStyle: React.CSSProperties = {
+    width:'100%', boxSizing:'border-box', padding:'13px 16px', border:'2px solid #EEEDFE',
+    borderRadius:14, fontSize:15, fontFamily:F, color:'#2a2440', outline:'none',
+    background:'#fff', marginBottom:14,
+  }
 
   return (
     <>
-      <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places`}
-        strategy="afterInteractive"
-        onLoad={() => setMapsListo(true)}
-      />
-      <main style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 50%, #faf9ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', padding: '2rem' }}>
-        <div style={{ background: '#fff', borderRadius: 24, padding: '2.5rem', width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(83,74,183,0.12), 0 4px 16px rgba(212,83,126,0.08)' }}>
+      <style>{`
+        @keyframes cheersRise { 0%{opacity:0;transform:translateY(14px)} 100%{opacity:1;transform:translateY(0)} }
+        @keyframes cheersPop  { 0%{transform:scale(.5);opacity:0} 60%{transform:scale(1.12);opacity:1} 100%{transform:scale(1)} }
+        @keyframes cheersPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+        @keyframes destello   { 0%{transform:translate(-50%,-50%) scale(0) rotate(0deg);opacity:1} 100%{transform:translate(-50%,-50%) scale(1) rotate(45deg) translateY(-20px);opacity:0} }
+      `}</style>
 
-          {paso === 1 && (
-            <div>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#D4537E', letterSpacing: '1px', margin: '0 0 6px' }}>PASO 1 DE 3</p>
-              <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px', color: '#1d1d1f', margin: '0 0 1.75rem' }}>¿Para quién es la celebración?</h1>
-              <button style={btnRol(rolOrganizador === 'yo')} onClick={() => elegirRol('yo')} onDoubleClick={() => { elegirRol('yo'); setPaso(2) }}>
-                🎂 Es mi celebración
-                <p style={{ fontSize: 13, color: rolOrganizador === 'yo' ? 'rgba(255,255,255,0.8)' : '#6e6e73', margin: '4px 0 0', fontWeight: 400 }}>Yo soy el festejado y organizo mi propio evento</p>
-              </button>
-              <button style={btnRol(rolOrganizador === 'otro')} onClick={() => elegirRol('otro')} onDoubleClick={() => { elegirRol('otro'); setPaso(2) }}>
-                🎁 Organizo para alguien más
-                <p style={{ fontSize: 13, color: rolOrganizador === 'otro' ? 'rgba(255,255,255,0.8)' : '#6e6e73', margin: '4px 0 0', fontWeight: 400 }}>Organizo el evento de otra persona — ya sabe</p>
-              </button>
-              <button style={btnRol(rolOrganizador === 'sorpresa')} onClick={() => elegirRol('sorpresa')} onDoubleClick={() => { elegirRol('sorpresa'); setPaso(2) }}>
-                🤫 Organizo para alguien más — es sorpresa
-                <p style={{ fontSize: 13, color: rolOrganizador === 'sorpresa' ? 'rgba(255,255,255,0.8)' : '#6e6e73', margin: '4px 0 0', fontWeight: 400 }}>Organizo el evento de otra persona — no debe saber</p>
-              </button>
-              <button onClick={() => setPaso(2)} disabled={!rolOrganizador} style={{ width: '100%', padding: '1rem', background: rolOrganizador ? 'linear-gradient(135deg, #534AB7, #D4537E)' : '#f0f0f0', border: 'none', borderRadius: 14, color: rolOrganizador ? '#fff' : '#aeaeb2', fontSize: 15, fontWeight: 600, cursor: rolOrganizador ? 'pointer' : 'not-allowed', marginTop: '0.5rem', boxShadow: rolOrganizador ? '0 8px 24px rgba(212,83,126,0.3)' : 'none' }}>
-                Siguiente →
-              </button>
-            </div>
-          )}
+      <Script src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places`} strategy="afterInteractive" onLoad={() => setMapsListo(true)} />
 
-          {paso === 2 && (
-            <div>
-              <button onClick={() => setPaso(1)} style={{ background: 'none', border: 'none', color: '#aeaeb2', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: '0.75rem' }}>← Atrás</button>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#D4537E', letterSpacing: '1px', margin: '0 0 6px' }}>PASO 2 DE 3</p>
-              <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px', color: '#1d1d1f', margin: '0 0 1.75rem' }}>Detalles del festejo</h1>
+      <canvas ref={canvasRef} style={{ position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:50 }} />
 
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 6 }}>¿Qué van a celebrar?</label>
-              <select value={tipo} onChange={e => setTipo(e.target.value)} style={{ ...input, marginBottom: '1.25rem' }}>
-                <option value="cumpleanos">🎂 Cumpleaños</option>
-                <option value="boda">💍 Boda</option>
-                <option value="graduacion">🎓 Graduación</option>
-                <option value="babyshower">🍼 Baby shower</option>
-                <option value="bachelorette">💃 Bachelorette</option>
-                <option value="otro">✨ Otro festejo</option>
-              </select>
+      <main style={{ minHeight:'100vh', width:'100%', background: bg, fontFamily:F, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'40px 20px', boxSizing:'border-box' }}>
 
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 6 }}>Nombre del evento</label>
-              <input value={nombre} onChange={e => setNombre(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && nombre) setPaso(3) }} placeholder='Ej: "Los 30 de Rodrigo"' style={{ ...input, marginBottom: '1.25rem' }} />
+        {/* ===== FLUJO PRINCIPAL (type → role → celebrating → success) ===== */}
+        {(step === 'type' || step === 'role' || step === 'celebrating' || step === 'success') && (
+          <div style={{ width:'100%', maxWidth:468, display:'flex', flexDirection:'column', alignItems:'center', gap:22 }}>
 
-              {(rolOrganizador === 'otro' || rolOrganizador === 'sorpresa') && (
-                <>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 6 }}>¿Quién es el festejado?</label>
-                  <input value={festejado} onChange={e => setFestejado(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && nombre) setPaso(3) }} placeholder='Nombre del festejado' style={{ ...input, marginBottom: '1.25rem' }} />
-                </>
+            <div style={{ fontSize:23, fontWeight:800, letterSpacing:'-.5px', color:'#fff', textShadow:'0 2px 14px rgba(40,20,70,.35)' }}>Cheers</div>
+
+            <div style={{ width:'100%', background:'#fff', borderRadius:30, boxShadow:'0 24px 64px rgba(83,74,183,.13)', padding:'34px 30px 30px', boxSizing:'border-box', position:'relative', overflow:'hidden' }}>
+
+              {/* Progress bar */}
+              {(step === 'type' || step === 'role') && (
+                <div style={{ display:'flex', gap:8, marginBottom:26 }}>
+                  <div style={{ height:6, flex:1, borderRadius:99, background:'linear-gradient(135deg,#534AB7,#D4537E)' }} />
+                  <div style={{ height:6, flex:1, borderRadius:99, background: step === 'role' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE' }} />
+                </div>
               )}
 
-              <button onClick={() => setPaso(3)} disabled={!nombre} style={{ width: '100%', padding: '1rem', background: nombre ? 'linear-gradient(135deg, #534AB7, #D4537E)' : '#f0f0f0', border: 'none', borderRadius: 14, color: nombre ? '#fff' : '#aeaeb2', fontSize: 15, fontWeight: 600, cursor: nombre ? 'pointer' : 'not-allowed', marginTop: '0.5rem', boxShadow: nombre ? '0 8px 24px rgba(212,83,126,0.3)' : 'none' }}>
-                Siguiente →
-              </button>
-            </div>
-          )}
-
-          {paso === 3 && (
-            <div>
-              <button onClick={() => setPaso(2)} style={{ background: 'none', border: 'none', color: '#aeaeb2', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: '0.75rem' }}>← Atrás</button>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#D4537E', letterSpacing: '1px', margin: '0 0 6px' }}>PASO 3 DE 3</p>
-              <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px', color: '#1d1d1f', margin: '0 0 1.75rem' }}>El plan 🗺️</h1>
-
-              {paradas.map((p, i) => (
-                <div key={i} style={{ background: '#faf9ff', border: '1px solid #f0eefa', borderRadius: 14, padding: '1rem', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#534AB7', margin: 0 }}>Parada {i + 1}</p>
-                    {paradas.length > 1 && (
-                      <button onClick={() => setParadas(paradas.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: '#aeaeb2', fontSize: 12, cursor: 'pointer' }}>Eliminar</button>
-                    )}
+              {/* STEP 1: Tipo de evento */}
+              {step === 'type' && (
+                <div style={{ animation:'cheersRise .35s ease' }}>
+                  <h1 style={{ fontSize:25, fontWeight:800, letterSpacing:'-.6px', margin:'0 0 4px', color:'#1c1830' }}>¿Qué estás celebrando?</h1>
+                  <p style={{ fontSize:15, color:'#6b6585', margin:'0 0 24px' }}>Elige el tipo de plan que quieres organizar.</p>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                    {TIPOS.map(t => (
+                      <div key={t.key}
+                        style={cardStyle(tipo === t.key)}
+                        onClick={() => setTipo(t.key as TipoEvento)}
+                        onDoubleClick={() => { setTipo(t.key as TipoEvento); /* avanza al hacer doble clic */ }}
+                      >
+                        {tipo === t.key && (
+                          <div style={{ position:'absolute', top:10, right:10, width:22, height:22, borderRadius:'50%', background:'rgba(255,255,255,.3)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✓</div>
+                        )}
+                        <div style={{ fontSize:42, lineHeight:1 }}>{t.emoji}</div>
+                        <div style={{ fontSize:15, fontWeight:650, textAlign:'center', color: tipo === t.key ? '#fff' : '#2a2440' }}>{t.label}</div>
+                      </div>
+                    ))}
                   </div>
-                  <input
-                    ref={el => { lugarRefs.current[i] = el }}
-                    value={p.lugar}
-                    onChange={e => actualizarParada(i, 'lugar', e.target.value)}
-                    placeholder='📍 Lugar — escribe para buscar (ej: Mochomos, Monterrey)'
-                    style={input}
-                  />
-                  <input value={p.hora} onChange={e => actualizarParada(i, 'hora', e.target.value)} placeholder='🕐 Hora (ej: 7pm)' style={input} />
-                  <input value={p.nota} onChange={e => actualizarParada(i, 'nota', e.target.value)} placeholder='📝 Nota opcional (ej: BYOB)' style={input} />
-                  <input value={p.waze} onChange={e => actualizarParada(i, 'waze', e.target.value)} placeholder='🗺️ Link Waze (opcional)' style={input} />
-                  <input value={p.maps} onChange={e => actualizarParada(i, 'maps', e.target.value)} placeholder='🗺️ Link Google Maps (se llena solo al elegir de la lista)' style={input} />
-                  <input value={p.link} onChange={e => actualizarParada(i, 'link', e.target.value)} placeholder='🔗 Link extra: OpenTable, reservación... (opcional)' style={{ ...input, marginBottom: 0 }} />
                 </div>
-              ))}
+              )}
 
-              <button onClick={() => setParadas([...paradas, { lugar: '', hora: '', nota: '', waze: '', maps: '', link: '' }])} style={{ width: '100%', padding: '0.8rem', background: 'none', border: '2px dashed #D4537E', borderRadius: 12, color: '#D4537E', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: '1.5rem' }}>
-                + Agregar parada
-              </button>
+              {/* STEP 2: Rol / personalización */}
+              {step === 'role' && step2cfg && (
+                <div style={{ animation:'cheersRise .35s ease' }}>
+                  <button onClick={() => { setStep('type'); setRol(null) }} style={{ background:'none', border:'none', color:'#534AB7', fontSize:14, fontWeight:600, cursor:'pointer', padding:0, marginBottom:14, fontFamily:F }}>← Atrás</button>
+                  <h1 style={{ fontSize:25, fontWeight:800, letterSpacing:'-.6px', margin:'0 0 4px', color:'#1c1830' }}>{step2cfg.title}</h1>
+                  <p style={{ fontSize:15, color:'#6b6585', margin:'0 0 24px' }}>{step2cfg.sub}</p>
 
-              <p style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f', margin: '0 0 8px' }}>🎁 Gift ideas (opcional)</p>
-              {gifts.map((g, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: '0.5rem' }}>
-                  <input value={g.nombre} onChange={e => actualizarGift(i, 'nombre', e.target.value)} placeholder='Nombre (ej: Liverpool, Amazon)' style={{ ...input, marginBottom: 0, flex: 1 }} />
-                  <input value={g.link} onChange={e => actualizarGift(i, 'link', e.target.value)} placeholder='Link' style={{ ...input, marginBottom: 0, flex: 2 }} />
-                  {gifts.length > 1 && (
-                    <button onClick={() => setGifts(gifts.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: '#aeaeb2', fontSize: 12, cursor: 'pointer' }}>✕</button>
+                  {/* Campo abierto para Viaje / Otro */}
+                  {step2cfg.open && (
+                    <>
+                      <input value={customEvent} onChange={e => setCustomEvent(e.target.value)} placeholder={step2cfg.placeholder} style={inputStyle} />
+                      <p style={{ fontSize:13, color:'#7a7494', margin:'-8px 2px 16px' }}>Aparecerá en la invitación tal como lo escribas.</p>
+                    </>
+                  )}
+
+                  {/* Opciones de cena */}
+                  {tipo === 'cena' && (
+                    <div style={{ display:'flex', flexDirection:'column' }}>
+                      {CENA_ROLES.map(r => (
+                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)} onDoubleClick={() => { setRol(r.key as Rol) }}>
+                          <div style={{ fontSize:28 }}>{r.emoji}</div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:16, fontWeight:650, color: rol === r.key ? '#fff' : '#2a2440' }}>{r.title}</div>
+                            <div style={{ fontSize:13, color: rol === r.key ? 'rgba(255,255,255,.75)' : '#7a7494', marginTop:2 }}>{r.sub}</div>
+                          </div>
+                          {rol === r.key && <div style={{ width:22, height:22, borderRadius:'50%', background:'rgba(255,255,255,.3)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✓</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Opciones de rol (para quién) */}
+                  {!step2cfg.open && tipo !== 'cena' && (
+                    <div style={{ display:'flex', flexDirection:'column' }}>
+                      {ROLES.map(r => (
+                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)} onDoubleClick={() => { setRol(r.key as Rol) }}>
+                          <div style={{ fontSize:28 }}>{r.emoji}</div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:16, fontWeight:650, color: rol === r.key ? '#fff' : '#2a2440' }}>{r.title}</div>
+                            <div style={{ fontSize:13, color: rol === r.key ? 'rgba(255,255,255,.75)' : '#7a7494', marginTop:2 }}>{r.sub}</div>
+                          </div>
+                          {rol === r.key && <div style={{ width:22, height:22, borderRadius:'50%', background:'rgba(255,255,255,.3)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✓</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Campos extra del evento */}
+                  <div style={{ marginTop:8 }}>
+                    <label style={{ fontSize:12, fontWeight:800, letterSpacing:'.4px', color:'#a39ec0', textTransform:'uppercase', display:'block', marginBottom:6 }}>Título del evento</label>
+                    <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={`Ej: ${chosenTipo?.emoji} ${rol === 'yo' ? `Mi ${chosenTipo?.label}` : `${chosenTipo?.label} de...`}`} style={inputStyle} />
+
+                    {(rol === 'otro' || rol === 'sorpresa') && (
+                      <>
+                        <label style={{ fontSize:12, fontWeight:800, letterSpacing:'.4px', color:'#a39ec0', textTransform:'uppercase', display:'block', marginBottom:6 }}>¿Quién es el festejado?</label>
+                        <input value={festejado} onChange={e => setFestejado(e.target.value)} placeholder="Nombre del festejado" style={inputStyle} />
+                      </>
+                    )}
+
+                    <label style={{ fontSize:12, fontWeight:800, letterSpacing:'.4px', color:'#a39ec0', textTransform:'uppercase', display:'block', marginBottom:6 }}>Fecha</label>
+                    <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+
+                    <label style={{ fontSize:12, fontWeight:800, letterSpacing:'.4px', color:'#a39ec0', textTransform:'uppercase', display:'block', marginBottom:6 }}>Lugar</label>
+                    <input ref={lugarRef} value={lugar} onChange={e => setLugar(e.target.value)} placeholder="📍 Buscar lugar..." style={{ ...inputStyle, marginBottom:0 }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Celebrando... */}
+              {step === 'celebrating' && (
+                <div style={{ minHeight:300, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:18, textAlign:'center' }}>
+                  <div style={{ fontSize:72, animation:'cheersPulse .7s ease-in-out infinite' }}>{chosenTipo?.emoji || '🎉'}</div>
+                  <div style={{ fontSize:19, fontWeight:700, color:'#534AB7' }}>Planeando tu celebración…</div>
+                </div>
+              )}
+
+              {/* SUCCESS */}
+              {step === 'success' && (
+                <div style={{ textAlign:'center', padding:'8px 0', animation:'cheersRise .4s ease' }}>
+                  <div style={{ fontSize:64, animation:'cheersPop .6s ease both' }}>🥂</div>
+                  <h1 style={{ fontSize:34, fontWeight:850, letterSpacing:-1, margin:'14px 0 6px', background:'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip:'text', backgroundClip:'text', WebkitTextFillColor:'transparent' }}>¡Cheers!</h1>
+                  <p style={{ fontSize:15, color:'#6b6585', margin:'0 0 20px' }}>¡Tu celebración está lista para compartir!</p>
+
+                  {/* Título editable */}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', margin:'0 4px 6px' }}>
+                    <span style={{ fontSize:11, fontWeight:800, letterSpacing:'.4px', color:'#a39ec0', textTransform:'uppercase' }}>Ponle título a tu evento</span>
+                  </div>
+                  <div style={{ position:'relative', marginBottom:18 }}>
+                    <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={`Ej: ${chosenTipo?.label} de ${userNombre}`} spellCheck={false} style={{ width:'100%', boxSizing:'border-box', textAlign:'center', border:'2px solid #d8d4f5', background:'#fff', borderRadius:14, padding:'13px 40px', fontSize:18, fontWeight:800, color:'#2a2440', fontFamily:F, outline:'none' }} />
+                    <span style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', fontSize:16, color:'#b3adcc', pointerEvents:'none' }}>✎</span>
+                  </div>
+
+                  {/* Link personalizable */}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', margin:'0 4px 6px' }}>
+                    <span style={{ fontSize:11, fontWeight:800, letterSpacing:'.4px', color:'#a39ec0', textTransform:'uppercase' }}>Tu link</span>
+                    {!linkConfirmed && <span style={{ fontSize:11, fontWeight:800, letterSpacing:'.4px', color:'#a39ec0', textTransform:'uppercase' }}>personalízalo</span>}
+                    {linkConfirmed && <span style={{ fontSize:11, fontWeight:800, letterSpacing:'.4px', color:'#1f8a5b', textTransform:'uppercase' }}>🔒 Confirmado</span>}
+                  </div>
+
+                  {!linkConfirmed && (
+                    <>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:8, textAlign:'left', background:'#FFF4E6', borderRadius:13, padding:'11px 13px', marginBottom:12 }}>
+                        <span style={{ fontSize:15, lineHeight:1.3, flexShrink:0 }}>⚠️</span>
+                        <span style={{ fontSize:12.5, color:'#9a6a13', fontWeight:600, lineHeight:1.45 }}>¡Recuerda que después no podrás editar el nombre del evento!</span>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:10, background:'#EEEDFE', borderRadius:16, padding:'11px 12px', marginBottom:16 }}>
+                        <div style={{ flex:1, minWidth:0, textAlign:'left', fontSize:14.5, color:'#534AB7', fontWeight:700, display:'flex', alignItems:'center', flexWrap:'wrap', gap:2 }}>
+                          <span style={{ opacity:.55 }}>joincheers.app/</span>
+                          <input value={userSlug} onChange={e => setUserSlug(slugify(e.target.value))} placeholder="tu_usuario" spellCheck={false} style={{ minWidth:70, border:'none', background:'#fff', color:'#534AB7', fontFamily:F, fontSize:14.5, fontWeight:800, padding:'3px 7px', borderRadius:8, outline:'none' }} />
+                          <span style={{ opacity:.55 }}>/</span>
+                          <input value={eventSlug} onChange={e => setEventSlug(slugify(e.target.value))} placeholder="mi-evento" spellCheck={false} style={{ minWidth:90, border:'none', background:'#fff', color:'#534AB7', fontFamily:F, fontSize:14.5, fontWeight:800, padding:'3px 7px', borderRadius:8, outline:'none' }} />
+                        </div>
+                      </div>
+                      <button onClick={() => setLinkConfirmed(true)} style={btnPrimary()}>Confirmar link</button>
+                    </>
+                  )}
+
+                  {linkConfirmed && (
+                    <>
+                      <div style={{ display:'flex', alignItems:'center', gap:10, background:'#ECF7F0', border:'1.5px solid #cdeedd', borderRadius:16, padding:'13px 14px', marginBottom:10 }}>
+                        <div style={{ flex:1, minWidth:0, textAlign:'left', fontSize:14.5, color:'#2a2440', fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{shareUrl}</div>
+                        <span style={{ flexShrink:0, fontSize:15 }}>🔒</span>
+                        <button onClick={copyLink} style={{ flexShrink:0, border:'none', background:'#fff', color:'#534AB7', fontSize:13, fontWeight:700, padding:'8px 14px', borderRadius:11, cursor:'pointer', fontFamily:F }}>
+                          {copied ? '¡Copiado!' : 'Copiar'}
+                        </button>
+                      </div>
+                      <div style={{ textAlign:'left', fontSize:12.5, color:'#1f8a5b', fontWeight:700, margin:'0 4px 16px' }}>✓ Link confirmado · ya no se puede cambiar</div>
+                      <button onClick={() => setStep('invite')} style={btnPrimary()}>Invitar personas →</button>
+                    </>
+                  )}
+
+                  {errorMsg && (
+                    <div style={{ background:'rgba(212,83,126,.08)', border:'1px solid rgba(212,83,126,.25)', borderRadius:12, padding:'12px 14px', margin:'12px 0' }}>
+                      <p style={{ fontSize:13, color:'#D4537E', margin:0, fontWeight:500 }}>⚠️ {errorMsg}</p>
+                    </div>
                   )}
                 </div>
-              ))}
-              <button onClick={() => setGifts([...gifts, { nombre: '', link: '' }])} style={{ width: '100%', padding: '0.8rem', background: 'none', border: '2px dashed #D4537E', borderRadius: 12, color: '#D4537E', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: '1.5rem' }}>
-                + Agregar gift idea
-              </button>
+              )}
+            </div>
 
-              {errorMsg && (
-                <div style={{ background: 'rgba(212,83,126,0.08)', border: '1px solid rgba(212,83,126,0.25)', borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '1rem' }}>
-                  <p style={{ fontSize: 13, color: '#D4537E', margin: 0, fontWeight: 500 }}>⚠️ {errorMsg}</p>
+            {/* Botón de acción principal */}
+            {(step === 'type' || step === 'role') && (
+              <button
+                onClick={() => {
+                  if (step === 'type') {
+                    if (tipo) setStep('role')
+                  } else {
+                    const canAdvance = step2cfg?.open ? !!customEvent : !!rol
+                    if (canAdvance && titulo) guardar()
+                    else if (canAdvance && !titulo) {
+                      // pide título
+                      document.querySelector<HTMLInputElement>('input[placeholder*="Ej:"]')?.focus()
+                    }
+                  }
+                }}
+                style={btnPrimary(step === 'type' ? !tipo : (step2cfg?.open ? !customEvent : !rol))}
+              >
+                {step === 'type' ? 'Continuar' : saving ? 'Creando...' : "Let's Cheer? 🥂"}
+              </button>
+            )}
+
+          </div>
+        )}
+
+        {/* ===== INVITE ===== */}
+        {step === 'invite' && (
+          <div style={{ width:'100%', maxWidth:468, display:'flex', flexDirection:'column', gap:18 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <button onClick={() => setStep('success')} style={{ background:'rgba(255,255,255,.92)', border:'none', color:'#534AB7', fontSize:14, fontWeight:700, padding:'9px 16px', borderRadius:99, cursor:'pointer', fontFamily:F, boxShadow:'0 4px 14px rgba(20,10,40,.18)' }}>← Volver</button>
+              <div style={{ fontSize:19, fontWeight:800, letterSpacing:'-.4px', color:'#fff' }}>Cheers</div>
+              <div style={{ width:84 }} />
+            </div>
+
+            <div style={{ background:'#fff', borderRadius:26, padding:'24px 22px', boxShadow:'0 18px 46px rgba(25,12,50,.22)' }}>
+              <h1 style={{ fontSize:26, fontWeight:850, letterSpacing:'-.6px', margin:'0 0 4px', color:'#2a2440' }}>Invita a tus personas 🎉</h1>
+              <p style={{ fontSize:14.5, color:'#6b6585', margin:'0 0 18px' }}>Agrega a tus invitados por email o nombre.</p>
+
+              <div style={{ display:'flex', alignItems:'center', gap:8, background:'#F5F4FB', border:'1.5px solid #EEEDFE', borderRadius:14, padding:'10px 14px', marginBottom:16 }}>
+                <span style={{ fontSize:15, color:'#a39ec0' }}>🔍</span>
+                <input
+                  value={inviteQuery}
+                  onChange={e => setInviteQuery(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && inviteQuery.trim()) {
+                      const id = 'm' + Date.now()
+                      setInvitados(prev => [...prev, { id, name: inviteQuery.trim(), email: inviteQuery.trim() }])
+                      setInvited(prev => ({ ...prev, [id]: true }))
+                      setInviteQuery('')
+                    }
+                  }}
+                  placeholder="Nombre o email — Enter para agregar"
+                  style={{ flex:1, border:'none', background:'transparent', fontFamily:F, fontSize:14.5, fontWeight:600, color:'#2a2440', outline:'none' }}
+                />
+              </div>
+
+              {invitados.length > 0 && (
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
+                  {invitados.map(c => (
+                    <div key={c.id} onClick={() => setInvited(prev => ({ ...prev, [c.id]: !prev[c.id] }))} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', borderRadius:14, cursor:'pointer', border: invited[c.id] ? '1.5px solid #534AB7' : '1.5px solid #EEEDFE', background: invited[c.id] ? '#F3F1FB' : '#fff' }}>
+                      <div style={{ width:36, height:36, borderRadius:'50%', background: invited[c.id] ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE', color: invited[c.id] ? '#fff' : '#534AB7', fontSize:14, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        {c.name[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:'#2a2440' }}>{c.name}</div>
+                        <div style={{ fontSize:12, color:'#7a7494' }}>{c.email}</div>
+                      </div>
+                      {invited[c.id] && <span style={{ color:'#534AB7', fontWeight:800 }}>✓</span>}
+                    </div>
+                  ))}
                 </div>
               )}
 
-              <button onClick={crear} disabled={loading} style={{ width: '100%', padding: '1rem', background: 'linear-gradient(135deg, #534AB7, #D4537E)', border: 'none', borderRadius: 14, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', boxShadow: '0 8px 24px rgba(212,83,126,0.3)' }}>
-                {loading ? 'Creando...' : 'Crear celebración 🥂'}
+              <button
+                onClick={() => router.push(`/${userSlug}/${eventSlug}`)}
+                style={btnPrimary(invitedCount === 0)}
+              >
+                {invitedCount > 0 ? `Listo, ver mi celebración (${invitedCount} invitados) →` : 'Ver mi celebración →'}
               </button>
             </div>
-          )}
+          </div>
+        )}
 
-        </div>
       </main>
     </>
   )
