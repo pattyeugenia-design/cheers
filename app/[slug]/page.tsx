@@ -6,7 +6,8 @@ import { useLocale } from '../hooks/useLocale'
 import ListaRegalos from '../components/ListaRegalos'
 
 const emojis: Record<string, string> = {
-  cumpleanos: '🎂', boda: '💍', graduacion: '🎓', babyshower: '🍼', bachelorette: '💃', otro: '✨'
+  cumple: '🎂', cumpleanos: '🎂', boda: '💍', graduacion: '🎓', babyshower: '🍼',
+  bachelorette: '💃', cena: '🍽️', viaje: '✈️', reunion: '🤝', evento: '🎉', otro: '✨'
 }
 
 export default function EventoPublico({ params }: { params: Promise<{ slug: string }> }) {
@@ -33,17 +34,31 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
   }, [])
 
   async function cargarDatos(s: string) {
-    const { data: cel } = await supabase.from('celebraciones').select('*').eq('slug', s).single()
+    // Busca primero por slug exacto, luego por slug que termine con /s
+    let { data: cel } = await supabase.from('celebraciones').select('*').eq('slug', s).single()
+
+    // Si no encuentra, busca slugs que terminen con el segmento (nuevo formato usuario/evento)
+    if (!cel) {
+      const { data: cels } = await supabase.from('celebraciones').select('*').ilike('slug', `%/${s}`)
+      if (cels && cels.length > 0) cel = cels[0]
+    }
+
+    // Si tampoco, busca por nombre slugificado (fallback)
+    if (!cel) {
+      const { data: cels } = await supabase.from('celebraciones').select('*').ilike('slug', `%${s}%`)
+      if (cels && cels.length > 0) cel = cels[0]
+    }
+
     setCelebracion(cel)
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user && cel && user.id === cel.organizador_id) {
       setEsOrganizador(true)
-      const { data: listaRsvps } = await supabase.from('rsvps').select('*').eq('celebracion_slug', s).order('created_at', { ascending: false })
+      const { data: listaRsvps } = await supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setRsvps(listaRsvps || [])
     }
 
-    const { count } = await supabase.from('rsvps').select('*', { count: 'exact', head: true }).eq('celebracion_slug', s).eq('asistencia', 'si')
+    const { count } = await supabase.from('rsvps').select('*', { count: 'exact', head: true }).eq('celebracion_slug', cel?.slug || s).eq('asistencia', 'si')
     setTotalRsvps(count || 0)
     setCargando(false)
   }
@@ -62,7 +77,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
   async function enviarRsvp() {
     if (!nombre || !asistencia) return
     setEnviando(true)
-    await supabase.from('rsvps').insert({ celebracion_slug: slug, nombre, asistencia, mensaje })
+    await supabase.from('rsvps').insert({ celebracion_slug: celebracion?.slug || slug, nombre, asistencia, mensaje })
     setConfirmado(true)
     setEnviando(false)
     if (asistencia === 'si') setTotalRsvps(t => t + 1)
@@ -91,7 +106,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
       <div style={{ background: 'linear-gradient(160deg, #3C3489 0%, #7F77DD 100%)', padding: '2.5rem 1.5rem 2rem', textAlign: 'center' }}>
         <p style={{ fontSize: 52, margin: '0 0 8px' }}>{emojis[celebracion.tipo] || '✨'}</p>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: '#FFFFFF', margin: '0 0 6px' }}>{celebracion.nombre}</h1>
-        <p style={{ fontSize: 14, color: '#CECBF6', margin: '0 0 12px' }}>joincheers.app/{celebracion.slug}</p>
+        <p style={{ fontSize: 14, color: '#CECBF6', margin: '0 0 12px' }}>joincheers.app/{slug}</p>
         {totalRsvps > 0 && (
           <p style={{ fontSize: 13, color: '#AFA9EC', margin: '0 0 16px' }}>
             🥂 {totalRsvps} {totalRsvps === 1 ? t.persona_confirmada : t.personas_confirmadas}
@@ -174,7 +189,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
             {!mostrarForm && !confirmado && (
               <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '1.5rem', textAlign: 'center' }}>
                 <p style={{ fontSize: 15, color: '#EEEDFE', margin: '0 0 1rem' }}>{t.vas_a_ir}</p>
-                <button onClick={() => setMostrarForm(true)} style={{ width: '100%', padding: '0.9rem', background: '#7F77DD', border: 'none', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, cursor: 'pointer' }}>
+                <button onClick={() => setMostrarForm(true)} style={{ width: '100%', padding: '0.9rem', background: 'linear-gradient(135deg,#534AB7,#D4537E)', border: 'none', borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
                   {t.confirmar_asistencia}
                 </button>
               </div>
@@ -188,14 +203,14 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
                 <label style={{ fontSize: 13, color: '#AFA9EC', display: 'block', marginBottom: 8 }}>{t.vas_a_ir_pregunta}</label>
                 <div style={{ display: 'flex', gap: 8, marginBottom: '1rem' }}>
                   {[{ val: 'si', label: t.si_voy }, { val: 'no', label: t.no_puedo }, { val: 'talvez', label: t.tal_vez }].map(op => (
-                    <button key={op.val} onClick={() => setAsistencia(op.val)} style={{ flex: 1, padding: '0.6rem 0.3rem', background: asistencia === op.val ? '#7F77DD' : 'rgba(255,255,255,0.08)', border: `1px solid ${asistencia === op.val ? '#7F77DD' : 'rgba(255,255,255,0.12)'}`, borderRadius: 8, color: '#EEEDFE', fontSize: 12, cursor: 'pointer' }}>
+                    <button key={op.val} onClick={() => setAsistencia(op.val)} style={{ flex: 1, padding: '0.6rem 0.3rem', background: asistencia === op.val ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,0.08)', border: `1px solid ${asistencia === op.val ? '#534AB7' : 'rgba(255,255,255,0.12)'}`, borderRadius: 8, color: '#EEEDFE', fontSize: 12, cursor: 'pointer' }}>
                       {op.label}
                     </button>
                   ))}
                 </div>
                 <label style={{ fontSize: 13, color: '#AFA9EC', display: 'block', marginBottom: 4 }}>{t.mensaje_label}</label>
                 <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder={t.mensaje_placeholder} rows={3} style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#EEEDFE', fontSize: 14, marginBottom: '1rem', boxSizing: 'border-box', resize: 'none' }} />
-                <button onClick={enviarRsvp} disabled={!nombre || !asistencia || enviando} style={{ width: '100%', padding: '0.9rem', background: (!nombre || !asistencia) ? 'rgba(127,119,221,0.4)' : '#7F77DD', border: 'none', borderRadius: 8, color: '#EEEDFE', fontSize: 15, fontWeight: 500, cursor: (!nombre || !asistencia) ? 'not-allowed' : 'pointer' }}>
+                <button onClick={enviarRsvp} disabled={!nombre || !asistencia || enviando} style={{ width: '100%', padding: '0.9rem', background: (!nombre || !asistencia) ? 'rgba(127,119,221,0.4)' : 'linear-gradient(135deg,#534AB7,#D4537E)', border: 'none', borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, cursor: (!nombre || !asistencia) ? 'not-allowed' : 'pointer' }}>
                   {enviando ? t.enviando : t.enviar}
                 </button>
               </div>
@@ -213,7 +228,7 @@ export default function EventoPublico({ params }: { params: Promise<{ slug: stri
           </div>
         )}
 
-        <ListaRegalos slug={slug} esOrganizador={esOrganizador} />
+        <ListaRegalos slug={celebracion?.slug || slug} esOrganizador={esOrganizador} />
       </div>
     </main>
   )
