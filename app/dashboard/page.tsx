@@ -77,7 +77,7 @@ export default function Dashboard() {
                   style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '1rem 1.25rem', background: 'rgba(255,255,255,.06)', borderRadius: 16, cursor: 'pointer', border: '1px solid rgba(255,255,255,.08)', transition: 'background .15s' }}
                 >
                   <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#534AB7,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '.5px' }}>{(TIPO_LABEL[cel.tipo] || 'Otro').slice(0, 3)}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '.5px' }}>{{ cumple: 'BDAY', cumpleanos: 'BDAY', cena: 'DINE', viaje: 'TRIP', reunion: 'MEET', evento: 'EVENT', otro: 'OTHER' }[cel.tipo] || 'EVT'}</span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#EEEDFE', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cel.nombre}</div>
