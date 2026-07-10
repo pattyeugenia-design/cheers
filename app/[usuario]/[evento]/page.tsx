@@ -645,7 +645,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
             <div style={{ padding: '16px 18px 20px' }}>
               <div style={{ marginBottom: 10 }}>
-                <input value={title} onChange={e => setTitle(e.target.value)} onBlur={e => guardarCampo('nombre', e.target.value)} placeholder={tx.title_placeholder} style={tituloInputStyle} />
+                git add -A && git commit -m "quitar titulo duplicado del hero card" && git push
                 <input value={tagline} onChange={e => setTagline(e.target.value)} onBlur={e => guardarCampo('tagline', e.target.value)} placeholder={tx.tagline_placeholder} style={{ border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 13, color: '#7a7494', padding: '3px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
               </div>
 
