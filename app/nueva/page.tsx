@@ -290,8 +290,7 @@ export default function NuevaCelebracion() {
                         {tipo === t.key && (
                           <div style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>
                         )}
-                        <div style={{ fontSize: 15, fontWeight: 700, color: tipo === t.key ? '#fff' : '#534AB7', background: tipo === t.key ? 'rgba(255,255,255,.2)' : '#EEEDFE', padding: '6px 10px', borderRadius: 8 }}>{t.label.slice(0, 3).toUpperCase()}</div>
-                        <div style={{ fontSize: 15, fontWeight: 650, textAlign: 'center', color: tipo === t.key ? '#fff' : '#2a2440' }}>{t.label}</div>
+<div style={{ fontSize: 15, fontWeight: 700, color: tipo === t.key ? '#fff' : '#534AB7', background: tipo === t.key ? 'rgba(255,255,255,.2)' : '#EEEDFE', padding: '6px 10px', borderRadius: 8 }}>{{ cumple: 'BDAY', cena: 'DINE', viaje: 'TRIP', reunion: 'MEET', evento: 'EVENT', otro: 'OTHER' }[t.key]}</div>                        <div style={{ fontSize: 15, fontWeight: 650, textAlign: 'center', color: tipo === t.key ? '#fff' : '#2a2440' }}>{t.label}</div>
                       </div>
                     ))}
                   </div>
