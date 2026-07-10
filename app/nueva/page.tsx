@@ -362,8 +362,7 @@ export default function NuevaCelebracion() {
                 <div style={{ minHeight: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, textAlign: 'center' }}>
                   <div style={{ fontSize: 72, animation: 'cheersPulse .7s ease-in-out infinite' }}>
                     <div style={{ width: 72, height: 72, borderRadius: 22, background: 'linear-gradient(135deg,#534AB7,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{(chosenTipo?.label || 'EVE').slice(0, 3).toUpperCase()}</span>
-                    </div>
+<span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{{ cumple: 'BDAY', cena: 'DINE', viaje: 'TRIP', reunion: 'MEET', evento: 'EVENT', otro: 'OTHER' }[tipo || ''] || 'CHR'}</span>                    </div>
                   </div>
                   <div style={{ fontSize: 19, fontWeight: 700, color: '#534AB7' }}>Planeando tu celebración…</div>
                 </div>
