@@ -196,8 +196,11 @@ export default function NuevaCelebracion() {
     router.push(`/${slugFinal}`)
   }
 
+  const LIMITE_FREE = 3
+
   function agregarInvitado() {
     if (!inviteQuery.trim()) return
+    if (invitados.length >= LIMITE_FREE) return
     const id = 'm' + Date.now()
     setInvitados(prev => [...prev, { id, name: inviteQuery.trim(), email: inviteQuery.trim() }])
     setInvited(prev => ({ ...prev, [id]: true }))
@@ -477,20 +480,34 @@ export default function NuevaCelebracion() {
               <h1 style={{ fontSize: 26, fontWeight: 850, letterSpacing: '-.6px', margin: '0 0 4px', color: '#2a2440' }}>Invita a tus personas</h1>
               <p style={{ fontSize: 14.5, color: '#6b6585', margin: '0 0 18px' }}>Agrega a tus invitados por email o nombre.</p>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F4FB', border: '1.5px solid #EEEDFE', borderRadius: 14, padding: '10px 14px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: invitados.length >= LIMITE_FREE ? '#f5f4fb' : '#F5F4FB', border: '1.5px solid #EEEDFE', borderRadius: 14, padding: '10px 14px', marginBottom: 12, opacity: invitados.length >= LIMITE_FREE ? 0.5 : 1 }}>
                 <input
                   value={inviteQuery}
                   onChange={e => setInviteQuery(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') agregarInvitado() }}
-                  placeholder="Nombre o email — presiona Enter para agregar"
+                  placeholder={invitados.length >= LIMITE_FREE ? `Límite de ${LIMITE_FREE} invitados alcanzado` : 'Nombre o email — presiona Enter para agregar'}
+                  disabled={invitados.length >= LIMITE_FREE}
                   style={{ flex: 1, border: 'none', background: 'transparent', fontFamily: F, fontSize: 14.5, fontWeight: 600, color: '#2a2440', outline: 'none' }}
                 />
-                {inviteQuery.trim() && (
+                {inviteQuery.trim() && invitados.length < LIMITE_FREE && (
                   <button onClick={agregarInvitado} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', fontFamily: F, flexShrink: 0 }}>
                     + Agregar
                   </button>
                 )}
               </div>
+
+              {/* Banner límite free */}
+              {invitados.length >= LIMITE_FREE && (
+                <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 16, padding: '16px 18px', marginBottom: 12, color: '#fff' }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Límite del plan gratuito</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.5, opacity: 0.92, marginBottom: 12 }}>
+                    Puedes invitar hasta {LIMITE_FREE} personas gratis. Con Pro invitas hasta 10, con Lifetime invitas a todos los que quieras.
+                  </div>
+                  <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
+                    Hazte Pro o Lifetime →
+                  </button>
+                </div>
+              )}
 
               {invitados.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
