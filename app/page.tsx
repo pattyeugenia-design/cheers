@@ -236,7 +236,7 @@ export default function Home() {
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', fontWeight: 600, letterSpacing: '.5px' }}>{tx.beta}</span>
             </div>
 
-            <h1 style={{ fontSize: isMobile ? 48 : isTablet ? 58 : 72, fontWeight: 900, letterSpacing: isMobile ? '-2px' : '-3px', lineHeight: 1, margin: '0 0 20px', color: '#fff' }}>
+            <h1 style={{ fontSize: isMobile ? 38 : isTablet ? 52 : 72, fontWeight: 900, letterSpacing: isMobile ? '-2px' : '-3px', lineHeight: 1, margin: '0 0 20px', color: '#fff' }}>
               {tx.h1.split('\n').map((line, i) => (
                 <span key={i}>
                   {i === 0 ? line : <><br /><span style={{ background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{line}</span></>}
