@@ -25,10 +25,10 @@ const TEMAS: Record<string, { label_key: string; bg: string; dark: boolean; tile
 const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
 
 const FUENTES: Record<string, { label_key: string; font: string; sample: string }> = {
-  system:  { label_key: 'font_modern',  font: FSYS,                                                                    sample: 'Patty Cumple 41' },
-  georgia: { label_key: 'font_classic', font: 'Georgia, "Times New Roman", serif',                                     sample: 'Patty Cumple 41' },
-  lora:    { label_key: 'font_elegant', font: '"Lora", Georgia, serif',                                                sample: 'Patty Cumple 41' },
-  fredoka: { label_key: 'font_fun',     font: '"Fredoka One", "Comic Sans MS", cursive',                               sample: 'Patty Cumple 41' },
+  system:  { label_key: 'font_modern',  font: FSYS,                                                                    sample: 'Tu evento' },
+  georgia: { label_key: 'font_classic', font: 'Georgia, "Times New Roman", serif',                                     sample: 'Tu evento' },
+  lora:    { label_key: 'font_elegant', font: '"Lora", Georgia, serif',                                                sample: 'Tu evento' },
+  fredoka: { label_key: 'font_fun',     font: '"Fredoka One", "Comic Sans MS", cursive',                               sample: 'Tu evento' },
 }
 const FUENTE_ORDER = ['system', 'georgia', 'lora', 'fredoka']
 
