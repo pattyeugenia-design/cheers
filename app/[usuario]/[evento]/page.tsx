@@ -27,6 +27,8 @@ const DEFAULT_TILES_VISIBLES: Record<string, boolean> = {
   itinerario: true, presupuesto: true, quellevar: true, menu: true, reservacion: true
 }
 
+const LIMITE_FREE = 3
+
 const BG: Record<string, { css: string; dark: boolean; label: string }> = {
   morado:  { css: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)', dark: true,  label: 'Morado' },
   rosa:    { css: 'linear-gradient(155deg,#D4537E,#a14b9c)', dark: true, label: 'Rosa' },
@@ -35,6 +37,29 @@ const BG: Record<string, { css: string; dark: boolean; label: string }> = {
   crema:   { css: '#FBF4EC', dark: false, label: 'Crema' },
 }
 const BG_ORDER = ['morado', 'rosa', 'noche', 'lavanda', 'crema']
+
+// Estrellitas decorativas para el fondo
+const STARS = [
+  { top: '4%',  left: '8%',  size: 22, opacity: 0.55 },
+  { top: '6%',  left: '55%', size: 14, opacity: 0.4  },
+  { top: '3%',  left: '82%', size: 28, opacity: 0.5  },
+  { top: '12%', left: '93%', size: 16, opacity: 0.35 },
+  { top: '18%', left: '3%',  size: 12, opacity: 0.3  },
+  { top: '25%', left: '97%', size: 20, opacity: 0.45 },
+  { top: '35%', left: '1%',  size: 18, opacity: 0.4  },
+  { top: '42%', left: '96%', size: 14, opacity: 0.3  },
+  { top: '50%', left: '4%',  size: 24, opacity: 0.5  },
+  { top: '55%', left: '92%', size: 16, opacity: 0.35 },
+  { top: '62%', left: '2%',  size: 12, opacity: 0.3  },
+  { top: '68%', left: '95%', size: 22, opacity: 0.45 },
+  { top: '75%', left: '5%',  size: 18, opacity: 0.4  },
+  { top: '80%', left: '90%', size: 14, opacity: 0.35 },
+  { top: '88%', left: '8%',  size: 26, opacity: 0.5  },
+  { top: '92%', left: '88%', size: 16, opacity: 0.4  },
+  { top: '95%', left: '45%', size: 12, opacity: 0.3  },
+  { top: '20%', left: '48%', size: 10, opacity: 0.25 },
+  { top: '60%', left: '50%', size: 10, opacity: 0.2  },
+]
 
 function tilesForType(type: string, sub?: string) {
   const SETS: Record<string, string[]> = {
@@ -98,6 +123,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [celebracion, setCelebracion] = useState<any>(null)
   const [rsvps, setRsvps] = useState<any[]>([])
+  const [invitadosList, setInvitadosList] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
   const [acceso, setAcceso] = useState<'loading' | 'ok' | 'denied'>('loading')
 
@@ -115,6 +141,11 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [showCustomize, setShowCustomize] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [guardandoToggle, setGuardandoToggle] = useState(false)
+
+  // Agregar invitados desde dashboard
+  const [showAddInvitado, setShowAddInvitado] = useState(false)
+  const [nuevoInvitado, setNuevoInvitado] = useState('')
+  const [guardandoInvitado, setGuardandoInvitado] = useState(false)
 
   useEffect(() => {
     params.then(async ({ usuario, evento }) => {
@@ -145,6 +176,10 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
       const { data: rsvpData } = await supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setRsvps(rsvpData || [])
+
+      const { data: invData } = await supabase.from('invitados').select('*').eq('celebracion_slug', `${usuario}/${evento}`).order('created_at', { ascending: false })
+      setInvitadosList(invData || [])
+
       setCargando(false)
     })
   }, [])
@@ -174,14 +209,11 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   async function subirPortada(file: File) {
     if (!file || !celebracion) return
     if (!file.type.startsWith('image/')) return
-
     setSubiendoPortada(true)
     const ext = file.name.split('.').pop()
     const path = `${celebracion.slug.replace('/', '-')}-portada.${ext}`
-
     const { error } = await supabase.storage.from('portadas').upload(path, file, { upsert: true })
     if (error) { setSubiendoPortada(false); return }
-
     const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
     await supabase.from('celebraciones').update({ portada_url: publicUrl }).eq('slug', celebracion.slug)
     setPortadaUrl(publicUrl)
@@ -198,6 +230,24 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     setDragOver(false)
     const file = e.dataTransfer.files?.[0]
     if (file) subirPortada(file)
+  }
+
+  async function agregarInvitado() {
+    if (!nuevoInvitado.trim() || !celebracion) return
+    if (invitadosList.length >= LIMITE_FREE) return
+    setGuardandoInvitado(true)
+    const row = {
+      celebracion_slug: celebracion.slug,
+      email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null,
+      nombre: nuevoInvitado.trim(),
+      user_id: null,
+      created_at: new Date().toISOString(),
+    }
+    const { data } = await supabase.from('invitados').insert(row).select().single()
+    if (data) setInvitadosList(prev => [...prev, data])
+    setNuevoInvitado('')
+    setGuardandoInvitado(false)
+    setShowAddInvitado(false)
   }
 
   if (cargando) return (
@@ -221,14 +271,28 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const bg = BG[planBg]
   const dark = bg.dark
   const textColor = dark ? '#ffffff' : '#2a2440'
+  const starColor = dark ? 'rgba(255,255,255,' : 'rgba(83,74,183,'
   const tipoLabel = TIPO_LABEL[celebracion?.tipo] || 'Celebración'
   const confirmados = rsvps.filter(r => r.asistencia === 'si').length
   const porConfirmar = rsvps.filter(r => r.asistencia !== 'si').length
   const shareUrl = `joincheers.app/${celebracion?.slug}/r`
+  const limiteAlcanzado = invitadosList.length >= LIMITE_FREE
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: bg.css, padding: '26px 18px 44px', boxSizing: 'border-box', fontFamily: FONT }}>
-      <div style={{ position: 'relative', maxWidth: 940, margin: '0 auto' }}>
+
+      {/* Estrellitas de fondo */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        {STARS.map((s, i) => (
+          <div key={i} style={{
+            position: 'absolute', top: s.top, left: s.left,
+            fontSize: s.size, color: `${starColor}${s.opacity})`,
+            lineHeight: 1, userSelect: 'none'
+          }}>✦</div>
+        ))}
+      </div>
+
+      <div style={{ position: 'relative', maxWidth: 940, margin: '0 auto', zIndex: 1 }}>
 
         {/* Top bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -249,8 +313,6 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
         {/* Hero card */}
         <div style={{ background: 'rgba(255,255,255,.97)', borderRadius: 26, overflow: 'hidden', boxShadow: '0 18px 46px rgba(25,12,50,.22)', marginBottom: 16 }}>
-
-          {/* Portada */}
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
           <div
             onClick={() => !subiendoPortada && fileInputRef.current?.click()}
@@ -262,19 +324,14 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
               background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: subiendoPortada ? 'wait' : 'pointer',
-              position: 'relative',
-              transition: 'background .2s',
+              position: 'relative', transition: 'background .2s',
               border: dragOver ? '2px dashed #534AB7' : 'none',
             }}
           >
             {subiendoPortada ? (
-              <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>
-                Subiendo imagen...
-              </div>
+              <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>Subiendo imagen...</div>
             ) : portadaUrl ? (
-              <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.5)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99 }}>
-                Cambiar imagen
-              </div>
+              <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.5)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99 }}>Cambiar imagen</div>
             ) : (
               <div style={{ textAlign: 'center', color: '#a39ec0' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Sube una imagen de portada</div>
@@ -384,6 +441,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                   <button onClick={() => cycleSize(i)} title="Cambiar tamaño" style={{ border: 'none', background: '#F3F1FB', color: '#534AB7', width: 28, height: 28, borderRadius: 9, cursor: 'pointer', fontSize: 13, fontFamily: FONT }}>⤢</button>
                 </div>
 
+                {/* Invitados */}
                 {tile.key === 'invitados' && (
                   <div>
                     <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
@@ -396,17 +454,75 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                         <div style={{ fontSize: 12, color: '#c98a1e', fontWeight: 700, marginTop: 3 }}>Por confirmar</div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {rsvps.slice(0, 6).map((r, j) => (
-                        <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#EEEDFE', color: '#534AB7', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initial(r.nombre)}</div>
-                          <span style={{ flex: 1, fontSize: 14, color: '#2a2440', fontWeight: 600 }}>{r.nombre}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: r.asistencia === 'si' ? '#1f8a5b' : '#c98a1e', background: r.asistencia === 'si' ? '#ECF7F0' : '#FFF4E6', padding: '3px 10px', borderRadius: 99 }}>
-                            {r.asistencia === 'si' ? 'Va' : r.asistencia === 'no' ? 'No va' : 'Tal vez'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+
+                    {/* Lista de invitados */}
+                    {invitadosList.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                        {invitadosList.map((inv, j) => (
+                          <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#EEEDFE', color: '#534AB7', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initial(inv.nombre)}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 14, color: '#2a2440', fontWeight: 600 }}>{inv.nombre}</div>
+                              {inv.email && <div style={{ fontSize: 11, color: '#a39ec0' }}>{inv.email}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Banner límite */}
+                    {limiteAlcanzado && (
+                      <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 14, padding: '12px 14px', marginBottom: 10, color: '#fff' }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>Límite del plan gratuito ({LIMITE_FREE} invitados)</div>
+                        <div style={{ fontSize: 12, opacity: 0.9, lineHeight: 1.4, marginBottom: 8 }}>Con Pro invitas hasta 10, con Lifetime invitas a todos.</div>
+                        <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 12, fontWeight: 800, padding: '7px 14px', borderRadius: 9, cursor: 'pointer', fontFamily: FONT }}>
+                          Hazte Pro o Lifetime →
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Formulario agregar invitado */}
+                    {!limiteAlcanzado && (
+                      <>
+                        {showAddInvitado ? (
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                            <input
+                              value={nuevoInvitado}
+                              onChange={e => setNuevoInvitado(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') agregarInvitado() }}
+                              placeholder="Nombre o email"
+                              autoFocus
+                              style={{ flex: 1, border: '1.5px solid #EEEDFE', borderRadius: 10, padding: '8px 12px', fontSize: 14, fontFamily: FONT, outline: 'none', color: '#2a2440' }}
+                            />
+                            <button onClick={agregarInvitado} disabled={guardandoInvitado} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT, flexShrink: 0 }}>
+                              {guardandoInvitado ? '...' : 'Agregar'}
+                            </button>
+                            <button onClick={() => { setShowAddInvitado(false); setNuevoInvitado('') }} style={{ border: 'none', background: '#f0edf8', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT }}>
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setShowAddInvitado(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: 12, borderRadius: 14, cursor: 'pointer', fontFamily: FONT, width: '100%', marginTop: 4 }}>
+                            + Agregar invitado ({invitadosList.length}/{LIMITE_FREE} gratis)
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    {/* Lista de RSVPs */}
+                    {rsvps.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0edf8' }}>
+                        {rsvps.slice(0, 6).map((r, j) => (
+                          <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#EEEDFE', color: '#534AB7', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initial(r.nombre)}</div>
+                            <span style={{ flex: 1, fontSize: 14, color: '#2a2440', fontWeight: 600 }}>{r.nombre}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: r.asistencia === 'si' ? '#1f8a5b' : '#c98a1e', background: r.asistencia === 'si' ? '#ECF7F0' : '#FFF4E6', padding: '3px 10px', borderRadius: 99 }}>
+                              {r.asistencia === 'si' ? 'Va' : r.asistencia === 'no' ? 'No va' : 'Tal vez'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
