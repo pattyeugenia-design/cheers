@@ -19,6 +19,10 @@ const TIPOS = [
   { key: 'otro',    label: 'Otro' },
 ]
 
+const CHIPS: Record<string, string> = {
+  cumple: 'BDAY', cena: 'DINE', viaje: 'TRIP', reunion: 'MEET', evento: 'EVENT', otro: 'OTHER'
+}
+
 const STEP2: Record<string, { title: string; sub: string; open?: boolean; placeholder?: string }> = {
   viaje:   { title: '¿Qué tipo de viaje?', sub: 'Cuéntanos para personalizar tu plan.', open: true, placeholder: 'Ej: escapada a la playa, aventura en la montaña…' },
   cena:    { title: '¿Dónde va a ser la cena?', sub: 'Elige el tipo de cena que organizas.' },
@@ -66,7 +70,6 @@ export default function NuevaCelebracion() {
   const [verificando, setVerificando] = useState(true)
   const [mapsListo, setMapsListo] = useState(false)
   const [userNombre, setUserNombre] = useState('')
-  const [userId, setUserId] = useState<string | null>(null)
   const [slugFinal, setSlugFinal] = useState('')
   const lugarRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -77,7 +80,6 @@ export default function NuevaCelebracion() {
       const nombre = user.user_metadata?.name?.split(' ')[0] || 'tu'
       setUserNombre(nombre)
       setUserSlug(slugify(nombre))
-      setUserId(user.id)
       setVerificando(false)
     })
   }, [router])
@@ -185,7 +187,7 @@ export default function NuevaCelebracion() {
         celebracion_slug: slugFinal,
         email: inv.email.includes('@') ? inv.email : null,
         nombre: inv.name,
-        user_id: null, // se actualizará cuando el invitado haga login
+        user_id: null,
         created_at: new Date().toISOString(),
       }))
       await supabase.from('invitados').insert(rows)
@@ -280,6 +282,7 @@ export default function NuevaCelebracion() {
                 </div>
               )}
 
+              {/* STEP 1: Tipo */}
               {step === 'type' && (
                 <div style={{ animation: 'cheersRise .35s ease' }}>
                   <h1 style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-.6px', margin: '0 0 4px', color: '#1c1830' }}>¿Qué estás celebrando?</h1>
@@ -290,13 +293,17 @@ export default function NuevaCelebracion() {
                         {tipo === t.key && (
                           <div style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>
                         )}
-<div style={{ fontSize: 15, fontWeight: 700, color: tipo === t.key ? '#fff' : '#534AB7', background: tipo === t.key ? 'rgba(255,255,255,.2)' : '#EEEDFE', padding: '6px 10px', borderRadius: 8 }}>{{ cumple: 'BDAY', cena: 'DINE', viaje: 'TRIP', reunion: 'MEET', evento: 'EVENT', otro: 'OTHER' }[t.key]}</div>                        <div style={{ fontSize: 15, fontWeight: 650, textAlign: 'center', color: tipo === t.key ? '#fff' : '#2a2440' }}>{t.label}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: tipo === t.key ? '#fff' : '#534AB7', background: tipo === t.key ? 'rgba(255,255,255,.2)' : '#EEEDFE', padding: '6px 10px', borderRadius: 8 }}>
+                          {CHIPS[t.key]}
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 650, textAlign: 'center', color: tipo === t.key ? '#fff' : '#2a2440' }}>{t.label}</div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* STEP 2: Rol */}
               {step === 'role' && step2cfg && (
                 <div style={{ animation: 'cheersRise .35s ease' }}>
                   <button onClick={() => { setStep('type'); setRol(null) }} style={{ background: 'none', border: 'none', color: '#534AB7', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 14, fontFamily: F }}>← Atrás</button>
@@ -358,21 +365,24 @@ export default function NuevaCelebracion() {
                 </div>
               )}
 
+              {/* Celebrating */}
               {step === 'celebrating' && (
                 <div style={{ minHeight: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, textAlign: 'center' }}>
-                  <div style={{ fontSize: 72, animation: 'cheersPulse .7s ease-in-out infinite' }}>
+                  <div style={{ animation: 'cheersPulse .7s ease-in-out infinite' }}>
                     <div style={{ width: 72, height: 72, borderRadius: 22, background: 'linear-gradient(135deg,#534AB7,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-<span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{{ cumple: 'BDAY', cena: 'DINE', viaje: 'TRIP', reunion: 'MEET', evento: 'EVENT', otro: 'OTHER' }[tipo || ''] || 'CHR'}</span>                    </div>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{CHIPS[tipo || ''] || 'CHR'}</span>
+                    </div>
                   </div>
                   <div style={{ fontSize: 19, fontWeight: 700, color: '#534AB7' }}>Planeando tu celebración…</div>
                 </div>
               )}
 
+              {/* Success */}
               {step === 'success' && (
                 <div style={{ textAlign: 'center', padding: '8px 0', animation: 'cheersRise .4s ease' }}>
-                  <div style={{ fontSize: 64, animation: 'cheersPop .6s ease both', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4, animation: 'cheersPop .6s ease both' }}>
                     <div style={{ width: 80, height: 80, borderRadius: 24, background: 'linear-gradient(135deg,#534AB7,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '.5px' }}>CHR</span>
+                      <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>✓</span>
                     </div>
                   </div>
                   <h1 style={{ fontSize: 34, fontWeight: 850, letterSpacing: -1, margin: '14px 0 6px', background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>¡Cheers!</h1>
@@ -430,6 +440,7 @@ export default function NuevaCelebracion() {
                   )}
                 </div>
               )}
+
             </div>
 
             {(step === 'type' || step === 'role') && (
@@ -447,12 +458,13 @@ export default function NuevaCelebracion() {
                 }}
                 style={btnPrimary(step === 'type' ? !tipo : (step2cfg?.open ? !customEvent : !rol))}
               >
-                {step === 'type' ? 'Continuar' : saving ? 'Creando...' : "Crear celebración"}
+                {step === 'type' ? 'Continuar' : saving ? 'Creando...' : 'Crear celebración'}
               </button>
             )}
           </div>
         )}
 
+        {/* Invite */}
         {step === 'invite' && (
           <div style={{ width: '100%', maxWidth: 468, display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
