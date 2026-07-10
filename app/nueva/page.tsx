@@ -57,7 +57,8 @@ export default function NuevaCelebracion() {
       if (!user) { router.push('/login'); return }
       const nombre = user.user_metadata?.name?.split(' ')[0] || 'tu'
       setUserNombre(nombre)
-      setUserSlug(slugify(nombre))
+      const { data: perfil } = await supabase.from('perfiles').select('username').eq('user_id', user.id).single()
+      setUserSlug(perfil?.username || slugify(nombre))
       setVerificando(false)
     })
   }, [router])
