@@ -33,7 +33,6 @@ const destellos = [
   { left: '56%', top: '15%', size: 10, delay: '2.3s', dur: '2.8s' },
   { left: '76%', top: '23%', size: 34, delay: '0.4s', dur: '3.8s' },
   { left: '20%', top: '9%',  size: 8,  delay: '1.9s', dur: '2.5s' },
-
   { left: '6%',  top: '35%', size: 16, delay: '0.3s', dur: '3.2s' },
   { left: '18%', top: '42%', size: 9,  delay: '1.6s', dur: '2.7s' },
   { left: '30%', top: '38%', size: 52, delay: '0.6s', dur: '4.1s' },
@@ -50,7 +49,6 @@ const destellos = [
   { left: '72%', top: '58%', size: 9,  delay: '0.2s', dur: '2.8s' },
   { left: '84%', top: '53%', size: 28, delay: '1.9s', dur: '3.3s' },
   { left: '94%', top: '60%', size: 13, delay: '0.8s', dur: '4.0s' },
-
   { left: '4%',  top: '65%', size: 44, delay: '0.6s', dur: '2.7s' },
   { left: '16%', top: '70%', size: 10, delay: '1.7s', dur: '3.5s' },
   { left: '28%', top: '67%', size: 18, delay: '0.3s', dur: '2.9s' },
@@ -72,6 +70,11 @@ const destellos = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Playfair+Display:wght@700;800&family=Fredoka+One&family=Pacifico&display=swap" rel="stylesheet" />
+      </head>
       <body style={{ margin: 0, padding: 0, cursor: 'none', background: '#fff', position: 'relative' }}>
         <style>{`
           @keyframes destelloFijo {
@@ -87,7 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span key={i} style={{
             position: 'absolute',
             pointerEvents: 'none',
-            zIndex: 5,
+            zIndex: 0,
             color: '#D4537E',
             left: d.left,
             top: d.top,
