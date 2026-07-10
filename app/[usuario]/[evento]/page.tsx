@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../supabase'
 
@@ -95,6 +95,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 export default function Dashboard({ params }: { params: Promise<{ usuario: string; evento: string }> }) {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [celebracion, setCelebracion] = useState<any>(null)
   const [rsvps, setRsvps] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
@@ -104,6 +105,9 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
   const [lugar, setLugar] = useState('')
+  const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
+  const [subiendoPortada, setSubiendoPortada] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
 
   const [tiles, setTiles] = useState<{ key: string; size: string }[]>([])
   const [tilesVisibles, setTilesVisibles] = useState<Record<string, boolean>>(DEFAULT_TILES_VISIBLES)
@@ -135,6 +139,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
       setLugar(cel.paradas?.[0]?.lugar || '')
+      setPortadaUrl(cel.portada_url || null)
       setTiles(tilesForType(cel.tipo, cel.sub_tipo))
       setTilesVisibles({ ...DEFAULT_TILES_VISIBLES, ...(cel.tiles_visibles || {}) })
 
@@ -164,6 +169,35 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     setGuardandoToggle(true)
     await supabase.from('celebraciones').update({ tiles_visibles: nuevo }).eq('slug', celebracion.slug)
     setGuardandoToggle(false)
+  }
+
+  async function subirPortada(file: File) {
+    if (!file || !celebracion) return
+    if (!file.type.startsWith('image/')) return
+
+    setSubiendoPortada(true)
+    const ext = file.name.split('.').pop()
+    const path = `${celebracion.slug.replace('/', '-')}-portada.${ext}`
+
+    const { error } = await supabase.storage.from('portadas').upload(path, file, { upsert: true })
+    if (error) { setSubiendoPortada(false); return }
+
+    const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
+    await supabase.from('celebraciones').update({ portada_url: publicUrl }).eq('slug', celebracion.slug)
+    setPortadaUrl(publicUrl)
+    setSubiendoPortada(false)
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) subirPortada(file)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) subirPortada(file)
   }
 
   if (cargando) return (
@@ -215,9 +249,40 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
         {/* Hero card */}
         <div style={{ background: 'rgba(255,255,255,.97)', borderRadius: 26, overflow: 'hidden', boxShadow: '0 18px 46px rgba(25,12,50,.22)', marginBottom: 16 }}>
-          <div style={{ height: 188, background: 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a39ec0', fontSize: 14, fontWeight: 600 }}>
-            Imagen del evento — próximamente
+
+          {/* Portada */}
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+          <div
+            onClick={() => !subiendoPortada && fileInputRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            style={{
+              height: 188,
+              background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: subiendoPortada ? 'wait' : 'pointer',
+              position: 'relative',
+              transition: 'background .2s',
+              border: dragOver ? '2px dashed #534AB7' : 'none',
+            }}
+          >
+            {subiendoPortada ? (
+              <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>
+                Subiendo imagen...
+              </div>
+            ) : portadaUrl ? (
+              <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.5)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99 }}>
+                Cambiar imagen
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: '#a39ec0' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Sube una imagen de portada</div>
+                <div style={{ fontSize: 12 }}>Arrastra o haz click para elegir</div>
+              </div>
+            )}
           </div>
+
           <div style={{ padding: '16px 18px 20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
               <div style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg,#534AB7,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -303,20 +368,15 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null) }}
                 style={{
                   gridColumn: isLg ? '1 / -1' : 'auto',
-                  background: '#fff',
-                  borderRadius: 22,
-                  padding: '20px 18px',
-                  boxShadow: '0 8px 24px rgba(25,12,50,.1)',
-                  cursor: 'default',
-                  opacity: visible ? 1 : 0.65,
-                  transition: 'opacity .2s'
+                  background: '#fff', borderRadius: 22, padding: '20px 18px',
+                  boxShadow: '0 8px 24px rgba(25,12,50,.1)', cursor: 'default',
+                  opacity: visible ? 1 : 0.65, transition: 'opacity .2s'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
                   <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 15 }}>⠿</span>
                   <TileIcon label={info.label} />
                   <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: '#2a2440' }}>{info.title}</span>
-                  {/* Toggle visibilidad */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 11, color: '#a39ec0', fontWeight: 600 }}>{visible ? 'Visible' : 'Oculto'}</span>
                     <Toggle on={visible} onToggle={() => toggleVisibilidad(tile.key)} />
@@ -324,7 +384,6 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                   <button onClick={() => cycleSize(i)} title="Cambiar tamaño" style={{ border: 'none', background: '#F3F1FB', color: '#534AB7', width: 28, height: 28, borderRadius: 9, cursor: 'pointer', fontSize: 13, fontFamily: FONT }}>⤢</button>
                 </div>
 
-                {/* Invitados */}
                 {tile.key === 'invitados' && (
                   <div>
                     <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
