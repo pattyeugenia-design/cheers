@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../supabase'
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
-
 const BG = 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)'
 
 const fieldInput: React.CSSProperties = {
@@ -20,9 +19,8 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
   const [invitado, setInvitado] = useState<any>(null)
   const [rsvpExistente, setRsvpExistente] = useState<any>(null)
   const [cargando, setCargando] = useState(true)
-  const [acceso, setAcceso] = useState<'loading' | 'ok' | 'denied' | 'no-account'>('loading')
+  const [acceso, setAcceso] = useState<'loading' | 'ok' | 'denied'>('loading')
 
-  // RSVP form
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
   const [mensaje, setMensaje] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -31,8 +29,8 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
   useEffect(() => {
     params.then(async ({ usuario, evento }) => {
       const { data: { user } } = await supabase.auth.getUser()
+
       if (!user) {
-        // guardar destino para redirigir de vuelta después del login
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('redirect_after_login', `/${usuario}/${evento}/r`)
         }
@@ -40,7 +38,7 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
         return
       }
 
-      // buscar celebracion
+      // Buscar celebración
       let cel: any = null
       const fullSlug = `${usuario}/${evento}`
       const { data: d1 } = await supabase.from('celebraciones').select('*').eq('slug', fullSlug).single()
@@ -52,29 +50,65 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
 
       if (!cel) { setAcceso('denied'); setCargando(false); return }
 
-      // verificar que el usuario esté en tabla invitados
-      const { data: inv } = await supabase
+      const esOrganizador = cel.organizador_id === user.id
+
+      if (esOrganizador) {
+        // El organizador puede ver la vista /r sin restricciones
+        setCelebracion(cel)
+        setInvitado({ nombre: user.user_metadata?.name, email: user.email, user_id: user.id })
+        setAcceso('ok')
+        setCargando(false)
+        return
+      }
+
+      // Buscar invitado por user_id primero
+      let inv: any = null
+      const { data: invPorId } = await supabase
         .from('invitados')
         .select('*')
         .eq('celebracion_slug', cel.slug)
         .eq('user_id', user.id)
         .single()
 
-      // el organizador también puede ver la vista /r
-      const esOrganizador = cel.organizador_id === user.id
+      if (invPorId) {
+        inv = invPorId
+      } else {
+        // Buscar por email (invitado agregado antes de que tuviera cuenta)
+        const { data: invPorEmail } = await supabase
+          .from('invitados')
+          .select('*')
+          .eq('celebracion_slug', cel.slug)
+          .eq('email', user.email || '')
+          .is('user_id', null)
+          .single()
 
-      if (!inv && !esOrganizador) { setAcceso('denied'); setCargando(false); return }
+        if (invPorEmail) {
+          // Conectar el user_id al registro existente
+          await supabase
+            .from('invitados')
+            .update({ user_id: user.id })
+            .eq('id', invPorEmail.id)
 
-      // buscar rsvp existente
+          inv = { ...invPorEmail, user_id: user.id }
+        }
+      }
+
+      if (!inv) {
+        setAcceso('denied')
+        setCargando(false)
+        return
+      }
+
+      // Buscar RSVP existente
       const { data: rsvpData } = await supabase
         .from('rsvps')
         .select('*')
         .eq('celebracion_slug', cel.slug)
-        .eq('nombre', user.user_metadata?.name || user.email || '')
+        .eq('nombre', inv.nombre || user.user_metadata?.name || user.email || '')
         .single()
 
       setCelebracion(cel)
-      setInvitado(inv || { nombre: user.user_metadata?.name, email: user.email, user_id: user.id })
+      setInvitado(inv)
       if (rsvpData) {
         setRsvpExistente(rsvpData)
         setAsistencia(rsvpData.asistencia)
@@ -118,7 +152,7 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
       <div style={{ background: '#fff', borderRadius: 24, padding: '2.5rem', maxWidth: 400, textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.25)' }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: '#1c1830', marginBottom: 8 }}>Sin acceso</div>
         <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 20px' }}>No estás en la lista de invitados de esta celebración.</p>
-        <button onClick={() => router.push('/dashboard')} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 15, fontWeight: 700, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT }}>
+        <button onClick={() => router.push('/')} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 15, fontWeight: 700, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT }}>
           Ir a inicio
         </button>
       </div>
@@ -128,7 +162,9 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
   const tiles = celebracion?.tiles_visibles || {}
   const paradas = celebracion?.paradas || []
   const regalos = celebracion?.gifts || []
-  const fecha = celebracion?.fecha ? new Date(celebracion.fecha).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : null
+  const fecha = celebracion?.fecha
+    ? new Date(celebracion.fecha).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : null
 
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: FONT, padding: '32px 18px 60px' }}>
@@ -136,8 +172,15 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>Estás invitado</div>
-          <h1 style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 8px', letterSpacing: '-.5px', lineHeight: 1.1 }}>{celebracion?.nombre}</h1>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+            Estás invitado
+          </div>
+          <h1 style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 8px', letterSpacing: '-.5px', lineHeight: 1.1 }}>
+            {celebracion?.nombre}
+          </h1>
+          {celebracion?.tagline && (
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,.8)', margin: '0 0 6px', fontStyle: 'italic' }}>{celebracion.tagline}</p>
+          )}
           {fecha && <p style={{ fontSize: 15, color: 'rgba(255,255,255,.85)', margin: 0 }}>{fecha}</p>}
           {celebracion?.paradas?.[0]?.lugar && (
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', margin: '4px 0 0' }}>{celebracion.paradas[0].lugar}</p>
@@ -153,7 +196,11 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             {(['si', 'no', 'talvez'] as const).map(op => {
               const labels = { si: 'Voy', no: 'No puedo', talvez: 'Tal vez' }
-              const colors = { si: { bg: '#ECF7F0', active: '#1f8a5b', border: '#1f8a5b' }, no: { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b' }, talvez: { bg: '#FFF4E6', active: '#c98a1e', border: '#c98a1e' } }
+              const colors = {
+                si:     { bg: '#ECF7F0', active: '#1f8a5b', border: '#1f8a5b' },
+                no:     { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b' },
+                talvez: { bg: '#FFF4E6', active: '#c98a1e', border: '#c98a1e' },
+              }
               const c = colors[op]
               const sel = asistencia === op
               return (
@@ -171,7 +218,9 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
           {/* Mensaje para el festejado */}
           {tiles.mensajes !== false && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Mensaje para {celebracion?.festejado_nombre || 'el festejado'}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>
+                Mensaje para {celebracion?.festejado_nombre || 'el festejado'}
+              </div>
               <textarea
                 value={mensaje}
                 onChange={e => setMensaje(e.target.value)}
@@ -191,7 +240,7 @@ export default function InvitadoView({ params }: { params: Promise<{ usuario: st
           </button>
         </div>
 
-        {/* Itinerario / paradas */}
+        {/* Itinerario */}
         {tiles.itinerario !== false && paradas.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>El plan</div>
