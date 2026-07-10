@@ -53,7 +53,7 @@ export default function NuevaCelebracion() {
     const lang = getLang()
     setTx(t[lang])
 
-    ssupabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
       const nombre = user.user_metadata?.name?.split(' ')[0] || 'tu'
       setUserNombre(nombre)
