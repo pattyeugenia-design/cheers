@@ -117,11 +117,40 @@ export default function Home() {
   useEffect(() => {
     const browserLang = navigator.language?.toLowerCase() || 'es'
     setLang(browserLang.startsWith('en') ? 'en' : 'es')
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) { window.location.href = '/dashboard' } else { setCargando(false) }
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session?.user) {
+        // Buscar username del usuario
+        const { data: perfil } = await supabase
+          .from('perfiles')
+          .select('username')
+          .eq('user_id', data.session.user.id)
+          .single()
+
+        if (perfil?.username) {
+          window.location.href = `/${perfil.username}`
+        } else {
+          window.location.href = '/onboarding'
+        }
+      } else {
+        setCargando(false)
+      }
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session) window.location.href = '/dashboard'
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (session?.user) {
+        const { data: perfil } = await supabase
+          .from('perfiles')
+          .select('username')
+          .eq('user_id', session.user.id)
+          .single()
+
+        if (perfil?.username) {
+          window.location.href = `/${perfil.username}`
+        } else {
+          window.location.href = '/onboarding'
+        }
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -137,7 +166,7 @@ export default function Home() {
     setCargando(true)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://joincheers.app/login' },
+      options: { redirectTo: `${window.location.origin}/login` },
     })
   }
 
@@ -165,15 +194,14 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
           <a href="#como-funciona" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_how}</a>
           <a href="#precios" style={{ fontSize: 14, color: '#6e6e73', textDecoration: 'none' }}>{tx.nav_prices}</a>
-          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '10px 22px', borderRadius: 22, border: 'none', cursor: 'none' }}>{tx.nav_cta}</button>
+          <button onClick={loginConGoogle} style={{ fontSize: 14, fontWeight: 500, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '10px 22px', borderRadius: 22, border: 'none', cursor: 'pointer' }}>{tx.nav_cta}</button>
         </div>
       </nav>
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      {/* HERO */}
       <section style={{ background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 50%, #faf9ff 100%)', padding: '80px 0 70px', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', maxWidth: 1200, margin: '0 auto', padding: '0 60px', gap: 60, alignItems: 'center' }}>
 
-          {/* IZQUIERDA — texto */}
           <div>
             <div style={{ display: 'inline-block', background: 'linear-gradient(135deg, rgba(83,74,183,0.1), rgba(212,83,126,0.1))', border: '1px solid rgba(212,83,126,0.2)', borderRadius: 20, padding: '6px 14px', marginBottom: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1px', margin: 0 }}>{tx.eyebrow}</p>
@@ -184,15 +212,13 @@ export default function Home() {
             </h1>
             <p style={{ fontSize: 18, color: '#6e6e73', marginBottom: 40, lineHeight: 1.65, maxWidth: 420 }}>{tx.sub}</p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '15px 30px', borderRadius: 28, border: 'none', cursor: 'none', boxShadow: '0 4px 20px rgba(212,83,126,0.35)' }}>{tx.cta}</button>
+              <button onClick={loginConGoogle} style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '15px 30px', borderRadius: 28, border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(212,83,126,0.35)' }}>{tx.cta}</button>
               <a href="#como-funciona" style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', padding: '15px 30px', borderRadius: 28, border: '1.5px solid #e0e0e0', textDecoration: 'none', background: '#fff' }}>{tx.how}</a>
             </div>
           </div>
 
-          {/* DERECHA — solo copas, grandes, con todo su espacio */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ position: 'relative', height: 380, width: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {/* Sparkles locales */}
               {[
                 { left: 10,  top: 20,  delay: '0s',   size: 16 },
                 { left: 310, top: 30,  delay: '0.6s', size: 16 },
@@ -205,7 +231,6 @@ export default function Home() {
                 <div key={i} style={{ position: 'absolute', left: s.left, top: s.top, color: '#D4537E', fontSize: s.size, animation: `sparkleLocal 2s ease-in-out infinite ${s.delay}`, pointerEvents: 'none' }}>✦</div>
               ))}
 
-              {/* Splash al clink */}
               <div style={{ position: 'absolute', top: 40, left: '50%', animation: 'splash 3s ease-in-out infinite', pointerEvents: 'none', zIndex: 5 }}>
                 <svg viewBox="0 0 90 70" width="90" height="70">
                   <g fill="#f7d76b" opacity="0.9">
@@ -219,7 +244,6 @@ export default function Home() {
                 </svg>
               </div>
 
-              {/* Copas SVG — más grandes */}
               <svg viewBox="0 0 360 300" width="340" height="300" style={{ overflow: 'visible' }}>
                 <defs>
                   <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -236,7 +260,6 @@ export default function Home() {
                   <clipPath id="c2"><path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" /></clipPath>
                 </defs>
 
-                {/* Copa izquierda */}
                 <g style={{ transformOrigin: '62px 280px', animation: 'clinkL 3s ease-in-out infinite' }}>
                   <path d="M14,16 L38,158 Q62,175 86,158 L110,16 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
                   <g clipPath="url(#c1)">
@@ -251,7 +274,6 @@ export default function Home() {
                   <ellipse cx="62" cy="267" rx="36" ry="8" fill="#D4537E" opacity="0.12" />
                 </g>
 
-                {/* Copa derecha */}
                 <g style={{ transformOrigin: '298px 280px', animation: 'clinkR 3s ease-in-out infinite' }}>
                   <path d="M250,16 L274,158 Q298,175 322,158 L346,16 Z" fill="url(#gl)" stroke="#D4537E" strokeWidth="1.5" strokeOpacity="0.35" />
                   <g clipPath="url(#c2)">
@@ -267,7 +289,6 @@ export default function Home() {
                 </g>
               </svg>
 
-              {/* Burbujas copa izq */}
               {[
                 { left: 94,  top: 185, size: 7, delay: '0s',   dur: '2s'   },
                 { left: 108, top: 202, size: 5, delay: '0.7s', dur: '2.3s' },
@@ -276,7 +297,6 @@ export default function Home() {
                 <div key={i} style={{ position: 'absolute', width: b.size, height: b.size, left: b.left, top: b.top, borderRadius: '50%', background: 'rgba(247,215,107,0.5)', border: '1px solid rgba(247,215,107,0.8)', animation: `bubble ${b.dur} ease-in infinite ${b.delay}` }} />
               ))}
 
-              {/* Burbujas copa der */}
               {[
                 { left: 250, top: 185, size: 7, delay: '0.4s', dur: '2.1s' },
                 { left: 265, top: 202, size: 5, delay: '1.1s', dur: '2.4s' },
@@ -286,11 +306,10 @@ export default function Home() {
               ))}
             </div>
           </div>
-
         </div>
       </section>
 
-      {/* ── PREVIEW DEL EVENTO — sección propia, centrada ────────────────── */}
+      {/* PREVIEW */}
       <section style={{ background: '#fff', padding: '80px 48px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 960, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12 }}>{tx.preview_label}</p>
@@ -298,8 +317,6 @@ export default function Home() {
           <p style={{ fontSize: 17, color: '#6e6e73', marginBottom: 52, lineHeight: 1.6 }}>{tx.preview_sub}</p>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32 }}>
-
-            {/* Store buttons izquierda, centrados verticalmente */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {(['App Store', 'Google Play'] as const).map(store => (
                 <div key={store} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', border: '1px solid #e0e0e0', borderRadius: 16, background: '#fafafa', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', minWidth: 148 }}>
@@ -312,17 +329,16 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Preview card derecha */}
             <div style={{ animation: 'float 4s ease-in-out infinite', boxShadow: '0 32px 80px rgba(83,74,183,0.18), 0 8px 24px rgba(212,83,126,0.14)', borderRadius: 24, overflow: 'hidden', width: 420, flexShrink: 0 }}>
               <div style={{ background: 'linear-gradient(135deg, #534AB7 0%, #D4537E 100%)', padding: '24px 28px', textAlign: 'center', color: '#fff' }}>
                 <p style={{ fontSize: 36, margin: '0 0 6px' }}>🎂</p>
                 <p style={{ fontSize: 20, fontWeight: 600, margin: '0 0 4px' }}>{lang === 'es' ? 'Los 30 de Rodrigo' : "Rodrigo's 30th"}</p>
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', margin: '0 0 8px' }}>joincheers.app/los-30-de-rodrigo</p>
-                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', margin: 0 }}>🥂 12 {tx.demo_confirmed}</p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', margin: '0 0 8px' }}>joincheers.app/rodrigo/los-30</p>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', margin: 0 }}>12 {tx.demo_confirmed}</p>
               </div>
               <div style={{ background: '#f5f5f7', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ background: '#fff', borderRadius: 14, padding: '14px' }}>
-                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 10, letterSpacing: '0.5px' }}>🗺️ {tx.demo_plan}</p>
+                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 10, letterSpacing: '0.5px' }}>{tx.demo_plan}</p>
                   {tx.demo_stops.map((p, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < 2 ? 10 : 0, paddingBottom: i < 2 ? 10 : 0, borderBottom: i < 2 ? '0.5px solid #f0f0f0' : 'none' }}>
                       <span style={{ fontSize: 11, color: '#D4537E', fontWeight: 600, minWidth: 28 }}>{p.hora}</span>
@@ -334,27 +350,26 @@ export default function Home() {
                   ))}
                 </div>
                 <div style={{ background: '#fff', borderRadius: 14, padding: '14px' }}>
-                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 10, letterSpacing: '0.5px' }}>🎁 {tx.demo_gifts}</p>
+                  <p style={{ fontSize: 9, color: '#aeaeb2', fontWeight: 600, marginBottom: 10, letterSpacing: '0.5px' }}>{tx.demo_gifts}</p>
                   {tx.demo_gifts_items.map(g => (
                     <p key={g} style={{ fontSize: 12, padding: '7px 10px', background: '#f5f5f7', borderRadius: 8, color: '#6e6e73', margin: '0 0 8px' }}>{g}</p>
                   ))}
-                  <button onClick={loginConGoogle} style={{ width: '100%', marginTop: 4, padding: '9px', background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'none' }}>
+                  <button onClick={loginConGoogle} style={{ width: '100%', marginTop: 4, padding: '9px', background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                     {lang === 'es' ? 'Confirmar asistencia' : 'RSVP'}
                   </button>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* ── TIPOS ────────────────────────────────────────────────────────── */}
+      {/* TIPOS */}
       <section style={{ padding: '32px 40px', background: '#faf9ff', position: 'relative', zIndex: 1, textAlign: 'center' }}>
         <p style={{ fontSize: 14, color: '#aeaeb2', letterSpacing: '0.5px', margin: 0 }}>{tx.tipos_texto}</p>
       </section>
 
-      {/* ── CÓMO FUNCIONA ────────────────────────────────────────────────── */}
+      {/* CÓMO FUNCIONA */}
       <section id="como-funciona" style={{ padding: '80px 48px', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 100%)', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12, textAlign: 'center' }}>{tx.s1_label}</p>
@@ -372,7 +387,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── TESTIMONIOS ──────────────────────────────────────────────────── */}
+      {/* TESTIMONIOS */}
       <section style={{ padding: '80px 48px', background: '#fff', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12 }}>{tx.s3_label}</p>
@@ -385,13 +400,13 @@ export default function Home() {
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 24 }}>
             {tx.testimonials.map((_, i) => (
-              <button key={i} onClick={() => setTestimonioActivo(i)} style={{ width: i === testimonioActivo ? 28 : 8, height: 8, borderRadius: 4, background: i === testimonioActivo ? '#D4537E' : '#e0e0e0', border: 'none', cursor: 'none', transition: 'all 0.3s' }} />
+              <button key={i} onClick={() => setTestimonioActivo(i)} style={{ width: i === testimonioActivo ? 28 : 8, height: 8, borderRadius: 4, background: i === testimonioActivo ? '#D4537E' : '#e0e0e0', border: 'none', cursor: 'pointer', transition: 'all 0.3s' }} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── PRECIOS ──────────────────────────────────────────────────────── */}
+      {/* PRECIOS */}
       <section id="precios" style={{ padding: '80px 48px', background: 'linear-gradient(160deg, #faf9ff 0%, #fff5f8 100%)', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: '#D4537E', letterSpacing: '1.5px', marginBottom: 12, textAlign: 'center' }}>{tx.s2_label}</p>
@@ -414,7 +429,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={loginConGoogle} style={{ width: '100%', padding: '14px', background: p.featured ? '#fff' : 'linear-gradient(135deg, #534AB7, #D4537E)', color: p.featured ? '#D4537E' : '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: 'none' }}>
+                <button onClick={loginConGoogle} style={{ width: '100%', padding: '14px', background: p.featured ? '#fff' : 'linear-gradient(135deg, #534AB7, #D4537E)', color: p.featured ? '#D4537E' : '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
                   {p.cta}
                 </button>
               </div>
@@ -423,14 +438,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CTA FINAL ────────────────────────────────────────────────────── */}
+      {/* CTA FINAL */}
       <section style={{ padding: '100px 48px', background: '#fff', textAlign: 'center', position: 'relative', zIndex: 1 }}>
         <h2 style={{ fontSize: 48, fontWeight: 700, letterSpacing: '-2px', color: '#1d1d1f', marginBottom: 16 }}>{tx.cta_title}</h2>
         <p style={{ fontSize: 18, color: '#6e6e73', marginBottom: 40 }}>{tx.cta_sub}</p>
-        <button onClick={loginConGoogle} style={{ fontSize: 18, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '18px 44px', borderRadius: 32, border: 'none', cursor: 'none', boxShadow: '0 8px 30px rgba(212,83,126,0.35)' }}>{tx.cta_btn}</button>
+        <button onClick={loginConGoogle} style={{ fontSize: 18, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', color: '#fff', padding: '18px 44px', borderRadius: 32, border: 'none', cursor: 'pointer', boxShadow: '0 8px 30px rgba(212,83,126,0.35)' }}>{tx.cta_btn}</button>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      {/* FOOTER */}
       <footer style={{ padding: '32px 48px', borderTop: '0.5px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, position: 'relative', zIndex: 1, background: '#fff' }}>
         <span style={{ fontSize: 16, fontWeight: 600, background: 'linear-gradient(135deg, #534AB7, #D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</span>
         <p style={{ fontSize: 12, color: '#aeaeb2' }}>joincheers.app · 2026</p>
