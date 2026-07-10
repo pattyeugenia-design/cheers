@@ -109,7 +109,7 @@ const translations = {
 }
 
 export default function Home() {
-  const [cargando, setCargando] = useState(true)
+  const [cargando, setCargando] = useState(false)
   const [lang, setLang] = useState<'es' | 'en'>('es')
   const [testimonioActivo, setTestimonioActivo] = useState(0)
   const tx = translations[lang]
