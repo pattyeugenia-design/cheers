@@ -104,7 +104,7 @@ const translations = {
 
 export default function Home() {
   const [lang, setLang] = useState<'es' | 'en'>('es')
-  const [cargando, setCargando] = useState(false)
+  const [cargando, setCargando] = useState(true)
   const [testimonioActivo, setTestimonioActivo] = useState(0)
   const [scrolled, setScrolled] = useState(false)
   const [isMobile, setIsMobile] = useState(false)

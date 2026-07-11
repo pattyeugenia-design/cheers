@@ -145,6 +145,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [nuevoInvitado, setNuevoInvitado] = useState('')
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
   const [showWAPrompt, setShowWAPrompt] = useState(false)
+  const [lifetimeExpanded, setLifetimeExpanded] = useState(false)
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
@@ -881,7 +882,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 8, flexWrap: 'wrap' as const }}>
             <button onClick={() => router.back()} style={pillBtn}>{tx.my_celebrations}</button>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.35)', letterSpacing: '.5px' }}>{tx.cheers}</div>
+              <div style={{ fontSize: 15, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-.3px' }}>Cheers</div>
               <div ref={titleRef} contentEditable suppressContentEditableWarning data-placeholder={tx.title_placeholder}
                 onInput={e => {
                   const el = e.currentTarget
@@ -939,17 +940,27 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             </div>
           </div>
 
-          {/* Upsell */}
-          <div style={{ borderRadius: 22, padding: '22px 24px', marginBottom: 18, background: 'linear-gradient(120deg,#534AB7,#7b46a8 55%,#D4537E)', boxShadow: '0 16px 42px rgba(83,74,183,.45)', color: '#fff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' as const }}>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '1.5px', opacity: 0.85 }}>{tx.lifetime_label}</div>
-                <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 850, letterSpacing: '-.4px', marginTop: 5 }}>{tx.lifetime_title}</div>
-                <div style={{ fontSize: 13, opacity: 0.92, marginTop: 7, lineHeight: 1.5 }}>{tx.lifetime_desc}</div>
+          {/* Upsell Lifetime colapsable */}
+          {lifetimeExpanded ? (
+            <div style={{ borderRadius: 22, padding: '20px 22px', marginBottom: 18, background: 'linear-gradient(120deg,#534AB7,#7b46a8 55%,#D4537E)', boxShadow: '0 16px 42px rgba(83,74,183,.35)', color: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', opacity: 0.8 }}>{tx.lifetime_label}</div>
+                  <div style={{ fontSize: isMobile ? 17 : 20, fontWeight: 850, letterSpacing: '-.4px', marginTop: 4 }}>{tx.lifetime_title}</div>
+                  <div style={{ fontSize: 13, opacity: 0.88, marginTop: 6, lineHeight: 1.5 }}>{tx.lifetime_desc}</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                  <button style={{ background: '#fff', color: '#534AB7', border: 'none', borderRadius: 13, padding: '12px 18px', fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS }}>{tx.lifetime_cta}</button>
+                  <button onClick={() => setLifetimeExpanded(false)} style={{ background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 13, padding: '8px 18px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Remind me later' : 'Después'}</button>
+                </div>
               </div>
-              <button style={{ flexShrink: 0, background: '#fff', color: '#534AB7', border: 'none', borderRadius: 15, padding: '14px 20px', fontSize: 14, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS }}>{tx.lifetime_cta}</button>
             </div>
-          </div>
+          ) : (
+            <button onClick={() => setLifetimeExpanded(true)} style={{ width: '100%', marginBottom: 18, padding: '10px 20px', background: 'rgba(83,74,183,.12)', border: '1px dashed rgba(83,74,183,.3)', borderRadius: 14, color: '#534AB7', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <span style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>Cheers Lifetime</span>
+              <span style={{ color: '#a39ec0', fontSize: 12 }}>— {lang === 'en' ? 'Unlock everything' : 'Desbloquea todo'} ↑</span>
+            </button>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 12px' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: textColor, opacity: 0.8 }}>{tx.drag_hint}</div>
@@ -964,8 +975,8 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
               const visible = tilesVisibles[tile.key] !== false
               const tileLabel = tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || tile.key
               return (
-                <div key={tile.key} draggable onDragStart={() => setDragIdx(i)} onDragOver={e => { e.preventDefault(); setDragOverIdx(i) }} onDragLeave={() => setDragOverIdx(null)} onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null); setDragOverIdx(null) }}
-                  style={{ gridColumn: isLg && !isMobile ? '1 / -1' : 'auto', background: dragOverIdx === i && dragIdx !== i ? 'transparent' : te.tileBg, borderRadius: 22, padding: '20px 18px', boxShadow: dragOverIdx === i && dragIdx !== i ? 'none' : '0 8px 24px rgba(25,12,50,.1)', opacity: visible ? (dragIdx === i ? 0.4 : 1) : 0.65, border: dragOverIdx === i && dragIdx !== i ? '2.5px dashed rgba(83,74,183,.5)' : 'none', transition: 'all .15s', color: te.tileText }}>
+                <div key={tile.key} draggable onDragStart={() => setDragIdx(i)} onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }} onDragOver={e => { e.preventDefault(); setDragOverIdx(i) }} onDragLeave={() => setDragOverIdx(null)} onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null); setDragOverIdx(null) }}
+                  style={{ gridColumn: isLg && !isMobile ? '1 / -1' : 'auto', gridRow: tile.key === 'portada' && tile.size === 'xl' ? 'span 2' : 'auto', background: dragOverIdx === i && dragIdx !== i ? 'transparent' : te.tileBg, borderRadius: 22, padding: '20px 18px', boxShadow: dragOverIdx === i && dragIdx !== i ? 'none' : '0 8px 24px rgba(25,12,50,.1)', opacity: visible ? (dragIdx === i ? 0.4 : 1) : 0.65, border: dragOverIdx === i && dragIdx !== i ? '2.5px dashed rgba(83,74,183,.5)' : 'none', transition: 'all .15s', color: te.tileText }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
                     <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 15 }}>⠿</span>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
