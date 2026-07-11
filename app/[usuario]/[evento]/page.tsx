@@ -661,7 +661,19 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 contentEditable
                 suppressContentEditableWarning
                 data-placeholder={tx.title_placeholder}
-                onInput={saveTitleHtml}
+                onInput={e => {
+  const el = e.currentTarget
+  if (el.innerText.length > 40) {
+    el.innerText = el.innerText.slice(0, 40)
+    // mover cursor al final
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    range.collapse(false)
+    window.getSelection()?.removeAllRanges()
+    window.getSelection()?.addRange(range)
+  }
+  saveTitleHtml()
+}}
                 style={{
                   fontFamily: F,
                   fontSize: Math.min(tituloSize, isMobile ? 18 : 22),
