@@ -555,7 +555,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
-        style={{ margin: '-20px -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative' }}
+        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative', borderRadius: '0 0 22px 22px', overflow: 'hidden' }}
       >
         <div style={{ height: 240, background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           {subiendoPortada
