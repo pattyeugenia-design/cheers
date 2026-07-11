@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../supabase'
 import { getLang, t } from '../../i18n'
@@ -24,22 +24,16 @@ const TEMAS: Record<string, { label_key: string; bg: string; dark: boolean; tile
 }
 const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
 
-const FUENTES: Record<string, { label_key: string; font: string; sample: string }> = {
-  system:  { label_key: 'font_modern',  font: FSYS,                                                                    sample: 'Tu evento' },
-  georgia: { label_key: 'font_classic', font: 'Georgia, "Times New Roman", serif',                                     sample: 'Tu evento' },
-  lora:    { label_key: 'font_elegant', font: '"Lora", Georgia, serif',                                                sample: 'Tu evento' },
-  fredoka: { label_key: 'font_fun',     font: '"Fredoka One", "Comic Sans MS", cursive',                               sample: 'Tu evento' },
+// Fuentes del sistema — siempre disponibles, sin Google Fonts
+const FUENTES: Record<string, { label: string; font: string }> = {
+  system:   { label: 'Moderna',  font: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif' },
+  verdana:  { label: 'Legible',  font: 'Verdana, Geneva, Tahoma, sans-serif' },
+  georgia:  { label: 'Clásica',  font: 'Georgia, "Times New Roman", serif' },
+  cursive:  { label: 'Cursiva',  font: '"Brush Script MT", "Segoe Script", cursive' },
 }
-const FUENTE_ORDER = ['system', 'georgia', 'lora', 'fredoka']
+const FUENTE_ORDER = ['system', 'verdana', 'georgia', 'cursive']
 
-type TituloEstilo = 'normal-left' | 'normal-center' | 'spaced' | 'underline' | 'strikethrough'
-const ESTILOS: { key: TituloEstilo; label_key: string }[] = [
-  { key: 'normal-left',   label_key: 'style_left' },
-  { key: 'normal-center', label_key: 'style_center' },
-  { key: 'spaced',        label_key: 'style_spaced' },
-  { key: 'underline',     label_key: 'style_underline' },
-  { key: 'strikethrough', label_key: 'style_strike' },
-]
+type TituloEstilo = 'normal-left' | 'normal-center' | 'spaced'
 
 const DEFAULT_TILES_VISIBLES: Record<string, boolean> = {
   invitados: true, aperturas: true, regalos: true, mensajes: true,
@@ -58,7 +52,6 @@ const TINFO: Record<string, { label: string; title_key: string }> = {
   mensajes:    { label: 'MSG', title_key: 'tile_mensajes' },
 }
 
-// Estrellitas animadas
 const STARS = [
   { top: '4%',  left: '2%',  size: 18, delay: '0s',   dur: '3.2s' },
   { top: '8%',  left: '92%', size: 24, delay: '1.1s', dur: '2.8s' },
@@ -74,8 +67,6 @@ const STARS = [
   { top: '82%', left: '93%', size: 14, delay: '2.2s', dur: '3.6s' },
   { top: '88%', left: '6%',  size: 18, delay: '0.4s', dur: '3.1s' },
   { top: '93%', left: '91%', size: 10, delay: '1.7s', dur: '2.4s' },
-  { top: '10%', left: '50%', size: 8,  delay: '2.8s', dur: '3.4s' },
-  { top: '55%', left: '48%', size: 8,  delay: '1.0s', dur: '2.8s' },
 ]
 
 function tilesForType(type: string, sub?: string) {
@@ -94,38 +85,12 @@ function tilesForType(type: string, sub?: string) {
 
 const initial = (n: string) => (n || '?').trim()[0].toUpperCase()
 
-function calcProgress(cel: any, title: string, festejado: string, fecha: string, lugar: string, portadaUrl: string | null, invitadosList: any[], tagline: string): number {
-  const checks = [
-    !!title,
-    !!festejado,
-    !!fecha,
-    !!lugar,
-    !!portadaUrl,
-    !!tagline,
-    invitadosList.length > 0,
-    (cel?.gifts || []).length > 0 || (cel?.paradas || []).length > 1,
-  ]
-  return Math.round((checks.filter(Boolean).length / checks.length) * 100)
-}
-
-function ProgressBar({ pct, textColor }: { pct: number; textColor: string }) {
-  const isComplete = pct === 100
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-      {isComplete ? (
-        <span style={{ fontSize: 12, fontWeight: 800, color: '#f7d76b', letterSpacing: '.3px', whiteSpace: 'nowrap' }}>
-          Cheers full! ✦
-        </span>
-      ) : (
-        <>
-          <div style={{ width: 52, height: 5, borderRadius: 99, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.55)', whiteSpace: 'nowrap' }}>{pct}%</span>
-        </>
-      )}
-    </div>
-  )
+function getProgressLabel(pct: number, lang: string): string {
+  if (pct === 100) return 'Cheers full!'
+  if (pct >= 91) return lang === 'en' ? 'One last detail...' : 'Un último detalle...'
+  if (pct >= 61) return lang === 'en' ? 'Almost ready!' : 'Casi lista la fiesta'
+  if (pct >= 31) return lang === 'en' ? 'Taking shape!' : 'Ya va tomando forma'
+  return lang === 'en' ? 'Start with the basics' : 'Empieza por lo básico'
 }
 
 function TileIcon({ label, accentBg, accentText }: { label: string; accentBg: string; accentText: string }) {
@@ -147,14 +112,16 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 export default function Dashboard({ params }: { params: Promise<{ usuario: string; evento: string }> }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const titleRef = useRef<HTMLDivElement>(null)
+  const saveTimeout = useRef<any>(null)
   const [tx, setTx] = useState(t.es)
+  const [lang, setLang] = useState('es')
   const [celebracion, setCelebracion] = useState<any>(null)
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitadosList, setInvitadosList] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
   const [acceso, setAcceso] = useState<'loading' | 'ok' | 'denied'>('loading')
 
-  const [title, setTitle] = useState('')
   const [tagline, setTagline] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
@@ -169,7 +136,10 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [fuente, setFuente] = useState('system')
   const [tituloEstilo, setTituloEstilo] = useState<TituloEstilo>('normal-left')
   const [tituloSize, setTituloSize] = useState(23)
+  const [tituloBold, setTituloBold] = useState(true)
+  const [tituloItalic, setTituloItalic] = useState(false)
   const [showCustomize, setShowCustomize] = useState(false)
+  const [showProgress, setShowProgress] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [guardandoToggle, setGuardandoToggle] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -181,9 +151,14 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
+  // Progreso
+  const [portadaOk, setPortadaOk] = useState(false)
+  const [titleHtml, setTitleHtml] = useState('')
+
   useEffect(() => {
-    const lang = getLang()
-    setTx(t[lang])
+    const l = getLang()
+    setLang(l)
+    setTx(t[l])
     const check = () => setIsMobile(window.innerWidth < 600)
     check()
     window.addEventListener('resize', check)
@@ -209,18 +184,21 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
       setAcceso('ok')
       setCelebracion(cel)
-      setTitle(cel.nombre || '')
+      setTitleHtml(cel.nombre_html || cel.nombre || '')
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
       setLugar(cel.paradas?.[0]?.lugar || '')
       setPortadaUrl(cel.portada_url || null)
+      setPortadaOk(!!cel.portada_url)
       setTiles(tilesForType(cel.tipo, cel.sub_tipo))
       setTilesVisibles({ ...DEFAULT_TILES_VISIBLES, ...(cel.tiles_visibles || {}) })
       if (cel.tema) setTema(cel.tema)
       if (cel.fuente) setFuente(cel.fuente)
       if (cel.titulo_align) setTituloEstilo(cel.titulo_align as TituloEstilo)
       if (cel.titulo_size) setTituloSize(cel.titulo_size)
+      if (cel.titulo_bold !== undefined) setTituloBold(cel.titulo_bold)
+      if (cel.titulo_italic !== undefined) setTituloItalic(cel.titulo_italic)
 
       const { data: rsvpData } = await supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setRsvps(rsvpData || [])
@@ -229,8 +207,29 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       setInvitadosList(invData || [])
 
       setCargando(false)
+
+      // Inicializar el rich text editor con el contenido guardado
+      setTimeout(() => {
+        if (titleRef.current) {
+          titleRef.current.innerHTML = cel.nombre_html || cel.nombre || ''
+        }
+      }, 100)
     })
   }, [])
+
+  const saveTitleHtml = useCallback(() => {
+    if (!celebracion || !titleRef.current) return
+    const html = titleRef.current.innerHTML
+    const text = titleRef.current.innerText
+    setTitleHtml(html)
+    supabase.from('celebraciones').update({ nombre_html: html, nombre: text }).eq('slug', celebracion.slug)
+  }, [celebracion])
+
+  function applyFormat(command: string, value?: string) {
+    titleRef.current?.focus()
+    document.execCommand(command, false, value)
+    setTimeout(saveTitleHtml, 100)
+  }
 
   function moveTile(from: number, to: number) {
     if (from == null || from === to) return
@@ -273,6 +272,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
     await supabase.from('celebraciones').update({ portada_url: publicUrl }).eq('slug', celebracion.slug)
     setPortadaUrl(publicUrl)
+    setPortadaOk(true)
     setSubiendoPortada(false)
   }
 
@@ -288,11 +288,10 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   async function agregarInvitado() {
     if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= LIMITE_FREE) return
     setGuardandoInvitado(true)
-    const isEmail = nuevoInvitado.includes('@')
-    const isPhone = /^\+?[\d\s\-()]{7,}$/.test(nuevoInvitado.trim())
+    const isPhone = /^\+?[\d\s\-()]{7,}$/.test(nuevoInvitado.trim()) && !nuevoInvitado.includes('@')
     const row = {
       celebracion_slug: celebracion.slug,
-      email: isEmail ? nuevoInvitado.trim() : null,
+      email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null,
       nombre: nuevoInvitado.trim(),
       user_id: null,
       created_at: new Date().toISOString()
@@ -302,22 +301,27 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       setInvitadosList(prev => [...prev, data])
       if (isPhone) {
         setInvitadoPendienteWA(data)
-        setWaPhone(nuevoInvitado.trim().replace(/\s/g, ''))
+        setWaPhone(nuevoInvitado.trim())
         setShowWAPrompt(true)
       }
     }
     setNuevoInvitado(''); setGuardandoInvitado(false); setShowAddInvitado(false)
   }
 
-  function enviarWhatsApp() {
-    if (!celebracion || !waPhone) return
+  function enviarWhatsApp(phone?: string) {
+    if (!celebracion) return
     const shareUrl = `https://joincheers.app/${celebracion.slug}/r`
-    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion.nombre}. Aquí está todo el plan: ${shareUrl}`)
-    const phone = waPhone.replace(/[^\d+]/g, '')
-    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank')
-    setShowWAPrompt(false)
-    setWaPhone('')
-    setInvitadoPendienteWA(null)
+    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion.nombre || titleRef.current?.innerText || ''}. Aquí está todo el plan: ${shareUrl}`)
+    const p = (phone || waPhone).replace(/[^\d+]/g, '')
+    window.open(p ? `https://wa.me/${p}?text=${msg}` : `https://wa.me/?text=${msg}`, '_blank')
+    setShowWAPrompt(false); setWaPhone(''); setInvitadoPendienteWA(null)
+  }
+
+  function enviarSMS() {
+    if (!celebracion) return
+    const shareUrl = `https://joincheers.app/${celebracion.slug}/r`
+    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion.nombre || ''}. El plan completo: ${shareUrl}`)
+    window.open(`sms:?&body=${msg}`, '_blank')
   }
 
   if (cargando) return (
@@ -346,25 +350,29 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const porConfirmar = rsvps.filter(r => r.asistencia !== 'si').length
   const shareUrl = `joincheers.app/${celebracion?.slug}/r`
   const limiteAlcanzado = invitadosList.length >= LIMITE_FREE
-  const progress = calcProgress(celebracion, title, festejado, fecha, lugar, portadaUrl, invitadosList, tagline)
-  const MIN_SIZE = 16
-  const MAX_SIZE = isMobile ? 36 : 48
+  const MIN_SIZE = 16, MAX_SIZE = isMobile ? 36 : 52
 
-  const tituloInputStyle: React.CSSProperties = {
-    border: 'none', background: 'transparent', fontFamily: F, fontWeight: 850,
-    color: te.tileText, padding: '5px 8px', borderRadius: 10, outline: 'none',
-    minWidth: 0, width: '100%', fontSize: tituloSize,
-    textAlign: tituloEstilo === 'normal-center' || tituloEstilo === 'spaced' ? 'center' : 'left',
-    letterSpacing: tituloEstilo === 'spaced' ? '6px' : tituloEstilo === 'normal-left' || tituloEstilo === 'normal-center' ? '-.5px' : 'normal',
-    textTransform: tituloEstilo === 'spaced' ? 'uppercase' : 'none',
-    textDecoration: tituloEstilo === 'underline' ? 'underline' : tituloEstilo === 'strikethrough' ? 'line-through' : 'none',
-  }
+  // Calcular progreso
+  const progressItems = [
+    { label: lang === 'en' ? 'Cover image' : 'Imagen de portada', done: portadaOk },
+    { label: lang === 'en' ? 'Event title' : 'Título del evento', done: !!(titleRef.current?.innerText || titleHtml) },
+    { label: lang === 'en' ? 'Guest of honor' : 'Festejado/a', done: !!festejado },
+    { label: lang === 'en' ? 'Date' : 'Fecha', done: !!fecha },
+    { label: lang === 'en' ? 'Place' : 'Lugar', done: !!lugar },
+    { label: lang === 'en' ? 'Description' : 'Descripción', done: !!tagline },
+    { label: lang === 'en' ? 'At least 1 guest' : 'Al menos 1 invitado', done: invitadosList.length > 0 },
+    { label: lang === 'en' ? 'Gift list or itinerary' : 'Regalos o itinerario', done: (celebracion?.gifts || []).length > 0 || (celebracion?.paradas || []).length > 1 },
+  ]
+  const progress = Math.round((progressItems.filter(p => p.done).length / progressItems.length) * 100)
+  const progressLabel = getProgressLabel(progress, lang)
+  const isComplete = progress === 100
 
   const pillBtn: React.CSSProperties = { background: 'rgba(255,255,255,.92)', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, boxShadow: '0 4px 14px rgba(20,10,40,.18)', whiteSpace: 'nowrap' as const }
   const fieldInput: React.CSSProperties = { border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 15, fontWeight: 600, color: te.tileText, padding: '7px 8px', borderRadius: 9, outline: 'none', width: '100%', boxSizing: 'border-box' as const }
 
   const SidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+
       {/* Temas */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.theme}</div>
@@ -382,46 +390,81 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.font}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {FUENTE_ORDER.map(k => (
-            <button key={k} onClick={() => { setFuente(k); guardarCampo('fuente', k) }} style={{ border: fuente === k ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', background: fuente === k ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: fuente === k ? '#2a2440' : '#fff', transition: 'all .15s', textAlign: 'left' as const }}>
-              <div style={{ fontFamily: FUENTES[k].font, fontSize: 18, fontWeight: 700, lineHeight: 1.2, marginBottom: 2 }}>{FUENTES[k].sample}</div>
-              <div style={{ fontFamily: FSYS, fontSize: 10, fontWeight: 700, letterSpacing: '.5px', opacity: 0.6, textTransform: 'uppercase' as const }}>{(tx as any)[FUENTES[k].label_key]}</div>
+            <button key={k} onClick={() => { setFuente(k); guardarCampo('fuente', k) }} style={{ border: fuente === k ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', background: fuente === k ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', transition: 'all .15s', textAlign: 'left' as const }}>
+              <div style={{ fontFamily: FUENTES[k].font, fontSize: 17, fontWeight: 700, lineHeight: 1.2, marginBottom: 3, color: fuente === k ? '#2a2440' : '#fff' }}>
+                {titleRef.current?.innerText || celebracion?.nombre || 'Mi celebración'}
+              </div>
+              <div style={{ fontFamily: FSYS, fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: fuente === k ? '#534AB7' : 'rgba(255,255,255,.5)', textTransform: 'uppercase' as const }}>{FUENTES[k].label}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tamaño del título */}
+      {/* Tamaño */}
       <div>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>
-          Tamaño del título · {tituloSize}px
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 8 }}>
+          {lang === 'en' ? 'Title size' : 'Tamaño del título'} · {tituloSize}px
         </div>
         <input
-          type="range"
-          min={MIN_SIZE}
-          max={MAX_SIZE}
-          value={tituloSize}
-          onChange={e => setTituloSize(Number(e.target.value))}
-          onMouseUp={e => guardarCampo('titulo_size', Number((e.target as HTMLInputElement).value))}
-          onTouchEnd={e => guardarCampo('titulo_size', Number((e.target as HTMLInputElement).value))}
-          style={{ width: '100%', accentColor: '#D4537E', cursor: 'pointer' }}
+          type="range" min={MIN_SIZE} max={MAX_SIZE} value={tituloSize}
+          onChange={e => {
+            const val = Number(e.target.value)
+            setTituloSize(val)
+            clearTimeout(saveTimeout.current)
+            saveTimeout.current = setTimeout(() => guardarCampo('titulo_size', val), 300)
+          }}
+          style={{ width: '100%', accentColor: '#D4537E', cursor: 'pointer', height: 4 }}
         />
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>A</span>
-          <span style={{ fontSize: 14, color: 'rgba(255,255,255,.4)', fontWeight: 700 }}>A</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontFamily: F }}>A</span>
+          <span style={{ fontSize: 18, color: 'rgba(255,255,255,.4)', fontFamily: F, fontWeight: 700 }}>A</span>
         </div>
       </div>
 
-      {/* Estilos del título */}
+      {/* Alineación */}
       <div>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.title_style}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {ESTILOS.map(e => (
-            <button key={e.key} onClick={() => { setTituloEstilo(e.key); guardarCampo('titulo_align', e.key) }} style={{ border: tituloEstilo === e.key ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '10px 8px', cursor: 'pointer', background: tituloEstilo === e.key ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', transition: 'all .15s', textAlign: 'center' as const }}>
-              <div style={{ fontFamily: F, fontSize: 14, fontWeight: 700, color: tituloEstilo === e.key ? '#534AB7' : '#fff', textDecoration: e.key === 'underline' ? 'underline' : e.key === 'strikethrough' ? 'line-through' : 'none', letterSpacing: e.key === 'spaced' ? '3px' : 'normal', marginBottom: 3 }}>Aa</div>
-              <div style={{ fontFamily: FSYS, fontSize: 9, fontWeight: 700, letterSpacing: '.3px', color: tituloEstilo === e.key ? '#534AB7' : 'rgba(255,255,255,.5)', textTransform: 'uppercase' as const }}>{(tx as any)[e.label_key]}</div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>
+          {lang === 'en' ? 'Alignment' : 'Alineación'}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['normal-left', 'normal-center', 'spaced'] as TituloEstilo[]).map(s => {
+            const labels: Record<TituloEstilo, string> = {
+              'normal-left': '⬛ Izq.',
+              'normal-center': '⬜ Cen.',
+              'spaced': 'S P A C I A D O',
+            }
+            return (
+              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s) }} style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS, transition: 'all .15s', textAlign: 'center' as const }}>
+                {labels[s]}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Formato del título (rich text) */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>
+          {lang === 'en' ? 'Title format' : 'Formato del título'}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+          {[
+            { cmd: 'bold',          label: 'B',  style: { fontWeight: 900 } },
+            { cmd: 'italic',        label: 'I',  style: { fontStyle: 'italic' } },
+            { cmd: 'underline',     label: 'U',  style: { textDecoration: 'underline' } },
+            { cmd: 'strikeThrough', label: 'S',  style: { textDecoration: 'line-through' } },
+          ].map(f => (
+            <button key={f.cmd} onClick={() => applyFormat(f.cmd)} style={{ width: 40, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, ...f.style, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {f.label}
             </button>
           ))}
+          <button onClick={() => { titleRef.current?.focus(); document.execCommand('removeFormat'); setTimeout(saveTitleHtml, 100) }} style={{ flex: 1, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.6)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS }}>
+            {lang === 'en' ? 'Clear' : 'Limpiar'}
+          </button>
         </div>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', margin: '8px 0 0', lineHeight: 1.4 }}>
+          {lang === 'en' ? 'Select text in the title, then tap a format.' : 'Selecciona texto en el título y aplica el formato.'}
+        </p>
       </div>
 
       <button onClick={() => setShowCustomize(false)} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>
@@ -453,17 +496,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                   <div style={{ fontSize: 14, color: te.tileText, fontWeight: 600 }}>{inv.nombre}</div>
                   {inv.email && <div style={{ fontSize: 11, color: '#a39ec0' }}>{inv.email}</div>}
                 </div>
-                {/* Botón WhatsApp */}
-                <button
-                  onClick={() => {
-                    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre}. Aquí está todo el plan: https://joincheers.app/${celebracion?.slug}/r`)
-                    window.open(`https://wa.me/?text=${msg}`, '_blank')
-                  }}
-                  title="Invitar por WhatsApp"
-                  style={{ border: 'none', background: '#25D366', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                >
-                  ✓
-                </button>
+                <button onClick={() => enviarWhatsApp()} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>W</button>
               </div>
             ))}
           </div>
@@ -485,26 +518,9 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 <button onClick={agregarInvitado} disabled={guardandoInvitado} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>{guardandoInvitado ? '...' : tx.add_guest_btn}</button>
                 <button onClick={() => { setShowAddInvitado(false); setNuevoInvitado('') }} style={{ border: 'none', background: '#f0edf8', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>{tx.cancel}</button>
               </div>
-              {/* Botones rápidos de envío */}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => {
-                    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre}. Aquí está todo el plan: https://joincheers.app/${celebracion?.slug}/r`)
-                    window.open(`https://wa.me/?text=${msg}`, '_blank')
-                  }}
-                  style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}
-                >
-                  WhatsApp
-                </button>
-                <button
-                  onClick={() => {
-                    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre}. Aquí está todo el plan: https://joincheers.app/${celebracion?.slug}/r`)
-                    window.open(`sms:?&body=${msg}`, '_blank')
-                  }}
-                  style={{ flex: 1, border: 'none', background: '#534AB7', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}
-                >
-                  SMS
-                </button>
+                <button onClick={() => enviarWhatsApp()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>WhatsApp</button>
+                <button onClick={enviarSMS} style={{ flex: 1, border: 'none', background: '#534AB7', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>SMS</button>
               </div>
             </div>
           ) : (
@@ -533,9 +549,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     if (tileKey === 'aperturas') return (
       <div>
         <div style={{ fontSize: 13, color: '#7a7494', fontWeight: 700, marginBottom: 8 }}>{tx.no_openings}</div>
-        <div style={{ height: 9, background: te.accentBg, borderRadius: 99, overflow: 'hidden' }}>
-          <div style={{ width: '0%', height: '100%', background: 'linear-gradient(90deg,#534AB7,#D4537E)' }} />
-        </div>
+        <div style={{ height: 9, background: te.accentBg, borderRadius: 99 }} />
       </div>
     )
 
@@ -554,12 +568,14 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: te.bg, fontFamily: FSYS }}>
       <style>{`
         @keyframes starPulse { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1)} }
+        [contenteditable]:empty:before { content: attr(data-placeholder); color: #a39ec0; }
+        [contenteditable]:focus { outline: none; }
       `}</style>
 
-      {/* Estrellitas animadas */}
+      {/* Estrellitas */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         {STARS.map((s, i) => (
-          <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: `${starColor}0.5)`, lineHeight: 1, userSelect: 'none', animation: `starPulse ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>
+          <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: `${starColor}0.45)`, lineHeight: 1, userSelect: 'none', animation: `starPulse ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>
         ))}
       </div>
 
@@ -568,18 +584,43 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 24, padding: '28px 24px', maxWidth: 360, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,.3)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#2a2440', marginBottom: 8 }}>Enviar por WhatsApp</div>
-            <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 16px' }}>
-              Confirma el número para enviar la invitación a {invitadoPendienteWA?.nombre}.
-            </p>
+            <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 16px' }}>Confirma el número de {invitadoPendienteWA?.nombre}.</p>
             <input value={waPhone} onChange={e => setWaPhone(e.target.value)} placeholder="+52 81 1234 5678" style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #EEEDFE', borderRadius: 12, padding: '10px 14px', fontSize: 15, fontFamily: FSYS, outline: 'none', marginBottom: 12 }} />
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => { setShowWAPrompt(false); setWaPhone('') }} style={{ flex: 1, border: '1.5px solid #e0ddf5', background: 'none', color: '#7a7494', fontSize: 14, fontWeight: 700, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>
-                Omitir
-              </button>
-              <button onClick={enviarWhatsApp} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>
-                Enviar
-              </button>
+              <button onClick={() => { setShowWAPrompt(false); setWaPhone('') }} style={{ flex: 1, border: '1.5px solid #e0ddf5', background: 'none', color: '#7a7494', fontSize: 14, fontWeight: 700, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>Omitir</button>
+              <button onClick={() => enviarWhatsApp()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>Enviar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Panel progreso */}
+      {showProgress && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 150, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 80 }}>
+          <div onClick={() => setShowProgress(false)} style={{ position: 'absolute', inset: 0 }} />
+          <div style={{ position: 'relative', background: '#fff', borderRadius: 20, padding: '24px 22px', width: 320, boxShadow: '0 20px 60px rgba(0,0,0,.25)', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440' }}>{progressLabel}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{progress}%</div>
+            </div>
+            <div style={{ height: 6, background: '#EEEDFE', borderRadius: 99, marginBottom: 20, overflow: 'hidden' }}>
+              <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius: 99, transition: 'width .4s' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {progressItems.map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: item.done ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, color: item.done ? '#fff' : '#a39ec0', fontWeight: 800 }}>{item.done ? '✓' : '·'}</span>
+                  </div>
+                  <span style={{ fontSize: 13, color: item.done ? '#2a2440' : '#a39ec0', fontWeight: item.done ? 600 : 400, textDecoration: item.done ? 'none' : 'none' }}>{item.label}</span>
+                </div>
+              ))}
+            </div>
+            {isComplete && (
+              <div style={{ marginTop: 16, padding: '12px', background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: 800 }}>
+                Cheers full! ✦
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -599,7 +640,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
         {/* Sidebar desktop */}
         {!isMobile && showCustomize && (
-          <div style={{ width: 280, flexShrink: 0, padding: '24px 16px', background: 'rgba(0,0,0,.32)', backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,.08)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', boxSizing: 'border-box' as const }}>
+          <div style={{ width: 290, flexShrink: 0, padding: '24px 16px', background: 'rgba(0,0,0,.32)', backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,.08)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', boxSizing: 'border-box' as const }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 24 }}>{tx.customize}</div>
             <SidebarContent />
           </div>
@@ -612,13 +653,49 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 8, flexWrap: 'wrap' as const }}>
             <button onClick={() => router.back()} style={pillBtn}>{tx.my_celebrations}</button>
 
-            {/* Título + progress */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {/* Título + termómetro */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.45)', letterSpacing: '.5px' }}>{tx.cheers}</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: textColor, fontFamily: F, maxWidth: isMobile ? 160 : 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                {title || tx.title_placeholder}
-              </div>
-              <ProgressBar pct={progress} textColor={textColor} />
+              <div
+                ref={titleRef}
+                contentEditable
+                suppressContentEditableWarning
+                data-placeholder={tx.title_placeholder}
+                onInput={saveTitleHtml}
+                style={{
+                  fontFamily: F,
+                  fontSize: Math.min(tituloSize, isMobile ? 18 : 22),
+                  fontWeight: 800,
+                  color: textColor,
+                  maxWidth: isMobile ? 160 : 300,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap' as const,
+                  textAlign: tituloEstilo === 'normal-center' || tituloEstilo === 'spaced' ? 'center' : 'left',
+                  letterSpacing: tituloEstilo === 'spaced' ? '4px' : 'normal',
+                  outline: 'none',
+                  cursor: 'text',
+                  minWidth: 80,
+                }}
+              />
+              {/* Termómetro clickeable */}
+              <button
+                onClick={() => setShowProgress(v => !v)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', display: 'flex', alignItems: 'center', gap: 5 }}
+              >
+                {isComplete ? (
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#f7d76b' }}>Cheers full! ✦</span>
+                ) : (
+                  <>
+                    <div style={{ width: 48, height: 4, borderRadius: 99, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}>
+                      <div style={{ width: `${progress}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.5)' }}>{progress}%</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>·</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,.45)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{progressLabel}</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <div style={{ display: 'flex', gap: 6 }}>
@@ -644,10 +721,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             </div>
 
             <div style={{ padding: '16px 18px 20px' }}>
-              <div style={{ marginBottom: 10 }}>
-                git add -A && git commit -m "quitar titulo duplicado del hero card" && git push
-                <input value={tagline} onChange={e => setTagline(e.target.value)} onBlur={e => guardarCampo('tagline', e.target.value)} placeholder={tx.tagline_placeholder} style={{ border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 13, color: '#7a7494', padding: '3px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
-              </div>
+              <input value={tagline} onChange={e => setTagline(e.target.value)} onBlur={e => guardarCampo('tagline', e.target.value)} placeholder={tx.tagline_placeholder} style={{ border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 13, color: '#7a7494', padding: '3px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' as const, marginBottom: 8 }} />
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 16px', padding: '0 4px' }}>
                 <div>
