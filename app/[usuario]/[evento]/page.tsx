@@ -798,7 +798,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', marginBottom: 16, boxShadow: '0 8px 24px rgba(25,12,50,.1)', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative' }}
             onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
           >
-            <div style={{ aspectRatio: '1/1', background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ height: isMobile ? 280 : 400, background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {subiendoPortada
                 ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
                 : portadaUrl
