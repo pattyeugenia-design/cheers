@@ -500,6 +500,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                   {inv.email && <div style={{ fontSize: 11, color: '#a39ec0' }}>{inv.email}</div>}
                 </div>
                 <button onClick={() => { const msg = encodeURIComponent(`¡Hola ${inv.nombre}! Te invito a ${celebracion?.nombre}. Aquí está todo el plan: https://joincheers.app/${celebracion?.slug}/r`); window.open(`https://wa.me/?text=${msg}`, '_blank') }} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>W</button>
+                <button onClick={async () => { if (!confirm(lang === 'en' ? 'Remove this guest?' : '¿Quitar a este invitado?')) return; await supabase.from('invitados').delete().eq('id', inv.id); setInvitadosList(prev => prev.filter(i => i.id !== inv.id)) }} style={{ border: 'none', background: '#fee2e2', color: '#dc2626', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
               </div>
             ))}
           </div>
@@ -557,7 +558,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
         style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative', borderRadius: '0 0 22px 22px', overflow: 'hidden' }}
       >
-        <div style={{ height: tileSize === 'lg' ? (isMobile ? 220 : 360) : 180, background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <div style={{ height: tileSize === 'lg' ? (isMobile ? 260 : 420) : (isMobile ? 200 : 260), background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           {subiendoPortada
             ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
             : portadaUrl
