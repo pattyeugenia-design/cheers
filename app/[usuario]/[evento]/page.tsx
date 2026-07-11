@@ -584,7 +584,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       {/* Lightbox portada */}
       {showLightbox && portadaUrl && (
         <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <img src={portadaUrl} alt="portada" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 16, objectFit: 'contain', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
+          <img src={portadaUrl} alt="portada" style={{ width: '100%', maxWidth: 800, height: '70vh', borderRadius: 16, objectFit: 'cover', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }} onClick={e => e.stopPropagation()}>
             {[{val:'top',label:'Arriba'},{val:'center',label:'Centro'},{val:'bottom',label:'Abajo'}].map(p => (
               <button key={p.val} onClick={() => setImgPosition(p.val)} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>
