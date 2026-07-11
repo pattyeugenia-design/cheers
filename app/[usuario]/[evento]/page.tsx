@@ -19,7 +19,7 @@ const TEMAS: Record<string, { label_key: string; bg: string; dark: boolean; tile
   bosque:  { label_key: 'theme_bosque',  bg: 'linear-gradient(155deg,#1a3c2a,#2d6a4f,#40916c)',                                                               dark: true,  tileBg: '#f0faf4', tileText: '#1a3c2a', accentBg: '#d8f3dc', accentText: '#2d6a4f' },
   ambar:   { label_key: 'theme_ambar',   bg: 'linear-gradient(155deg,#b5451b,#e76f51,#f4a261)',                                                               dark: true,  tileBg: '#fff8f0', tileText: '#3d1a08', accentBg: '#fde8d8', accentText: '#b5451b' },
   carbon:  { label_key: 'theme_carbon',  bg: 'linear-gradient(160deg,#1a1a1a,#2d2d2d,#3d3d3d)',                                                               dark: true,  tileBg: '#2a2a2a', tileText: '#f0f0f0', accentBg: '#3a3a3a', accentText: '#d0d0d0' },
-  lavanda: { label_key: 'theme_lavanda', bg: '#EEEDFE',                                                                                                       dark: false, tileBg: '#fff',    tileText: '#2a2440', accentBg: '#534AB7', accentText: '#fff'    },
+  lavanda: { label_key: 'theme_lavanda', bg: '#B8B0F0',                                                                                                       dark: false, tileBg: '#fff',    tileText: '#2a2440', accentBg: '#534AB7', accentText: '#fff'    },
   crema:   { label_key: 'theme_crema',   bg: '#FBF4EC',                                                                                                       dark: false, tileBg: '#fff',    tileText: '#2a2440', accentBg: '#f0e6d3', accentText: '#7a5c3a' },
 }
 const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
@@ -655,19 +655,30 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
             {/* Título + termómetro */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.45)', letterSpacing: '.5px' }}>{tx.cheers}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.35)', letterSpacing: '.5px' }}>{tx.cheers}</div>
               <div
                 ref={titleRef}
                 contentEditable
                 suppressContentEditableWarning
                 data-placeholder={tx.title_placeholder}
-                onInput={saveTitleHtml}
+                onInput={e => {
+                  const el = e.currentTarget
+                  if (el.innerText.length > 40) {
+                    el.innerText = el.innerText.slice(0, 40)
+                    const range = document.createRange()
+                    range.selectNodeContents(el)
+                    range.collapse(false)
+                    window.getSelection()?.removeAllRanges()
+                    window.getSelection()?.addRange(range)
+                  }
+                  saveTitleHtml()
+                }}
                 style={{
                   fontFamily: F,
-                  fontSize: Math.min(tituloSize, isMobile ? 16 : 20),
+                  fontSize: Math.min(tituloSize, isMobile ? 18 : 24),
                   fontWeight: 800,
                   color: textColor,
-                  maxWidth: isMobile ? 180 : 340,
+                  maxWidth: isMobile ? 180 : 360,
                   textAlign: tituloEstilo === 'normal-center' || tituloEstilo === 'spaced' ? 'center' : 'left',
                   letterSpacing: tituloEstilo === 'spaced' ? '3px' : 'normal',
                   outline: 'none',
@@ -683,13 +694,13 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', display: 'flex', alignItems: 'center', gap: 5 }}
               >
                 {isComplete ? (
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#f7d76b' }}>Cheers full! ✦</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: te.dark ? '#f7d76b' : '#534AB7' }}>Cheers full! ✦</span>
                 ) : (
                   <>
-                    <div style={{ width: 48, height: 4, borderRadius: 99, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}>
+                    <div style={{ width: 48, height: 4, borderRadius: 99, background: te.dark ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.12)', overflow: 'hidden' }}>
                       <div style={{ width: `${progress}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.85)' }}>{progress}% · {progressLabel}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.6)' }}>{progress}% · {progressLabel}</span>
                   </>
                 )}
               </button>
