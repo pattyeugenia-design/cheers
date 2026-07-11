@@ -575,7 +575,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       `}</style>
 
       {/* Estrellitas */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, isolation: 'isolate' }}>
         {STARS.map((s, i) => (
           <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: `${starColor}0.45)`, lineHeight: 1, userSelect: 'none', animation: `starPulse ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>
         ))}
@@ -656,7 +656,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', maxWidth: isMobile ? '100%' : 1280, margin: '0 auto', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', maxWidth: isMobile ? '100%' : 1280, margin: '0 auto', minHeight: '100vh' }}>
 
         {/* Sidebar desktop */}
         {!isMobile && showCustomize && (
@@ -798,7 +798,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', marginBottom: 16, boxShadow: '0 8px 24px rgba(25,12,50,.1)', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative' }}
             onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
           >
-            <div style={{ height: isMobile ? 280 : 400, background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ aspectRatio: '1/1', background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {subiendoPortada
                 ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
                 : portadaUrl
