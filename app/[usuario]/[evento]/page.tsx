@@ -7,11 +7,6 @@ import { getLang, t } from '../../i18n'
 const LIMITE_FREE = 3
 const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 
-const CHIPS: Record<string, string> = {
-  cumple: 'BDAY', cumpleanos: 'BDAY', cena: 'DINE', viaje: 'TRIP',
-  reunion: 'MEET', evento: 'EVENT', otro: 'OTHER'
-}
-
 const TEMAS: Record<string, { label_key: string; bg: string; dark: boolean; tileBg: string; tileText: string; accentBg: string; accentText: string }> = {
   morado:  { label_key: 'theme_morado',  bg: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)', dark: true,  tileBg: '#fff',    tileText: '#2a2440', accentBg: '#EEEDFE', accentText: '#534AB7' },
   rosa:    { label_key: 'theme_rosa',    bg: 'linear-gradient(155deg,#D4537E,#a14b9c)',                                                                        dark: true,  tileBg: '#fff5f8', tileText: '#3a1525', accentBg: '#FCE9F0', accentText: '#D4537E' },
@@ -24,24 +19,23 @@ const TEMAS: Record<string, { label_key: string; bg: string; dark: boolean; tile
 }
 const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
 
-// Fuentes del sistema — siempre disponibles, sin Google Fonts
 const FUENTES: Record<string, { label: string; font: string }> = {
-  system:   { label: 'SF Pro',        font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' },
-  verdana:  { label: 'Verdana',       font: 'Verdana, Geneva, sans-serif' },
-  georgia:  { label: 'Georgia',       font: 'Georgia, serif' },
-  cursive:  { label: 'Brush Script',  font: '"Brush Script MT", "Segoe Script", cursive' },
+  system:  { label: 'SF Pro',       font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' },
+  verdana: { label: 'Verdana',      font: 'Verdana, Geneva, sans-serif' },
+  georgia: { label: 'Georgia',      font: 'Georgia, serif' },
+  cursive: { label: 'Brush Script', font: '"Brush Script MT", "Segoe Script", cursive' },
 }
 const FUENTE_ORDER = ['system', 'verdana', 'georgia', 'cursive']
 
 type TituloEstilo = 'normal-left' | 'normal-center' | 'spaced'
 
 const DEFAULT_TILES_VISIBLES: Record<string, boolean> = {
-  invitados: true, aperturas: true, regalos: true, mensajes: true,
+  portada: true, invitados: true, aperturas: true, regalos: true, mensajes: true,
   itinerario: true, presupuesto: true, quellevar: true, menu: true, reservacion: true
 }
 
 const TINFO: Record<string, { label: string; title_key: string }> = {
-  portada:     { label: 'IMG', title_key: 'tile_portada' }, // handled separately
+  portada:     { label: 'IMG', title_key: 'tile_portada' },
   invitados:   { label: 'INV', title_key: 'tile_invitados' },
   aperturas:   { label: 'APE', title_key: 'tile_aperturas' },
   regalos:     { label: 'REG', title_key: 'tile_regalos' },
@@ -60,14 +54,10 @@ const STARS = [
   { top: '22%', left: '96%', size: 16, delay: '2.1s', dur: '2.6s' },
   { top: '30%', left: '1%',  size: 20, delay: '0.8s', dur: '3.8s' },
   { top: '38%', left: '97%', size: 14, delay: '1.6s', dur: '3.0s' },
-  { top: '45%', left: '3%',  size: 10, delay: '2.4s', dur: '2.5s' },
   { top: '52%', left: '95%', size: 22, delay: '0.3s', dur: '4.0s' },
   { top: '60%', left: '2%',  size: 16, delay: '1.9s', dur: '2.9s' },
-  { top: '68%', left: '94%', size: 12, delay: '0.7s', dur: '3.3s' },
   { top: '75%', left: '4%',  size: 26, delay: '1.3s', dur: '2.7s' },
-  { top: '82%', left: '93%', size: 14, delay: '2.2s', dur: '3.6s' },
   { top: '88%', left: '6%',  size: 18, delay: '0.4s', dur: '3.1s' },
-  { top: '93%', left: '91%', size: 10, delay: '1.7s', dur: '2.4s' },
 ]
 
 function tilesForType(type: string, sub?: string) {
@@ -80,7 +70,7 @@ function tilesForType(type: string, sub?: string) {
     otro:    ['portada', 'invitados', 'aperturas', 'regalos'],
   }
   const LG: Record<string, boolean> = { portada: true, regalos: true, itinerario: true, menu: true, mensajes: true }
-  const keys = SETS[type] || ['invitados', 'aperturas', 'regalos']
+  const keys = SETS[type] || ['portada', 'invitados', 'aperturas', 'regalos']
   return keys.map(k => ({ key: k, size: LG[k] ? 'lg' : 'sm' }))
 }
 
@@ -94,14 +84,6 @@ function getProgressLabel(pct: number, lang: string): string {
   return lang === 'en' ? 'Start with the basics' : 'Empieza por lo básico'
 }
 
-function TileIcon({ label, accentBg, accentText }: { label: string; accentBg: string; accentText: string }) {
-  return (
-    <div style={{ width: 28, height: 28, borderRadius: 8, background: accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <span style={{ fontSize: 10, fontWeight: 800, color: accentText, letterSpacing: '.3px' }}>{label}</span>
-    </div>
-  )
-}
-
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 99, border: 'none', padding: 0, background: on ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#d4d0e8', cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
@@ -110,11 +92,20 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
+function TileIcon({ label, accentBg, accentText }: { label: string; accentBg: string; accentText: string }) {
+  return (
+    <div style={{ width: 28, height: 28, borderRadius: 8, background: accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <span style={{ fontSize: 10, fontWeight: 800, color: accentText, letterSpacing: '.3px' }}>{label}</span>
+    </div>
+  )
+}
+
 export default function Dashboard({ params }: { params: Promise<{ usuario: string; evento: string }> }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const saveTimeout = useRef<any>(null)
+
   const [tx, setTx] = useState(t.es)
   const [lang, setLang] = useState('es')
   const [celebracion, setCelebracion] = useState<any>(null)
@@ -123,6 +114,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [cargando, setCargando] = useState(true)
   const [acceso, setAcceso] = useState<'loading' | 'ok' | 'denied'>('loading')
 
+  // Hero fields
   const [tagline, setTagline] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
@@ -130,41 +122,54 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [imgPosition, setImgPosition] = useState('center')
+  const [showLightbox, setShowLightbox] = useState(false)
 
+  // Tiles
   const [tiles, setTiles] = useState<{ key: string; size: string }[]>([])
   const [tilesVisibles, setTilesVisibles] = useState<Record<string, boolean>>(DEFAULT_TILES_VISIBLES)
   const [tema, setTema] = useState('morado')
   const [fuente, setFuente] = useState('system')
   const [tituloEstilo, setTituloEstilo] = useState<TituloEstilo>('normal-left')
   const [tituloSize, setTituloSize] = useState(23)
-  const [tituloBold, setTituloBold] = useState(true)
-  const [tituloItalic, setTituloItalic] = useState(false)
   const [showCustomize, setShowCustomize] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [guardandoToggle, setGuardandoToggle] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
+  // Invitados
   const [showAddInvitado, setShowAddInvitado] = useState(false)
   const [nuevoInvitado, setNuevoInvitado] = useState('')
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
   const [showWAPrompt, setShowWAPrompt] = useState(false)
-  const [showLightbox, setShowLightbox] = useState(false)
-  const [imgPosition, setImgPosition] = useState('center')
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
-  // Progreso
-  const [portadaOk, setPortadaOk] = useState(false)
-  const [titleHtml, setTitleHtml] = useState('')
+  // Regalos
+  const [regalos, setRegalos] = useState<any[]>([])
+  const [showAddRegalo, setShowAddRegalo] = useState(false)
+  const [nuevoRegalo, setNuevoRegalo] = useState({ nombre: '', precio: '', link: '' })
+
+  // Itinerario
+  const [paradas, setParadas] = useState<any[]>([])
+  const [showAddParada, setShowAddParada] = useState(false)
+  const [nuevaParada, setNuevaParada] = useState({ lugar: '', hora: '', nota: '' })
+
+  // Qué llevar
+  const [quellevar, setQuellevar] = useState<any[]>([])
+  const [showAddItem, setShowAddItem] = useState(false)
+  const [nuevoItem, setNuevoItem] = useState('')
+
+  // Quién trae qué
+  const [menu, setMenu] = useState<any[]>([])
+  const [showAddPlato, setShowAddPlato] = useState(false)
+  const [nuevoPlato, setNuevoPlato] = useState({ nombre: '', quien: '' })
 
   useEffect(() => {
-    const l = getLang()
-    setLang(l)
-    setTx(t[l])
+    const l = getLang(); setLang(l); setTx(t[l])
     const check = () => setIsMobile(window.innerWidth < 600)
-    check()
-    window.addEventListener('resize', check)
+    check(); window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
 
@@ -185,37 +190,31 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       if (!cel) { setAcceso('denied'); setCargando(false); return }
       if (cel.organizador_id !== user.id) { setAcceso('denied'); setCargando(false); return }
 
-      setAcceso('ok')
-      setCelebracion(cel)
-      setTitleHtml(cel.nombre_html || cel.nombre || '')
+      setAcceso('ok'); setCelebracion(cel)
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
       setLugar(cel.paradas?.[0]?.lugar || '')
       setPortadaUrl(cel.portada_url || null)
-      setPortadaOk(!!cel.portada_url)
+      setParadas(cel.paradas || [])
+      setRegalos(cel.gifts || [])
+      setQuellevar(cel.quellevar || [])
+      setMenu(cel.menu || [])
       setTiles(tilesForType(cel.tipo, cel.sub_tipo))
       setTilesVisibles({ ...DEFAULT_TILES_VISIBLES, ...(cel.tiles_visibles || {}) })
       if (cel.tema) setTema(cel.tema)
       if (cel.fuente) setFuente(cel.fuente)
       if (cel.titulo_align) setTituloEstilo(cel.titulo_align as TituloEstilo)
       if (cel.titulo_size) setTituloSize(cel.titulo_size)
-      if (cel.titulo_bold !== undefined) setTituloBold(cel.titulo_bold)
-      if (cel.titulo_italic !== undefined) setTituloItalic(cel.titulo_italic)
 
       const { data: rsvpData } = await supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setRsvps(rsvpData || [])
-
       const { data: invData } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setInvitadosList(invData || [])
-
       setCargando(false)
 
-      // Inicializar el rich text editor con el contenido guardado
       setTimeout(() => {
-        if (titleRef.current) {
-          titleRef.current.innerHTML = cel.nombre_html || cel.nombre || ''
-        }
+        if (titleRef.current) titleRef.current.innerHTML = cel.nombre_html || cel.nombre || ''
       }, 100)
     })
   }, [])
@@ -223,14 +222,12 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const saveTitleHtml = useCallback(() => {
     if (!celebracion || !titleRef.current) return
     const html = titleRef.current.innerHTML
-    const text = titleRef.current.innerText
-    setTitleHtml(html)
-    supabase.from('celebraciones').update({ nombre_html: html, nombre: text }).eq('slug', celebracion.slug)
+    supabase.from('celebraciones').update({ nombre_html: html, nombre: titleRef.current.innerText }).eq('slug', celebracion.slug)
   }, [celebracion])
 
-  function applyFormat(command: string, value?: string) {
+  function applyFormat(cmd: string) {
     titleRef.current?.focus()
-    document.execCommand(command, false, value)
+    document.execCommand(cmd, false)
     setTimeout(saveTitleHtml, 100)
   }
 
@@ -258,11 +255,11 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
   async function guardarLugar(val: string) {
     if (!celebracion) return
-    const paradas = [...(celebracion.paradas || [])]
-    if (paradas.length > 0) paradas[0].lugar = val
-    else paradas.push({ lugar: val, hora: '', nota: '' })
-    await supabase.from('celebraciones').update({ paradas }).eq('slug', celebracion.slug)
-    setCelebracion((prev: any) => ({ ...prev, paradas }))
+    const ps = [...paradas]
+    if (ps.length > 0) ps[0].lugar = val
+    else ps.push({ lugar: val, hora: '', nota: '' })
+    setParadas(ps)
+    await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
   }
 
   async function subirPortada(file: File) {
@@ -275,56 +272,114 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
     await supabase.from('celebraciones').update({ portada_url: publicUrl }).eq('slug', celebracion.slug)
     setPortadaUrl(publicUrl)
-    setPortadaOk(true)
     setSubiendoPortada(false)
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (file) subirPortada(file)
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault(); setDragOver(false)
-    const file = e.dataTransfer.files?.[0]; if (file) subirPortada(file)
-  }
-
+  // Invitados
   async function agregarInvitado() {
     if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= LIMITE_FREE) return
     setGuardandoInvitado(true)
     const isPhone = /^\+?[\d\s\-()]{7,}$/.test(nuevoInvitado.trim()) && !nuevoInvitado.includes('@')
-    const row = {
-      celebracion_slug: celebracion.slug,
-      email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null,
-      nombre: nuevoInvitado.trim(),
-      user_id: null,
-      created_at: new Date().toISOString()
-    }
+    const row = { celebracion_slug: celebracion.slug, email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null, nombre: nuevoInvitado.trim(), user_id: null, created_at: new Date().toISOString() }
     const { data } = await supabase.from('invitados').insert(row).select().single()
     if (data) {
       setInvitadosList(prev => [...prev, data])
-      if (isPhone) {
-        setInvitadoPendienteWA(data)
-        setWaPhone(nuevoInvitado.trim())
-        setShowWAPrompt(true)
-      }
+      if (isPhone) { setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true) }
     }
     setNuevoInvitado(''); setGuardandoInvitado(false); setShowAddInvitado(false)
   }
 
-  function enviarWhatsApp(phone?: string) {
-    if (!celebracion) return
-    const shareUrl = `https://joincheers.app/${celebracion.slug}/r`
-    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion.nombre || titleRef.current?.innerText || ''}. Aquí está todo el plan: ${shareUrl}`)
+  async function borrarInvitado(id: string) {
+    if (!confirm(lang === 'en' ? 'Remove this guest?' : '¿Quitar a este invitado?')) return
+    await supabase.from('invitados').delete().eq('id', id)
+    setInvitadosList(prev => prev.filter(i => i.id !== id))
+  }
+
+  function enviarWA(nombre?: string, phone?: string) {
+    const shareUrl = `https://joincheers.app/${celebracion?.slug}/r`
+    const greeting = nombre ? `¡Hola ${nombre}! ` : '¡Hola! '
+    const msg = encodeURIComponent(`${greeting}Te invito a ${titleRef.current?.innerText || celebracion?.nombre || ''}. Aquí está todo el plan: ${shareUrl}`)
     const p = (phone || waPhone).replace(/[^\d+]/g, '')
     window.open(p ? `https://wa.me/${p}?text=${msg}` : `https://wa.me/?text=${msg}`, '_blank')
-    setShowWAPrompt(false); setWaPhone(''); setInvitadoPendienteWA(null)
+    setShowWAPrompt(false); setWaPhone('')
   }
 
   function enviarSMS() {
-    if (!celebracion) return
-    const shareUrl = `https://joincheers.app/${celebracion.slug}/r`
-    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion.nombre || ''}. El plan completo: ${shareUrl}`)
+    const shareUrl = `https://joincheers.app/${celebracion?.slug}/r`
+    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre || ''}. El plan: ${shareUrl}`)
     window.open(`sms:?&body=${msg}`, '_blank')
+  }
+
+  // Regalos
+  async function agregarRegalo() {
+    if (!nuevoRegalo.nombre.trim() || !celebracion) return
+    const nuevo = [...regalos, { id: Date.now().toString(), nombre: nuevoRegalo.nombre.trim(), precio: nuevoRegalo.precio, link: nuevoRegalo.link, reservado: false }]
+    setRegalos(nuevo)
+    await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+    setNuevoRegalo({ nombre: '', precio: '', link: '' }); setShowAddRegalo(false)
+  }
+
+  async function toggleRegalo(id: string) {
+    const nuevo = regalos.map(r => r.id === id ? { ...r, reservado: !r.reservado } : r)
+    setRegalos(nuevo)
+    await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+  }
+
+  async function borrarRegalo(id: string) {
+    const nuevo = regalos.filter(r => r.id !== id)
+    setRegalos(nuevo)
+    await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+  }
+
+  // Itinerario
+  async function agregarParada() {
+    if (!nuevaParada.lugar.trim() || !celebracion) return
+    const nuevo = [...paradas, { id: Date.now().toString(), ...nuevaParada }]
+    setParadas(nuevo)
+    await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
+    setNuevaParada({ lugar: '', hora: '', nota: '' }); setShowAddParada(false)
+  }
+
+  async function borrarParada(id: string) {
+    const nuevo = paradas.filter(p => p.id !== id)
+    setParadas(nuevo)
+    await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
+  }
+
+  // Qué llevar
+  async function agregarItem() {
+    if (!nuevoItem.trim() || !celebracion) return
+    const nuevo = [...quellevar, { id: Date.now().toString(), nombre: nuevoItem.trim(), listo: false }]
+    setQuellevar(nuevo)
+    await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
+    setNuevoItem(''); setShowAddItem(false)
+  }
+
+  async function toggleItem(id: string) {
+    const nuevo = quellevar.map(i => i.id === id ? { ...i, listo: !i.listo } : i)
+    setQuellevar(nuevo)
+    await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
+  }
+
+  async function borrarItem(id: string) {
+    const nuevo = quellevar.filter(i => i.id !== id)
+    setQuellevar(nuevo)
+    await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
+  }
+
+  // Quién trae qué
+  async function agregarPlato() {
+    if (!nuevoPlato.nombre.trim() || !celebracion) return
+    const nuevo = [...menu, { id: Date.now().toString(), nombre: nuevoPlato.nombre.trim(), quien: nuevoPlato.quien }]
+    setMenu(nuevo)
+    await supabase.from('celebraciones').update({ menu: nuevo }).eq('slug', celebracion.slug)
+    setNuevoPlato({ nombre: '', quien: '' }); setShowAddPlato(false)
+  }
+
+  async function borrarPlato(id: string) {
+    const nuevo = menu.filter(p => p.id !== id)
+    setMenu(nuevo)
+    await supabase.from('celebraciones').update({ menu: nuevo }).eq('slug', celebracion.slug)
   }
 
   if (cargando) return (
@@ -335,12 +390,10 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
   if (acceso === 'denied') return (
     <div style={{ minHeight: '100vh', background: TEMAS.morado.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#fff', borderRadius: 24, padding: '2.5rem', maxWidth: 400, textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,.25)' }}>
+      <div style={{ background: '#fff', borderRadius: 24, padding: '2.5rem', maxWidth: 400, textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: '#1c1830', marginBottom: 8 }}>{tx.access_denied}</div>
         <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 20px' }}>{tx.no_permission}</p>
-        <button onClick={() => router.back()} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 15, fontWeight: 700, padding: '12px 24px', borderRadius: 14, cursor: 'pointer' }}>
-          {tx.go_home}
-        </button>
+        <button onClick={() => router.back()} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 15, fontWeight: 700, padding: '12px 24px', borderRadius: 14, cursor: 'pointer' }}>{tx.go_home}</button>
       </div>
     </div>
   )
@@ -355,16 +408,15 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const limiteAlcanzado = invitadosList.length >= LIMITE_FREE
   const MIN_SIZE = 16, MAX_SIZE = isMobile ? 36 : 52
 
-  // Calcular progreso
   const progressItems = [
-    { label: lang === 'en' ? 'Cover image' : 'Imagen de portada', done: portadaOk },
-    { label: lang === 'en' ? 'Event title' : 'Título del evento', done: !!(titleRef.current?.innerText || titleHtml) },
+    { label: lang === 'en' ? 'Cover photo' : 'Foto de portada', done: !!portadaUrl },
+    { label: lang === 'en' ? 'Event title' : 'Título del evento', done: !!(titleRef.current?.innerText || celebracion?.nombre) },
     { label: lang === 'en' ? 'Guest of honor' : 'Festejado/a', done: !!festejado },
     { label: lang === 'en' ? 'Date' : 'Fecha', done: !!fecha },
     { label: lang === 'en' ? 'Place' : 'Lugar', done: !!lugar },
     { label: lang === 'en' ? 'Description' : 'Descripción', done: !!tagline },
     { label: lang === 'en' ? 'At least 1 guest' : 'Al menos 1 invitado', done: invitadosList.length > 0 },
-    { label: lang === 'en' ? 'Gift list or itinerary' : 'Regalos o itinerario', done: (celebracion?.gifts || []).length > 0 || (celebracion?.paradas || []).length > 1 },
+    { label: lang === 'en' ? 'Gift list or itinerary' : 'Regalos o itinerario', done: regalos.length > 0 || paradas.length > 1 },
   ]
   const progress = Math.round((progressItems.filter(p => p.done).length / progressItems.length) * 100)
   const progressLabel = getProgressLabel(progress, lang)
@@ -372,11 +424,14 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
   const pillBtn: React.CSSProperties = { background: 'rgba(255,255,255,.92)', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, boxShadow: '0 4px 14px rgba(20,10,40,.18)', whiteSpace: 'nowrap' as const }
   const fieldInput: React.CSSProperties = { border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 15, fontWeight: 600, color: te.tileText, padding: '7px 8px', borderRadius: 9, outline: 'none', width: '100%', boxSizing: 'border-box' as const }
+  const inputStyle: React.CSSProperties = { border: `1.5px solid ${te.accentBg}`, background: te.tileBg, fontFamily: FSYS, fontSize: 14, color: te.tileText, padding: '8px 12px', borderRadius: 10, outline: 'none', width: '100%', boxSizing: 'border-box' as const }
+  const dashedBtn: React.CSSProperties = { border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }
+  const addBtn: React.CSSProperties = { border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }
+  const cancelBtn: React.CSSProperties = { border: 'none', background: '#f0edf8', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }
+  const deleteBtn: React.CSSProperties = { border: 'none', background: '#fee2e2', color: '#dc2626', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
 
   const SidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-
-      {/* Temas */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.theme}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -388,7 +443,6 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         </div>
       </div>
 
-      {/* Tipografías con preview real */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.font}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -403,41 +457,30 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         </div>
       </div>
 
-      {/* Tamaño */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-          {lang === 'en' ? 'Title size' : 'Tamaño del título'} · {tituloSize}px
+          {lang === 'en' ? 'Title size' : 'Tamaño'} · {tituloSize}px
         </div>
-        <input
-          type="range" min={MIN_SIZE} max={MAX_SIZE} value={tituloSize}
-          onChange={e => {
-            const val = Number(e.target.value)
-            setTituloSize(val)
-            clearTimeout(saveTimeout.current)
-            saveTimeout.current = setTimeout(() => guardarCampo('titulo_size', val), 300)
-          }}
-          style={{ width: '100%', accentColor: '#D4537E', cursor: 'pointer', height: 4 }}
+        <input type="range" min={MIN_SIZE} max={MAX_SIZE} value={tituloSize}
+          onChange={e => { const v = Number(e.target.value); setTituloSize(v); clearTimeout(saveTimeout.current); saveTimeout.current = setTimeout(() => guardarCampo('titulo_size', v), 300) }}
+          style={{ width: '100%', accentColor: '#D4537E', cursor: 'pointer' }}
         />
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontFamily: F }}>A</span>
           <span style={{ fontSize: 18, color: 'rgba(255,255,255,.4)', fontFamily: F, fontWeight: 700 }}>A</span>
         </div>
       </div>
 
-      {/* Alineación */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>
           {lang === 'en' ? 'Alignment' : 'Alineación'}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
           {(['normal-left', 'normal-center', 'spaced'] as TituloEstilo[]).map(s => {
-            const labels: Record<TituloEstilo, string> = {
-              'normal-left': '⬛ Izq.',
-              'normal-center': '⬜ Cen.',
-              'spaced': 'S P A C I A D O',
-            }
+            const labels: Record<string, string> = { 'normal-left': '⬛ Izq.', 'normal-center': '⬜ Cen.', 'spaced': 'S·P·A·C·E' }
             return (
-              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s === 'normal-center' || s === 'spaced') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }} style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS, transition: 'all .15s', textAlign: 'center' as const }}>
+              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s === 'normal-center' || s === 'spaced') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }}
+                style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS, transition: 'all .15s' }}>
                 {labels[s]}
               </button>
             )
@@ -445,38 +488,48 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         </div>
       </div>
 
-      {/* Formato del título (rich text) */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>
-          {lang === 'en' ? 'Title format' : 'Formato del título'}
+          {lang === 'en' ? 'Format' : 'Formato'}
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-          {[
-            { cmd: 'bold',          label: 'B',  style: { fontWeight: 900 } },
-            { cmd: 'italic',        label: 'I',  style: { fontStyle: 'italic' } },
-            { cmd: 'underline',     label: 'U',  style: { textDecoration: 'underline' } },
-            { cmd: 'strikeThrough', label: 'S',  style: { textDecoration: 'line-through' } },
-          ].map(f => (
-            <button key={f.cmd} onClick={() => applyFormat(f.cmd)} style={{ width: 40, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, ...f.style, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {f.label}
-            </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[{ cmd: 'bold', label: 'B', style: { fontWeight: 900 } }, { cmd: 'italic', label: 'I', style: { fontStyle: 'italic' } }, { cmd: 'underline', label: 'U', style: { textDecoration: 'underline' } }, { cmd: 'strikeThrough', label: 'S', style: { textDecoration: 'line-through' } }].map(f => (
+            <button key={f.cmd} onClick={() => applyFormat(f.cmd)} style={{ width: 40, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', ...f.style }}>{f.label}</button>
           ))}
           <button onClick={() => { titleRef.current?.focus(); document.execCommand('removeFormat'); setTimeout(saveTitleHtml, 100) }} style={{ flex: 1, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.6)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS }}>
             {lang === 'en' ? 'Clear' : 'Limpiar'}
           </button>
         </div>
         <p style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', margin: '8px 0 0', lineHeight: 1.4 }}>
-          {lang === 'en' ? 'Select text in the title, then tap a format.' : 'Selecciona texto en el título y aplica el formato.'}
+          {lang === 'en' ? 'Select text in the title then tap a format.' : 'Selecciona texto en el título y aplica el formato.'}
         </p>
       </div>
 
-      <button onClick={() => setShowCustomize(false)} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>
-        {tx.save_close}
-      </button>
+      <button onClick={() => setShowCustomize(false)} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>{tx.save_close}</button>
     </div>
   )
 
   const TileContent = ({ tileKey, tileSize }: { tileKey: string; tileSize: string }) => {
+    // PORTADA
+    if (tileKey === 'portada') return (
+      <div onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)}
+        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) subirPortada(f) }}
+        onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
+        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', borderRadius: '0 0 22px 22px', overflow: 'hidden' }}>
+        <div style={{ height: tileSize === 'lg' ? (isMobile ? 260 : 420) : (isMobile ? 180 : 240), background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+          {subiendoPortada
+            ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
+            : portadaUrl
+              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</div>
+              : <div style={{ textAlign: 'center' as const, color: '#a39ec0', pointerEvents: 'none' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div>
+                  <div style={{ fontSize: 12 }}>{tx.cover_hint}</div>
+                </div>}
+        </div>
+      </div>
+    )
+
+    // INVITADOS
     if (tileKey === 'invitados') return (
       <div>
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
@@ -492,15 +545,15 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
         {invitadosList.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-            {invitadosList.map((inv, j) => (
-              <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initial(inv.nombre)}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: te.tileText, fontWeight: 600 }}>{inv.nombre}</div>
-                  {inv.email && <div style={{ fontSize: 11, color: '#a39ec0' }}>{inv.email}</div>}
+            {invitadosList.map(inv => (
+              <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 30, height: 30, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial(inv.nombre)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, color: te.tileText, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{inv.nombre}</div>
+                  {inv.email && <div style={{ fontSize: 11, color: '#a39ec0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{inv.email}</div>}
                 </div>
-                <button onClick={() => { const msg = encodeURIComponent(`¡Hola ${inv.nombre}! Te invito a ${celebracion?.nombre}. Aquí está todo el plan: https://joincheers.app/${celebracion?.slug}/r`); window.open(`https://wa.me/?text=${msg}`, '_blank') }} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>W</button>
-                <button onClick={async () => { if (!confirm(lang === 'en' ? 'Remove this guest?' : '¿Quitar a este invitado?')) return; await supabase.from('invitados').delete().eq('id', inv.id); setInvitadosList(prev => prev.filter(i => i.id !== inv.id)) }} style={{ border: 'none', background: '#fee2e2', color: '#dc2626', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                <button onClick={() => enviarWA(inv.nombre)} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>W</button>
+                <button onClick={() => borrarInvitado(inv.id)} style={{ ...deleteBtn }}>×</button>
               </div>
             ))}
           </div>
@@ -517,30 +570,31 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         {!limiteAlcanzado && (
           showAddInvitado ? (
             <div style={{ marginTop: 4 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const, marginBottom: 8 }}>
-                <input value={nuevoInvitado} onChange={e => setNuevoInvitado(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') agregarInvitado() }} placeholder="Nombre, email o teléfono" autoFocus style={{ flex: 1, minWidth: 120, border: `1.5px solid ${te.accentBg}`, borderRadius: 10, padding: '8px 12px', fontSize: 14, fontFamily: FSYS, outline: 'none', color: te.tileText, background: te.tileBg }} />
-                <button onClick={agregarInvitado} disabled={guardandoInvitado} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>{guardandoInvitado ? '...' : tx.add_guest_btn}</button>
-                <button onClick={() => { setShowAddInvitado(false); setNuevoInvitado('') }} style={{ border: 'none', background: '#f0edf8', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>{tx.cancel}</button>
+              <input value={nuevoInvitado} onChange={e => setNuevoInvitado(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarInvitado()} placeholder="Nombre, email o teléfono" autoFocus style={{ ...inputStyle, marginBottom: 8 }} />
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <button onClick={agregarInvitado} disabled={guardandoInvitado} style={{ ...addBtn, flex: 1 }}>{guardandoInvitado ? '...' : tx.add_guest_btn}</button>
+                <button onClick={() => { setShowAddInvitado(false); setNuevoInvitado('') }} style={cancelBtn}>{tx.cancel}</button>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => enviarWhatsApp()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>WhatsApp</button>
+                <button onClick={() => enviarWA()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>WhatsApp</button>
                 <button onClick={enviarSMS} style={{ flex: 1, border: 'none', background: '#534AB7', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>SMS</button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setShowAddInvitado(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: 12, borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, width: '100%', marginTop: 4 }}>
+            <button onClick={() => setShowAddInvitado(true)} style={{ ...dashedBtn, width: '100%', textAlign: 'center' as const }}>
               {tx.add_guest(invitadosList.length, LIMITE_FREE)}
             </button>
           )
         )}
 
         {rsvps.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${te.accentBg}` }}>
-            {rsvps.map((r, j) => (
-              <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initial(r.nombre)}</div>
-                <span style={{ flex: 1, fontSize: 14, color: te.tileText, fontWeight: 600 }}>{r.nombre}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: r.asistencia === 'si' ? '#1f8a5b' : '#c98a1e', background: r.asistencia === 'si' ? '#ECF7F0' : '#FFF4E6', padding: '3px 10px', borderRadius: 99 }}>
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${te.accentBg}` }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 8 }}>RSVPs</div>
+            {rsvps.map(r => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial(r.nombre)}</div>
+                <span style={{ flex: 1, fontSize: 13, color: te.tileText, fontWeight: 600 }}>{r.nombre}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: r.asistencia === 'si' ? '#1f8a5b' : r.asistencia === 'no' ? '#dc2626' : '#c98a1e', background: r.asistencia === 'si' ? '#ECF7F0' : r.asistencia === 'no' ? '#FEE2E2' : '#FFF4E6', padding: '2px 8px', borderRadius: 99 }}>
                   {r.asistencia === 'si' ? tx.going : r.asistencia === 'no' ? tx.not_going : tx.maybe}
                 </span>
               </div>
@@ -550,52 +604,167 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       </div>
     )
 
-    if (tileKey === 'portada') return (
-      <div
-        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
-        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative', borderRadius: '0 0 22px 22px', overflow: 'hidden' }}
-      >
-        <div style={{ height: tileSize === 'lg' ? (isMobile ? 260 : 420) : (isMobile ? 200 : 260), background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-          {subiendoPortada
-            ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
-            : portadaUrl
-              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</div>
-              : <div style={{ textAlign: 'center' as const, color: '#a39ec0', pointerEvents: 'none' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div>
-                  <div style={{ fontSize: 12 }}>{tx.cover_hint}</div>
-                </div>}
-        </div>
-      </div>
-    )
-
+    // APERTURAS
     if (tileKey === 'aperturas') return (
       <div>
         <div style={{ fontSize: 13, color: '#7a7494', fontWeight: 700, marginBottom: 8 }}>{tx.no_openings}</div>
-        <div style={{ height: 9, background: te.accentBg, borderRadius: 99 }} />
+        <div style={{ height: 8, background: te.accentBg, borderRadius: 99 }} />
       </div>
     )
 
-    const dashedBtn: React.CSSProperties = { border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: 12, borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 10 }
-    if (tileKey === 'regalos') return <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}><p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.gifts_empty}</p><button style={dashedBtn}>{tx.add_gift}</button></div>
+    // REGALOS
+    if (tileKey === 'regalos') return (
+      <div>
+        {regalos.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+            {regalos.map(r => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: r.reservado ? '#f0faf4' : '#fafafa', borderRadius: 12, border: r.reservado ? '1.5px solid #d8f3dc' : '1.5px solid #f0edf8' }}>
+                <button onClick={() => toggleRegalo(r.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${r.reservado ? '#1f8a5b' : '#cfc8ec'}`, background: r.reservado ? '#1f8a5b' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {r.reservado && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
+                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: r.reservado ? '#1f8a5b' : te.tileText, textDecoration: r.reservado ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.nombre}</div>
+                  {r.precio && <div style={{ fontSize: 11, color: '#a39ec0' }}>${r.precio}</div>}
+                </div>
+                {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '4px 10px', borderRadius: 99, textDecoration: 'none', flexShrink: 0 }}>Ver</a>}
+                <button onClick={() => borrarRegalo(r.id)} style={{ ...deleteBtn }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {showAddRegalo ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input value={nuevoRegalo.nombre} onChange={e => setNuevoRegalo(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Gift name' : 'Nombre del regalo'} style={inputStyle} autoFocus />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={nuevoRegalo.precio} onChange={e => setNuevoRegalo(p => ({ ...p, precio: e.target.value }))} placeholder={lang === 'en' ? 'Price (optional)' : 'Precio (opcional)'} style={{ ...inputStyle, flex: 1 }} />
+              <input value={nuevoRegalo.link} onChange={e => setNuevoRegalo(p => ({ ...p, link: e.target.value }))} placeholder="Link (opcional)" style={{ ...inputStyle, flex: 2 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={agregarRegalo} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
+              <button onClick={() => { setShowAddRegalo(false); setNuevoRegalo({ nombre: '', precio: '', link: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddRegalo(true)} style={dashedBtn}>{tx.add_gift}</button>
+        )}
+      </div>
+    )
+
+    // ITINERARIO
+    if (tileKey === 'itinerario') return (
+      <div>
+        {paradas.filter(p => p.id).length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 }}>
+            {paradas.filter(p => p.id).map((p, i) => (
+              <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: te.tileText }}>{p.lugar}</div>
+                  {p.hora && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, marginTop: 1 }}>{p.hora}</div>}
+                  {p.nota && <div style={{ fontSize: 12, color: '#a39ec0', marginTop: 1 }}>{p.nota}</div>}
+                  {p.lugar && <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 2 }}>{tx.see_map}</a>}
+                </div>
+                <button onClick={() => borrarParada(p.id)} style={{ ...deleteBtn, marginTop: 2 }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {showAddParada ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} autoFocus />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={nuevaParada.hora} onChange={e => setNuevaParada(p => ({ ...p, hora: e.target.value }))} placeholder={lang === 'en' ? 'Time (e.g. 8pm)' : 'Hora (ej: 8pm)'} style={{ ...inputStyle, flex: 1 }} />
+              <input value={nuevaParada.nota} onChange={e => setNuevaParada(p => ({ ...p, nota: e.target.value }))} placeholder={lang === 'en' ? 'Note (optional)' : 'Nota (opcional)'} style={{ ...inputStyle, flex: 2 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={agregarParada} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add stop' : 'Agregar parada'}</button>
+              <button onClick={() => { setShowAddParada(false); setNuevaParada({ lugar: '', hora: '', nota: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddParada(true)} style={dashedBtn}>{tx.add_stop}</button>
+        )}
+      </div>
+    )
+
+    // QUÉ LLEVAR
+    if (tileKey === 'quellevar') return (
+      <div>
+        {quellevar.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+            {quellevar.map(item => (
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => toggleItem(item.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${item.listo ? '#534AB7' : '#cfc8ec'}`, background: item.listo ? '#534AB7' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {item.listo && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
+                </button>
+                <span style={{ flex: 1, fontSize: 14, color: te.tileText, textDecoration: item.listo ? 'line-through' : 'none', opacity: item.listo ? 0.5 : 1 }}>{item.nombre}</span>
+                <button onClick={() => borrarItem(item.id)} style={{ ...deleteBtn }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {showAddItem ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarItem()} placeholder={lang === 'en' ? 'Item to bring' : 'Artículo a llevar'} style={{ ...inputStyle, flex: 1 }} autoFocus />
+            <button onClick={agregarItem} style={addBtn}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
+            <button onClick={() => { setShowAddItem(false); setNuevoItem('') }} style={cancelBtn}>×</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddItem(true)} style={dashedBtn}>{tx.add_item}</button>
+        )}
+      </div>
+    )
+
+    // QUIÉN TRAE QUÉ
+    if (tileKey === 'menu') return (
+      <div>
+        {menu.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+            {menu.map(plato => (
+              <div key={plato.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1.5px solid #f0edf8' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: te.tileText }}>{plato.nombre}</div>
+                  {plato.quien && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, marginTop: 1 }}>→ {plato.quien}</div>}
+                </div>
+                <button onClick={() => borrarPlato(plato.id)} style={{ ...deleteBtn }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {showAddPlato ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input value={nuevoPlato.nombre} onChange={e => setNuevoPlato(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Dish or item' : 'Platillo o artículo'} style={inputStyle} autoFocus />
+            <input value={nuevoPlato.quien} onChange={e => setNuevoPlato(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Who brings it? (optional)' : '¿Quién lo trae? (opcional)'} style={inputStyle} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={agregarPlato} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
+              <button onClick={() => { setShowAddPlato(false); setNuevoPlato({ nombre: '', quien: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddPlato(true)} style={dashedBtn}>{tx.assign_dish}</button>
+        )}
+      </div>
+    )
+
+    // MENSAJES
     if (tileKey === 'mensajes') return <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.messages_empty}</p>
-    if (tileKey === 'itinerario') return <div><p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.itinerary_empty}</p><button style={dashedBtn}>{tx.add_stop}</button></div>
+
+    // PRESUPUESTO
     if (tileKey === 'presupuesto') return <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.budget_empty}</p>
-    if (tileKey === 'quellevar') return <div><p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.packing_empty}</p><button style={dashedBtn}>{tx.add_item}</button></div>
-    if (tileKey === 'menu') return <div><p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.potluck_empty}</p><button style={dashedBtn}>{tx.assign_dish}</button></div>
-    if (tileKey === 'reservacion') return <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 16, padding: 18, color: '#fff' }}><p style={{ fontSize: 14, margin: 0 }}>{tx.reservation_empty}</p></div>
+
+    // RESERVACIÓN
+    if (tileKey === 'reservacion') return (
+      <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 16, padding: 18, color: '#fff' }}>
+        <p style={{ fontSize: 14, margin: 0 }}>{tx.reservation_empty}</p>
+      </div>
+    )
+
     return null
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: te.bg, fontFamily: FSYS }}>
-      <style>{`
-        @keyframes starPulse { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1)} }
-        [contenteditable]:empty:before { content: attr(data-placeholder); color: #a39ec0; }
-        [contenteditable]:focus { outline: none; }
-      `}</style>
+      <style>{`@keyframes starPulse { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1)} } [contenteditable]:empty:before{content:attr(data-placeholder);color:#a39ec0} [contenteditable]:focus{outline:none}`}</style>
 
       {/* Estrellitas */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99 }}>
@@ -604,34 +773,32 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         ))}
       </div>
 
-      {/* Lightbox portada */}
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }} style={{ display: 'none' }} />
+
+      {/* Lightbox */}
       {showLightbox && portadaUrl && (
         <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <img src={portadaUrl} alt="portada" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 16, objectFit: 'contain', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
+          <img src={portadaUrl} alt="portada" style={{ width: '90vw', maxWidth: 600, height: '70vw', maxHeight: 500, borderRadius: 20, objectFit: 'cover', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }} onClick={e => e.stopPropagation()}>
-            {[{val:'top',label:'Arriba'},{val:'center',label:'Centro'},{val:'bottom',label:'Abajo'}].map(p => (
-              <button key={p.val} onClick={() => setImgPosition(p.val)} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>
-                {p.label}
-              </button>
+            {[{ val: 'top', label: lang === 'en' ? 'Top' : 'Arriba' }, { val: 'center', label: lang === 'en' ? 'Center' : 'Centro' }, { val: 'bottom', label: lang === 'en' ? 'Bottom' : 'Abajo' }].map(p => (
+              <button key={p.val} onClick={() => setImgPosition(p.val)} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{p.label}</button>
             ))}
-            <button onClick={() => { setShowLightbox(false); fileInputRef.current?.click() }} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>
-              Cambiar imagen
-            </button>
+            <button onClick={() => { setShowLightbox(false); fileInputRef.current?.click() }} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</button>
           </div>
-          <p style={{ color: 'rgba(255,255,255,.4)', fontSize: 12, marginTop: 12 }}>Clic fuera para cerrar</p>
+          <p style={{ color: 'rgba(255,255,255,.4)', fontSize: 12, marginTop: 12 }}>{lang === 'en' ? 'Click outside to close' : 'Clic fuera para cerrar'}</p>
         </div>
       )}
 
       {/* Modal WhatsApp */}
       {showWAPrompt && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 24, padding: '28px 24px', maxWidth: 360, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,.3)' }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#2a2440', marginBottom: 8 }}>Enviar por WhatsApp</div>
-            <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 16px' }}>Confirma el número de {invitadoPendienteWA?.nombre}.</p>
-            <input value={waPhone} onChange={e => setWaPhone(e.target.value)} placeholder="+52 81 1234 5678" style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #EEEDFE', borderRadius: 12, padding: '10px 14px', fontSize: 15, fontFamily: FSYS, outline: 'none', marginBottom: 12 }} />
+          <div style={{ background: '#fff', borderRadius: 24, padding: '28px 24px', maxWidth: 360, width: '100%' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#2a2440', marginBottom: 8 }}>WhatsApp</div>
+            <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 16px' }}>{lang === 'en' ? `Confirm number for ${invitadoPendienteWA?.nombre}` : `Confirma el número de ${invitadoPendienteWA?.nombre}`}</p>
+            <input value={waPhone} onChange={e => setWaPhone(e.target.value)} placeholder="+52 81 1234 5678" style={{ ...inputStyle, marginBottom: 12 }} />
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => { setShowWAPrompt(false); setWaPhone('') }} style={{ flex: 1, border: '1.5px solid #e0ddf5', background: 'none', color: '#7a7494', fontSize: 14, fontWeight: 700, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>Omitir</button>
-              <button onClick={() => enviarWhatsApp()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>Enviar</button>
+              <button onClick={() => { setShowWAPrompt(false); setWaPhone('') }} style={{ flex: 1, border: '1.5px solid #e0ddf5', background: 'none', color: '#7a7494', fontSize: 14, fontWeight: 700, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Skip' : 'Omitir'}</button>
+              <button onClick={() => enviarWA(invitadoPendienteWA?.nombre, waPhone)} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Send' : 'Enviar'}</button>
             </div>
           </div>
         </div>
@@ -649,21 +816,15 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             <div style={{ height: 6, background: '#EEEDFE', borderRadius: 99, marginBottom: 20, overflow: 'hidden' }}>
               <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius: 99, transition: 'width .4s' }} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {progressItems.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: item.done ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, color: item.done ? '#fff' : '#a39ec0', fontWeight: 800 }}>{item.done ? '✓' : '·'}</span>
-                  </div>
-                  <span style={{ fontSize: 13, color: item.done ? '#2a2440' : '#a39ec0', fontWeight: item.done ? 600 : 400, textDecoration: item.done ? 'none' : 'none' }}>{item.label}</span>
+            {progressItems.map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: item.done ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, color: item.done ? '#fff' : '#a39ec0', fontWeight: 800 }}>{item.done ? '✓' : '·'}</span>
                 </div>
-              ))}
-            </div>
-            {isComplete && (
-              <div style={{ marginTop: 16, padding: '12px', background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: 800 }}>
-                Cheers full! ✦
+                <span style={{ fontSize: 13, color: item.done ? '#2a2440' : '#a39ec0', fontWeight: item.done ? 600 : 400 }}>{item.label}</span>
               </div>
-            )}
+            ))}
+            {isComplete && <div style={{ marginTop: 16, padding: '12px', background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: 800 }}>Cheers full! ✦</div>}
           </div>
         </div>
       )}
@@ -689,82 +850,42 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           </div>
         )}
 
-        {/* Contenido */}
         <div style={{ flex: 1, padding: isMobile ? '20px 16px 44px' : '26px 24px 44px', boxSizing: 'border-box' as const }}>
 
           {/* Top bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 8, flexWrap: 'wrap' as const }}>
             <button onClick={() => router.back()} style={pillBtn}>{tx.my_celebrations}</button>
-
-            {/* Título + termómetro */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.35)', letterSpacing: '.5px' }}>{tx.cheers}</div>
-              <div
-                ref={titleRef}
-                contentEditable
-                suppressContentEditableWarning
-                data-placeholder={tx.title_placeholder}
+              <div ref={titleRef} contentEditable suppressContentEditableWarning data-placeholder={tx.title_placeholder}
                 onInput={e => {
                   const el = e.currentTarget
-                  if (el.innerText.length > 40) {
-                    el.innerText = el.innerText.slice(0, 40)
-                    const range = document.createRange()
-                    range.selectNodeContents(el)
-                    range.collapse(false)
-                    window.getSelection()?.removeAllRanges()
-                    window.getSelection()?.addRange(range)
-                  }
+                  if (el.innerText.length > 40) { el.innerText = el.innerText.slice(0, 40); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); window.getSelection()?.removeAllRanges(); window.getSelection()?.addRange(r) }
                   saveTitleHtml()
                 }}
-                style={{
-                  fontFamily: F,
-                  fontSize: tituloSize,
-                  fontWeight: 800,
-                  color: textColor,
-                  maxWidth: isMobile ? 180 : 360,
-                  textAlign: tituloEstilo === 'normal-center' || tituloEstilo === 'spaced' ? 'center' : 'left',
-                  letterSpacing: tituloEstilo === 'spaced' ? '3px' : 'normal',
-                  outline: 'none',
-                  cursor: 'text',
-                  minWidth: 80,
-                  wordBreak: 'break-word' as const,
-                  lineHeight: 1.2,
-                }}
+                style={{ fontFamily: F, fontSize: tituloSize, fontWeight: 800, color: textColor, maxWidth: isMobile ? 180 : 360, textAlign: tituloEstilo === 'normal-center' || tituloEstilo === 'spaced' ? 'center' : 'left', letterSpacing: tituloEstilo === 'spaced' ? '3px' : 'normal', outline: 'none', cursor: 'text', minWidth: 80, wordBreak: 'break-word' as const, lineHeight: 1.2 }}
               />
-              {/* Termómetro clickeable */}
-              <button
-                onClick={() => setShowProgress(v => !v)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', display: 'flex', alignItems: 'center', gap: 5 }}
-              >
-                {isComplete ? (
-                  <span style={{ fontSize: 11, fontWeight: 800, color: te.dark ? '#f7d76b' : '#534AB7' }}>Cheers full! ✦</span>
-                ) : (
-                  <>
-                    <div style={{ width: 48, height: 4, borderRadius: 99, background: te.dark ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.12)', overflow: 'hidden' }}>
-                      <div style={{ width: `${progress}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
-                    </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.6)' }}>{progress}% · {progressLabel}</span>
-                  </>
-                )}
+              <button onClick={() => setShowProgress(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', display: 'flex', alignItems: 'center', gap: 5 }}>
+                {isComplete
+                  ? <span style={{ fontSize: 11, fontWeight: 800, color: te.dark ? '#f7d76b' : '#534AB7' }}>Cheers full! ✦</span>
+                  : <>
+                      <div style={{ width: 48, height: 4, borderRadius: 99, background: te.dark ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.12)', overflow: 'hidden' }}>
+                        <div style={{ width: `${progress}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.6)' }}>{progress}% · {progressLabel}</span>
+                    </>}
               </button>
             </div>
-
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => router.push(`/${celebracion?.slug}/r`)} style={{ ...pillBtn, background: 'rgba(255,255,255,.15)', color: textColor, border: '1px solid rgba(255,255,255,.3)' }}>
-                {tx.view_as_guest}
-              </button>
-              <button onClick={() => setShowCustomize(v => !v)} style={{ ...pillBtn, background: showCustomize ? '#534AB7' : 'rgba(255,255,255,.92)', color: showCustomize ? '#fff' : '#534AB7' }}>
-                {tx.customize}
-              </button>
+              <button onClick={() => router.push(`/${celebracion?.slug}/r`)} style={{ ...pillBtn, background: 'rgba(255,255,255,.15)', color: textColor, border: '1px solid rgba(255,255,255,.3)' }}>{tx.view_as_guest}</button>
+              <button onClick={() => setShowCustomize(v => !v)} style={{ ...pillBtn, background: showCustomize ? '#534AB7' : 'rgba(255,255,255,.92)', color: showCustomize ? '#fff' : '#534AB7' }}>{tx.customize}</button>
             </div>
           </div>
 
           {/* Hero card */}
           <div style={{ background: te.tileBg, borderRadius: 26, overflow: 'hidden', boxShadow: '0 18px 46px rgba(25,12,50,.22)', marginBottom: 16 }}>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
             <div style={{ padding: '16px 18px 20px' }}>
               <input value={tagline} onChange={e => setTagline(e.target.value)} onBlur={e => guardarCampo('tagline', e.target.value)} placeholder={tx.tagline_placeholder} style={{ border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 13, color: '#7a7494', padding: '3px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' as const, marginBottom: 8 }} />
-
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 16px', padding: '0 4px' }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.celebrated}</div>
@@ -801,13 +922,10 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 850, letterSpacing: '-.4px', marginTop: 5 }}>{tx.lifetime_title}</div>
                 <div style={{ fontSize: 13, opacity: 0.92, marginTop: 7, lineHeight: 1.5 }}>{tx.lifetime_desc}</div>
               </div>
-              <button style={{ flexShrink: 0, background: '#fff', color: '#534AB7', border: 'none', borderRadius: 15, padding: '14px 20px', fontSize: 14, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS, boxShadow: '0 10px 24px rgba(0,0,0,.22)' }}>
-                {tx.lifetime_cta}
-              </button>
+              <button style={{ flexShrink: 0, background: '#fff', color: '#534AB7', border: 'none', borderRadius: 15, padding: '14px 20px', fontSize: 14, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS }}>{tx.lifetime_cta}</button>
             </div>
           </div>
 
-          {/* Hint */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 12px' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: textColor, opacity: 0.8 }}>{tx.drag_hint}</div>
             {guardandoToggle && <div style={{ fontSize: 12, color: textColor, opacity: 0.6 }}>{tx.saving}</div>}
@@ -816,16 +934,19 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           {/* Grid tiles */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
             {tiles.map((tile, i) => {
-              const info = TINFO[tile.key] || { label: '?', title_key: tile.key }
+              const info = TINFO[tile.key] || { label: '?', title_key: '' }
               const isLg = tile.size === 'lg'
               const visible = tilesVisibles[tile.key] !== false
+              const tileLabel = tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || tile.key
               return (
                 <div key={tile.key} draggable onDragStart={() => setDragIdx(i)} onDragOver={e => e.preventDefault()} onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null) }}
-                  style={{ gridColumn: isLg && !isMobile ? '1 / -1' : 'auto', background: te.tileBg, borderRadius: 22, padding: '20px 18px', boxShadow: '0 8px 24px rgba(25,12,50,.1)', cursor: 'default', opacity: visible ? 1 : 0.65, transition: 'opacity .2s', color: te.tileText }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+                  style={{ gridColumn: isLg && !isMobile ? '1 / -1' : 'auto', background: te.tileBg, borderRadius: 22, padding: tile.key === 'portada' ? '16px 18px 0' : '20px 18px', boxShadow: '0 8px 24px rgba(25,12,50,.1)', opacity: visible ? 1 : 0.65, overflow: tile.key === 'portada' ? 'hidden' : 'visible', transition: 'opacity .2s', color: te.tileText }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
                     <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 15 }}>⠿</span>
-                    <TileIcon label={info.label} accentBg={te.accentBg} accentText={te.accentText} />
-                    <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: te.tileText }}>{tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key]}</span>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: te.accentText, letterSpacing: '.3px' }}>{info.label}</span>
+                    </div>
+                    <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: te.tileText }}>{tileLabel}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 11, color: '#a39ec0', fontWeight: 600 }}>{visible ? tx.visible : tx.hidden}</span>
                       <Toggle on={visible} onToggle={() => toggleVisibilidad(tile.key)} />
