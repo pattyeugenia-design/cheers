@@ -26,10 +26,10 @@ const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lav
 
 // Fuentes del sistema — siempre disponibles, sin Google Fonts
 const FUENTES: Record<string, { label: string; font: string }> = {
-  system:   { label: 'Moderna',  font: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif' },
-  verdana:  { label: 'Legible',  font: 'Verdana, Geneva, Tahoma, sans-serif' },
-  georgia:  { label: 'Clásica',  font: 'Georgia, "Times New Roman", serif' },
-  cursive:  { label: 'Cursiva',  font: '"Brush Script MT", "Segoe Script", cursive' },
+  system:   { label: 'SF Pro',        font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' },
+  verdana:  { label: 'Verdana',       font: 'Verdana, Geneva, sans-serif' },
+  georgia:  { label: 'Georgia',       font: 'Georgia, serif' },
+  cursive:  { label: 'Brush Script',  font: '"Brush Script MT", "Segoe Script", cursive' },
 }
 const FUENTE_ORDER = ['system', 'verdana', 'georgia', 'cursive']
 
@@ -661,19 +661,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 contentEditable
                 suppressContentEditableWarning
                 data-placeholder={tx.title_placeholder}
-                onInput={e => {
-  const el = e.currentTarget
-  if (el.innerText.length > 40) {
-    el.innerText = el.innerText.slice(0, 40)
-    // mover cursor al final
-    const range = document.createRange()
-    range.selectNodeContents(el)
-    range.collapse(false)
-    window.getSelection()?.removeAllRanges()
-    window.getSelection()?.addRange(range)
-  }
-  saveTitleHtml()
-}}
+                onInput={saveTitleHtml}
                 style={{
                   fontFamily: F,
                   fontSize: Math.min(tituloSize, isMobile ? 18 : 22),
