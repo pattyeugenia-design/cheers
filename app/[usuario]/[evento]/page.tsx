@@ -69,9 +69,10 @@ function tilesForType(type: string, sub?: string) {
     evento:  ['portada', 'invitados', 'aperturas', 'regalos'],
     otro:    ['portada', 'invitados', 'aperturas', 'regalos'],
   }
-  const LG: Record<string, boolean> = { portada: true, regalos: true, itinerario: true, menu: true, mensajes: true }
+  const LG: Record<string, string> = { portada: 'lg', regalos: 'lg', itinerario: 'lg', menu: 'lg', mensajes: 'lg' }
+  // size as string now supports sm/md/lg
   const keys = SETS[type] || ['portada', 'invitados', 'aperturas', 'regalos']
-  return keys.map(k => ({ key: k, size: LG[k] ? 'lg' : 'sm' }))
+  return keys.map(k => ({ key: k, size: LG[k] || 'sm' }))
 }
 
 const initial = (n: string) => (n || '?').trim()[0].toUpperCase()
@@ -135,6 +136,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [showCustomize, setShowCustomize] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
   const [guardandoToggle, setGuardandoToggle] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -200,7 +202,11 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       setRegalos(cel.gifts || [])
       setQuellevar(cel.quellevar || [])
       setMenu(cel.menu || [])
-      setTiles(tilesForType(cel.tipo, cel.sub_tipo))
+      if (cel.tiles_order) {
+        try { setTiles(JSON.parse(cel.tiles_order)) } catch { setTiles(tilesForType(cel.tipo, cel.sub_tipo)) }
+      } else {
+        setTiles(tilesForType(cel.tipo, cel.sub_tipo))
+      }
       setTilesVisibles({ ...DEFAULT_TILES_VISIBLES, ...(cel.tiles_visibles || {}) })
       if (cel.tema) setTema(cel.tema)
       if (cel.fuente) setFuente(cel.fuente)
@@ -233,11 +239,25 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
   function moveTile(from: number, to: number) {
     if (from == null || from === to) return
-    setTiles(prev => { const t = [...prev]; const [m] = t.splice(from, 1); t.splice(to, 0, m); return t })
+    setTiles(prev => {
+      const t = [...prev]; const [m] = t.splice(from, 1); t.splice(to, 0, m)
+      guardarCampo('tiles_order', JSON.stringify(t))
+      return t
+    })
   }
 
   function cycleSize(i: number) {
-    setTiles(prev => prev.map((x, j) => j === i ? { ...x, size: x.size === 'sm' ? 'lg' : 'sm' } : x))
+    setTiles(prev => {
+      const next = prev.map((x, j) => {
+        if (j !== i) return x
+        const sizes = ['sm', 'md', 'lg']
+        const idx = sizes.indexOf(x.size)
+        const newSize = sizes[(idx + 1) % sizes.length]
+        return { ...x, size: newSize }
+      })
+      guardarCampo('tiles_order', JSON.stringify(next))
+      return next
+    })
   }
 
   async function toggleVisibilidad(key: string) {
@@ -515,12 +535,12 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       <div onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)}
         onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) subirPortada(f) }}
         onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
-        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', borderRadius: '0 0 22px 22px', overflow: 'hidden' }}>
+        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', borderRadius: '0 0 18px 18px', overflow: 'hidden', position: 'relative' as const }}>
         <div style={{ height: tileSize === 'lg' ? (isMobile ? 260 : 420) : (isMobile ? 180 : 240), background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           {subiendoPortada
             ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
             : portadaUrl
-              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</div>
+              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', zIndex: 2, backdropFilter: 'blur(4px)' }}>{tx.change_image}</div>
               : <div style={{ textAlign: 'center' as const, color: '#a39ec0', pointerEvents: 'none' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div>
                   <div style={{ fontSize: 12 }}>{tx.cover_hint}</div>
@@ -939,8 +959,8 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
               const visible = tilesVisibles[tile.key] !== false
               const tileLabel = tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || tile.key
               return (
-                <div key={tile.key} draggable onDragStart={() => setDragIdx(i)} onDragOver={e => e.preventDefault()} onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null) }}
-                  style={{ gridColumn: isLg && !isMobile ? '1 / -1' : 'auto', background: te.tileBg, borderRadius: 22, padding: tile.key === 'portada' ? '16px 18px 0' : '20px 18px', boxShadow: '0 8px 24px rgba(25,12,50,.1)', opacity: visible ? 1 : 0.65, overflow: tile.key === 'portada' ? 'hidden' : 'visible', transition: 'opacity .2s', color: te.tileText }}>
+                <div key={tile.key} draggable onDragStart={() => setDragIdx(i)} onDragOver={e => { e.preventDefault(); setDragOverIdx(i) }} onDragLeave={() => setDragOverIdx(null)} onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null); setDragOverIdx(null) }}
+                  style={{ gridColumn: isLg && !isMobile ? '1 / -1' : 'auto', background: dragOverIdx === i && dragIdx !== i ? 'transparent' : te.tileBg, borderRadius: 22, padding: '20px 18px', boxShadow: dragOverIdx === i && dragIdx !== i ? 'none' : '0 8px 24px rgba(25,12,50,.1)', opacity: visible ? (dragIdx === i ? 0.4 : 1) : 0.65, border: dragOverIdx === i && dragIdx !== i ? '2.5px dashed rgba(83,74,183,.5)' : 'none', transition: 'all .15s', color: te.tileText }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
                     <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 15 }}>⠿</span>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
