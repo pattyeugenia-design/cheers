@@ -6,6 +6,7 @@ import { getLang, t } from '../../i18n'
 
 const LIMITE_FREE = 3
 const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+const BG_INVITADO = 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)'
 
 const TEMAS: Record<string, { label_key: string; bg: string; dark: boolean; tileBg: string; tileText: string; accentBg: string; accentText: string }> = {
   morado:  { label_key: 'theme_morado',  bg: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)', dark: true,  tileBg: '#fff',    tileText: '#2a2440', accentBg: '#EEEDFE', accentText: '#534AB7' },
@@ -53,9 +54,8 @@ const STARS = [
   { top: '15%', left: '5%',  size: 12, delay: '0.5s', dur: '3.5s' },
   { top: '22%', left: '96%', size: 16, delay: '2.1s', dur: '2.6s' },
   { top: '30%', left: '1%',  size: 20, delay: '0.8s', dur: '3.8s' },
-  { top: '38%', left: '97%', size: 14, delay: '1.6s', dur: '3.0s' },
   { top: '52%', left: '95%', size: 22, delay: '0.3s', dur: '4.0s' },
-  { top: '60%', left: '2%',  size: 16, delay: '1.9s', dur: '2.9s' },
+  { top: '68%', left: '94%', size: 12, delay: '0.7s', dur: '3.3s' },
   { top: '75%', left: '4%',  size: 26, delay: '1.3s', dur: '2.7s' },
   { top: '88%', left: '6%',  size: 18, delay: '0.4s', dur: '3.1s' },
 ]
@@ -70,7 +70,6 @@ function tilesForType(type: string, sub?: string) {
     otro:    ['portada', 'invitados', 'aperturas', 'regalos'],
   }
   const LG: Record<string, string> = { portada: 'lg', regalos: 'lg', itinerario: 'lg', menu: 'lg', mensajes: 'lg' }
-  // size as string now supports sm/md/lg
   const keys = SETS[type] || ['portada', 'invitados', 'aperturas', 'regalos']
   return keys.map(k => ({ key: k, size: LG[k] || 'sm' }))
 }
@@ -93,15 +92,205 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
-function TileIcon({ label, accentBg, accentText }: { label: string; accentBg: string; accentText: string }) {
+// ============================================================
+// VISTA DEL INVITADO/MIEMBRO
+// ============================================================
+function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
+  const router = useRouter()
+  const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
+  const [mensaje, setMensaje] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [guardado, setGuardado] = useState(false)
+  const [rsvpExistente, setRsvpExistente] = useState<any>(null)
+
+  useEffect(() => {
+    supabase.from('rsvps').select('*')
+      .eq('celebracion_slug', celebracion.slug)
+      .eq('nombre', user?.user_metadata?.name || user?.email || '')
+      .single()
+      .then(({ data }) => {
+        if (data) { setRsvpExistente(data); setAsistencia(data.asistencia); setMensaje(data.mensaje || '') }
+      })
+  }, [])
+
+  async function guardarRsvp() {
+    if (!asistencia) return
+    setGuardando(true)
+    const payload = { celebracion_slug: celebracion.slug, nombre: user?.user_metadata?.name || user?.email || '', asistencia, mensaje: mensaje.trim() || null }
+    if (rsvpExistente) await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
+    else await supabase.from('rsvps').insert(payload)
+    setGuardando(false); setGuardado(true)
+    setTimeout(() => setGuardado(false), 3000)
+  }
+
+  const paradas = celebracion.paradas || []
+  const regalos = celebracion.gifts || []
+  const tiles = celebracion.tiles_visibles || {}
+  const fecha = celebracion.fecha
+    ? new Date(celebracion.fecha).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : null
+
+  const rsvpColors = {
+    si:     { bg: '#ECF7F0', active: '#1f8a5b', border: '#1f8a5b', label: lang === 'en' ? 'Going' : 'Voy' },
+    no:     { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b', label: lang === 'en' ? "Can't make it" : 'No puedo' },
+    talvez: { bg: '#FFF4E6', active: '#c98a1e', border: '#c98a1e', label: lang === 'en' ? 'Maybe' : 'Tal vez' },
+  }
+
   return (
-    <div style={{ width: 28, height: 28, borderRadius: 8, background: accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <span style={{ fontSize: 10, fontWeight: 800, color: accentText, letterSpacing: '.3px' }}>{label}</span>
+    <div style={{ minHeight: '100vh', background: BG_INVITADO, fontFamily: FSYS }}>
+      <style>{`@keyframes starPulse2{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:.8;transform:scale(1)}}`}</style>
+
+      {/* Estrellitas */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        {STARS.map((s, i) => (
+          <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: 'rgba(255,255,255,0.4)', lineHeight: 1, animation: `starPulse2 ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>
+        ))}
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 600, margin: '0 auto', padding: '32px 18px 60px' }}>
+
+        {/* Header Cheers */}
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-.3px' }}>Cheers</div>
+        </div>
+
+        {/* Portada si existe */}
+        {celebracion.portada_url && (
+          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)' }}>
+            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+
+        {/* Info del evento */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+            {lang === 'en' ? "You're invited" : 'Estás invitado'}
+          </div>
+          <h1
+            style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 10px', letterSpacing: '-.5px', lineHeight: 1.1 }}
+            dangerouslySetInnerHTML={{ __html: celebracion.nombre_html || celebracion.nombre }}
+          />
+          {celebracion.tagline && (
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,.8)', margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+            {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: 0 }}>{fecha}</p>}
+            {paradas?.[0]?.lugar && (
+              <a href={`https://maps.google.com/?q=${encodeURIComponent(paradas[0].lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>
+                {paradas[0].lugar} →
+              </a>
+            )}
+            {celebracion.festejado_nombre && (
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', margin: 0 }}>
+                {lang === 'en' ? `Organized for ${celebracion.festejado_nombre}` : `Para ${celebracion.festejado_nombre}`}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Card RSVP */}
+        <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>
+            {rsvpExistente ? (lang === 'en' ? 'Your RSVP' : 'Tu confirmación') : (lang === 'en' ? 'Will you be there?' : '¿Vas a ir?')}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            {(['si', 'no', 'talvez'] as const).map(op => {
+              const c = rsvpColors[op]
+              const sel = asistencia === op
+              return (
+                <button key={op} onClick={() => setAsistencia(op)} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>
+                  {c.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {tiles.mensajes !== false && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>
+                {lang === 'en' ? `Message for ${celebracion.festejado_nombre || 'the guest of honor'}` : `Mensaje para ${celebracion.festejado_nombre || 'el festejado'}`}
+              </div>
+              <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder={lang === 'en' ? 'Write something nice...' : 'Escribe algo bonito...'} rows={3} style={{ border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'none', lineHeight: 1.5 }} />
+            </div>
+          )}
+
+          <button onClick={guardarRsvp} disabled={!asistencia || guardando} style={{ width: '100%', padding: '14px', background: asistencia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: asistencia ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: asistencia ? 'pointer' : 'default', fontFamily: FSYS, transition: 'all .15s' }}>
+            {guardando ? '...' : guardado ? (lang === 'en' ? '✓ Confirmed!' : '✓ ¡Confirmado!') : rsvpExistente ? (lang === 'en' ? 'Update RSVP' : 'Actualizar') : (lang === 'en' ? 'Confirm attendance' : 'Confirmar asistencia')}
+          </button>
+        </div>
+
+        {/* Itinerario */}
+        {tiles.itinerario !== false && paradas.filter((p: any) => p.id).length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'The plan' : 'El plan'}</div>
+            {paradas.filter((p: any) => p.id).map((p: any, i: number) => (
+              <div key={p.id} style={{ display: 'flex', gap: 14, marginBottom: i < paradas.length - 1 ? 14 : 0, paddingBottom: i < paradas.length - 1 ? 14 : 0, borderBottom: i < paradas.length - 1 ? '1px solid #f0edf8' : 'none' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#2a2440' }}>{p.lugar}</div>
+                  {p.hora && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, marginTop: 1 }}>{p.hora}</div>}
+                  {p.nota && <div style={{ fontSize: 12, color: '#a39ec0', marginTop: 1 }}>{p.nota}</div>}
+                  <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>
+                    {lang === 'en' ? 'See on Maps →' : 'Ver en Maps →'}
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Qué llevar */}
+        {tiles.quellevar !== false && (celebracion.quellevar || []).length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'What to bring' : 'Qué llevar'}</div>
+            {(celebracion.quellevar || []).map((item: any) => (
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{ width: 18, height: 18, borderRadius: 5, border: '2px solid #cfc8ec', background: item.listo ? '#534AB7' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {item.listo && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
+                </div>
+                <span style={{ fontSize: 14, color: '#2a2440', opacity: item.listo ? 0.5 : 1 }}>{item.nombre}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Lista de regalos */}
+        {tiles.regalos !== false && regalos.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'Gift ideas' : 'Ideas de regalo'}</div>
+            {regalos.map((r: any) => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: r.reservado ? '#f0faf4' : '#fafafa', borderRadius: 12, marginBottom: 8, border: r.reservado ? '1.5px solid #d8f3dc' : '1.5px solid #f0edf8' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: r.reservado ? '#1f8a5b' : '#2a2440', textDecoration: r.reservado ? 'line-through' : 'none' }}>{r.nombre}</div>
+                  {r.precio && <div style={{ fontSize: 11, color: '#a39ec0' }}>${r.precio}</div>}
+                </div>
+                {r.reservado
+                  ? <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a5b', background: '#d8f3dc', padding: '3px 10px', borderRadius: 99 }}>{lang === 'en' ? 'Reserved' : 'Reservado'}</span>
+                  : r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '5px 12px', borderRadius: 99, textDecoration: 'none' }}>{lang === 'en' ? 'See →' : 'Ver →'}</a>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer Cheers */}
+        <div style={{ textAlign: 'center', marginTop: 32 }}>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginBottom: 4 }}>{lang === 'en' ? 'Organized with' : 'Organizado con'}</div>
+          <div style={{ fontSize: 18, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
+          <button onClick={() => router.push('/')} style={{ marginTop: 8, border: 'none', background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.6)', fontSize: 12, fontWeight: 700, padding: '6px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>
+            {lang === 'en' ? 'Create your own →' : 'Crea el tuyo →'}
+          </button>
+        </div>
+
+      </div>
     </div>
   )
 }
 
-export default function Dashboard({ params }: { params: Promise<{ usuario: string; evento: string }> }) {
+// ============================================================
+// DASHBOARD DEL ORGANIZADOR
+// ============================================================
+export default function EventoPage({ params }: { params: Promise<{ usuario: string; evento: string }> }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
@@ -109,20 +298,22 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
   const [tx, setTx] = useState(t.es)
   const [lang, setLang] = useState('es')
+  const [locale, setLocale] = useState('es-MX')
   const [celebracion, setCelebracion] = useState<any>(null)
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitadosList, setInvitadosList] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
-  const [acceso, setAcceso] = useState<'loading' | 'ok' | 'denied'>('loading')
+  const [rol, setRol] = useState<'organizador' | 'invitado' | 'sin_acceso' | null>(null)
+  const [user, setUser] = useState<any>(null)
 
-  // Hero fields
+  // Hero
   const [tagline, setTagline] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
   const [lugar, setLugar] = useState('')
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
+  const [dragOverPortada, setDragOverPortada] = useState(false)
   const [imgPosition, setImgPosition] = useState('center')
   const [showLightbox, setShowLightbox] = useState(false)
 
@@ -135,6 +326,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [tituloSize, setTituloSize] = useState(23)
   const [showCustomize, setShowCustomize] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
+  const [lifetimeExpanded, setLifetimeExpanded] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
   const [guardandoToggle, setGuardandoToggle] = useState(false)
@@ -145,32 +337,28 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [nuevoInvitado, setNuevoInvitado] = useState('')
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
   const [showWAPrompt, setShowWAPrompt] = useState(false)
-  const [lifetimeExpanded, setLifetimeExpanded] = useState(false)
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
-  // Regalos
+  // Tiles data
   const [regalos, setRegalos] = useState<any[]>([])
   const [showAddRegalo, setShowAddRegalo] = useState(false)
   const [nuevoRegalo, setNuevoRegalo] = useState({ nombre: '', precio: '', link: '' })
-
-  // Itinerario
   const [paradas, setParadas] = useState<any[]>([])
   const [showAddParada, setShowAddParada] = useState(false)
   const [nuevaParada, setNuevaParada] = useState({ lugar: '', hora: '', nota: '' })
-
-  // Qué llevar
   const [quellevar, setQuellevar] = useState<any[]>([])
   const [showAddItem, setShowAddItem] = useState(false)
   const [nuevoItem, setNuevoItem] = useState('')
-
-  // Quién trae qué
-  const [menu, setMenu] = useState<any[]>([])
+  const [menuItems, setMenuItems] = useState<any[]>([])
   const [showAddPlato, setShowAddPlato] = useState(false)
   const [nuevoPlato, setNuevoPlato] = useState({ nombre: '', quien: '' })
+  const [presupuesto, setPresupuesto] = useState<any[]>([])
+  const [showAddGasto, setShowAddGasto] = useState(false)
+  const [nuevoGasto, setNuevoGasto] = useState({ nombre: '', monto: '', quien: '' })
 
   useEffect(() => {
-    const l = getLang(); setLang(l); setTx(t[l])
+    const l = getLang(); setLang(l); setTx(t[l]); setLocale(l === 'en' ? 'en-US' : 'es-MX')
     const check = () => setIsMobile(window.innerWidth < 600)
     check(); window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
@@ -178,8 +366,13 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
   useEffect(() => {
     params.then(async ({ usuario, evento }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+
+      if (!authUser) {
+        if (typeof window !== 'undefined') sessionStorage.setItem('redirect_after_login', `/${usuario}/${evento}`)
+        router.push('/login'); return
+      }
+      setUser(authUser)
 
       let cel: any = null
       const fullSlug = `${usuario}/${evento}`
@@ -190,10 +383,27 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         if (d2) cel = d2
       }
 
-      if (!cel) { setAcceso('denied'); setCargando(false); return }
-      if (cel.organizador_id !== user.id) { setAcceso('denied'); setCargando(false); return }
+      if (!cel) { setRol('sin_acceso'); setCargando(false); return }
 
-      setAcceso('ok'); setCelebracion(cel)
+      // Detectar rol
+      if (cel.organizador_id === authUser.id) {
+        setRol('organizador')
+      } else {
+        // Buscar si es invitado
+        let inv: any = null
+        const { data: invPorId } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('user_id', authUser.id).single()
+        if (invPorId) { inv = invPorId }
+        else {
+          const { data: invPorEmail } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('email', authUser.email || '').is('user_id', null).single()
+          if (invPorEmail) {
+            await supabase.from('invitados').update({ user_id: authUser.id }).eq('id', invPorEmail.id)
+            inv = { ...invPorEmail, user_id: authUser.id }
+          }
+        }
+        setRol(inv ? 'invitado' : 'sin_acceso')
+      }
+
+      setCelebracion(cel)
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
@@ -202,12 +412,12 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       setParadas(cel.paradas || [])
       setRegalos(cel.gifts || [])
       setQuellevar(cel.quellevar || [])
-      setMenu(cel.menu || [])
-      if (cel.tiles_order) {
-        try { setTiles(JSON.parse(cel.tiles_order)) } catch { setTiles(tilesForType(cel.tipo, cel.sub_tipo)) }
-      } else {
-        setTiles(tilesForType(cel.tipo, cel.sub_tipo))
-      }
+      setMenuItems(cel.menu || [])
+      setPresupuesto(cel.presupuesto || [])
+
+      if (cel.tiles_order) { try { setTiles(JSON.parse(cel.tiles_order)) } catch { setTiles(tilesForType(cel.tipo, cel.sub_tipo)) } }
+      else { setTiles(tilesForType(cel.tipo, cel.sub_tipo)) }
+
       setTilesVisibles({ ...DEFAULT_TILES_VISIBLES, ...(cel.tiles_visibles || {}) })
       if (cel.tema) setTema(cel.tema)
       if (cel.fuente) setFuente(cel.fuente)
@@ -220,56 +430,36 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       setInvitadosList(invData || [])
       setCargando(false)
 
-      setTimeout(() => {
-        if (titleRef.current) titleRef.current.innerHTML = cel.nombre_html || cel.nombre || ''
-      }, 100)
+      setTimeout(() => { if (titleRef.current) titleRef.current.innerHTML = cel.nombre_html || cel.nombre || '' }, 100)
     })
   }, [])
 
   const saveTitleHtml = useCallback(() => {
     if (!celebracion || !titleRef.current) return
-    const html = titleRef.current.innerHTML
-    supabase.from('celebraciones').update({ nombre_html: html, nombre: titleRef.current.innerText }).eq('slug', celebracion.slug)
+    supabase.from('celebraciones').update({ nombre_html: titleRef.current.innerHTML, nombre: titleRef.current.innerText }).eq('slug', celebracion.slug)
   }, [celebracion])
 
-  function applyFormat(cmd: string) {
-    titleRef.current?.focus()
-    document.execCommand(cmd, false)
-    setTimeout(saveTitleHtml, 100)
-  }
+  function applyFormat(cmd: string) { titleRef.current?.focus(); document.execCommand(cmd, false); setTimeout(saveTitleHtml, 100) }
 
   function moveTile(from: number, to: number) {
     if (from == null || from === to) return
-    setTiles(prev => {
-      const t = [...prev]; const [m] = t.splice(from, 1); t.splice(to, 0, m)
-      guardarCampo('tiles_order', JSON.stringify(t))
-      return t
-    })
+    setTiles(prev => { const t = [...prev]; const [m] = t.splice(from, 1); t.splice(to, 0, m); guardarCampo('tiles_order', JSON.stringify(t)); return t })
   }
 
   function cycleSize(i: number) {
     setTiles(prev => {
       const next = prev.map((x, j) => {
         if (j !== i) return x
-        // Portada tiene 4 tamaños de alto: sm->md->lg->xl
-        if (x.key === 'portada') {
-          const sizes = ['sm', 'md', 'lg', 'xl']
-          const idx = sizes.indexOf(x.size)
-          const newSize = sizes[(idx + 1) % sizes.length]
-          return { ...x, size: newSize }
-        }
-        // Otros tiles: sm <-> lg (ancho)
+        if (x.key === 'portada') { const sizes = ['sm', 'md', 'lg', 'xl']; return { ...x, size: sizes[(sizes.indexOf(x.size) + 1) % sizes.length] } }
         return { ...x, size: x.size === 'sm' ? 'lg' : 'sm' }
       })
-      guardarCampo('tiles_order', JSON.stringify(next))
-      return next
+      guardarCampo('tiles_order', JSON.stringify(next)); return next
     })
   }
 
   async function toggleVisibilidad(key: string) {
     const nuevo = { ...tilesVisibles, [key]: !tilesVisibles[key] }
-    setTilesVisibles(nuevo)
-    setGuardandoToggle(true)
+    setTilesVisibles(nuevo); setGuardandoToggle(true)
     await supabase.from('celebraciones').update({ tiles_visibles: nuevo }).eq('slug', celebracion.slug)
     setGuardandoToggle(false)
   }
@@ -282,10 +472,8 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   async function guardarLugar(val: string) {
     if (!celebracion) return
     const ps = [...paradas]
-    if (ps.length > 0) ps[0].lugar = val
-    else ps.push({ lugar: val, hora: '', nota: '' })
-    setParadas(ps)
-    await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
+    if (ps.length > 0) ps[0].lugar = val; else ps.push({ lugar: val, hora: '', nota: '' })
+    setParadas(ps); await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
   }
 
   async function subirPortada(file: File) {
@@ -297,21 +485,16 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     if (error) { setSubiendoPortada(false); return }
     const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
     await supabase.from('celebraciones').update({ portada_url: publicUrl }).eq('slug', celebracion.slug)
-    setPortadaUrl(publicUrl)
-    setSubiendoPortada(false)
+    setPortadaUrl(publicUrl); setSubiendoPortada(false)
   }
 
-  // Invitados
   async function agregarInvitado() {
     if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= LIMITE_FREE) return
     setGuardandoInvitado(true)
     const isPhone = /^\+?[\d\s\-()]{7,}$/.test(nuevoInvitado.trim()) && !nuevoInvitado.includes('@')
     const row = { celebracion_slug: celebracion.slug, email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null, nombre: nuevoInvitado.trim(), user_id: null, created_at: new Date().toISOString() }
     const { data } = await supabase.from('invitados').insert(row).select().single()
-    if (data) {
-      setInvitadosList(prev => [...prev, data])
-      if (isPhone) { setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true) }
-    }
+    if (data) { setInvitadosList(prev => [...prev, data]); if (isPhone) { setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true) } }
     setNuevoInvitado(''); setGuardandoInvitado(false); setShowAddInvitado(false)
   }
 
@@ -322,7 +505,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   }
 
   function enviarWA(nombre?: string, phone?: string) {
-    const shareUrl = `https://joincheers.app/${celebracion?.slug}/r`
+    const shareUrl = `https://joincheers.app/${celebracion?.slug}`
     const greeting = nombre ? `¡Hola ${nombre}! ` : '¡Hola! '
     const msg = encodeURIComponent(`${greeting}Te invito a ${titleRef.current?.innerText || celebracion?.nombre || ''}. Aquí está todo el plan: ${shareUrl}`)
     const p = (phone || waPhone).replace(/[^\d+]/g, '')
@@ -330,109 +513,111 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     setShowWAPrompt(false); setWaPhone('')
   }
 
-  function enviarSMS() {
-    const shareUrl = `https://joincheers.app/${celebracion?.slug}/r`
-    const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre || ''}. El plan: ${shareUrl}`)
-    window.open(`sms:?&body=${msg}`, '_blank')
-  }
-
-  // Regalos
   async function agregarRegalo() {
     if (!nuevoRegalo.nombre.trim() || !celebracion) return
     const nuevo = [...regalos, { id: Date.now().toString(), nombre: nuevoRegalo.nombre.trim(), precio: nuevoRegalo.precio, link: nuevoRegalo.link, reservado: false }]
-    setRegalos(nuevo)
-    await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+    setRegalos(nuevo); await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
     setNuevoRegalo({ nombre: '', precio: '', link: '' }); setShowAddRegalo(false)
   }
 
   async function toggleRegalo(id: string) {
     const nuevo = regalos.map(r => r.id === id ? { ...r, reservado: !r.reservado } : r)
-    setRegalos(nuevo)
-    await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+    setRegalos(nuevo); await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
   }
 
   async function borrarRegalo(id: string) {
     const nuevo = regalos.filter(r => r.id !== id)
-    setRegalos(nuevo)
-    await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+    setRegalos(nuevo); await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
   }
 
-  // Itinerario
   async function agregarParada() {
     if (!nuevaParada.lugar.trim() || !celebracion) return
     const nuevo = [...paradas, { id: Date.now().toString(), ...nuevaParada }]
-    setParadas(nuevo)
-    await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
+    setParadas(nuevo); await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
     setNuevaParada({ lugar: '', hora: '', nota: '' }); setShowAddParada(false)
   }
 
   async function borrarParada(id: string) {
     const nuevo = paradas.filter(p => p.id !== id)
-    setParadas(nuevo)
-    await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
+    setParadas(nuevo); await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
   }
 
-  // Qué llevar
   async function agregarItem() {
     if (!nuevoItem.trim() || !celebracion) return
     const nuevo = [...quellevar, { id: Date.now().toString(), nombre: nuevoItem.trim(), listo: false }]
-    setQuellevar(nuevo)
-    await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
+    setQuellevar(nuevo); await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
     setNuevoItem(''); setShowAddItem(false)
   }
 
   async function toggleItem(id: string) {
     const nuevo = quellevar.map(i => i.id === id ? { ...i, listo: !i.listo } : i)
-    setQuellevar(nuevo)
-    await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
+    setQuellevar(nuevo); await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
   }
 
   async function borrarItem(id: string) {
     const nuevo = quellevar.filter(i => i.id !== id)
-    setQuellevar(nuevo)
-    await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
+    setQuellevar(nuevo); await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
   }
 
-  // Quién trae qué
   async function agregarPlato() {
     if (!nuevoPlato.nombre.trim() || !celebracion) return
-    const nuevo = [...menu, { id: Date.now().toString(), nombre: nuevoPlato.nombre.trim(), quien: nuevoPlato.quien }]
-    setMenu(nuevo)
-    await supabase.from('celebraciones').update({ menu: nuevo }).eq('slug', celebracion.slug)
+    const nuevo = [...menuItems, { id: Date.now().toString(), nombre: nuevoPlato.nombre.trim(), quien: nuevoPlato.quien }]
+    setMenuItems(nuevo); await supabase.from('celebraciones').update({ menu: nuevo }).eq('slug', celebracion.slug)
     setNuevoPlato({ nombre: '', quien: '' }); setShowAddPlato(false)
   }
 
   async function borrarPlato(id: string) {
-    const nuevo = menu.filter(p => p.id !== id)
-    setMenu(nuevo)
-    await supabase.from('celebraciones').update({ menu: nuevo }).eq('slug', celebracion.slug)
+    const nuevo = menuItems.filter(p => p.id !== id)
+    setMenuItems(nuevo); await supabase.from('celebraciones').update({ menu: nuevo }).eq('slug', celebracion.slug)
   }
 
+  async function agregarGasto() {
+    if (!nuevoGasto.nombre.trim() || !nuevoGasto.monto || !celebracion) return
+    const nuevo = [...presupuesto, { id: Date.now().toString(), nombre: nuevoGasto.nombre.trim(), monto: parseFloat(nuevoGasto.monto), quien: nuevoGasto.quien }]
+    setPresupuesto(nuevo); await supabase.from('celebraciones').update({ presupuesto: nuevo }).eq('slug', celebracion.slug)
+    setNuevoGasto({ nombre: '', monto: '', quien: '' }); setShowAddGasto(false)
+  }
+
+  async function borrarGasto(id: string) {
+    const nuevo = presupuesto.filter(g => g.id !== id)
+    setPresupuesto(nuevo); await supabase.from('celebraciones').update({ presupuesto: nuevo }).eq('slug', celebracion.slug)
+  }
+
+  // Loading
   if (cargando) return (
     <div style={{ minHeight: '100vh', background: TEMAS.morado.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#EEEDFE', fontSize: 16 }}>{tx.loading}</p>
+      <p style={{ color: '#EEEDFE', fontSize: 16 }}>{t[lang as 'es' | 'en'].loading}</p>
     </div>
   )
 
-  if (acceso === 'denied') return (
-    <div style={{ minHeight: '100vh', background: TEMAS.morado.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  // Sin acceso
+  if (rol === 'sin_acceso') return (
+    <div style={{ minHeight: '100vh', background: BG_INVITADO, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FSYS }}>
       <div style={{ background: '#fff', borderRadius: 24, padding: '2.5rem', maxWidth: 400, textAlign: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#1c1830', marginBottom: 8 }}>{tx.access_denied}</div>
-        <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 20px' }}>{tx.no_permission}</p>
-        <button onClick={() => router.back()} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 15, fontWeight: 700, padding: '12px 24px', borderRadius: 14, cursor: 'pointer' }}>{tx.go_home}</button>
+        <div style={{ fontSize: 18, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 16 }}>Cheers</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#1c1830', marginBottom: 8 }}>{lang === 'en' ? 'Not on the list' : 'No estás en la lista'}</div>
+        <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 20px' }}>{lang === 'en' ? "You don't have access to this celebration." : 'No tienes acceso a esta celebración.'}</p>
+        <button onClick={() => router.push('/')} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 15, fontWeight: 700, padding: '12px 24px', borderRadius: 14, cursor: 'pointer' }}>
+          {lang === 'en' ? 'Go home' : 'Ir al inicio'}
+        </button>
       </div>
     </div>
   )
 
+  // Vista invitado
+  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} />
+
+  // ---- DASHBOARD ORGANIZADOR ----
   const te = TEMAS[tema] || TEMAS.morado
   const F = FUENTES[fuente]?.font || FSYS
   const textColor = te.dark ? '#ffffff' : '#2a2440'
   const starColor = te.dark ? 'rgba(255,255,255,' : 'rgba(83,74,183,'
   const confirmados = rsvps.filter(r => r.asistencia === 'si').length
   const porConfirmar = rsvps.filter(r => r.asistencia !== 'si').length
-  const shareUrl = `joincheers.app/${celebracion?.slug}/r`
+  const shareUrl = `joincheers.app/${celebracion?.slug}`
   const limiteAlcanzado = invitadosList.length >= LIMITE_FREE
   const MIN_SIZE = 16, MAX_SIZE = isMobile ? 36 : 52
+  const totalPresupuesto = presupuesto.reduce((s: number, g: any) => s + (g.monto || 0), 0)
 
   const progressItems = [
     { label: lang === 'en' ? 'Cover photo' : 'Foto de portada', done: !!portadaUrl },
@@ -442,7 +627,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     { label: lang === 'en' ? 'Place' : 'Lugar', done: !!lugar },
     { label: lang === 'en' ? 'Description' : 'Descripción', done: !!tagline },
     { label: lang === 'en' ? 'At least 1 guest' : 'Al menos 1 invitado', done: invitadosList.length > 0 },
-    { label: lang === 'en' ? 'Gift list or itinerary' : 'Regalos o itinerario', done: regalos.length > 0 || paradas.length > 1 },
+    { label: lang === 'en' ? 'Gift list or itinerary' : 'Regalos o itinerario', done: regalos.length > 0 || paradas.filter(p => p.id).length > 0 },
   ]
   const progress = Math.round((progressItems.filter(p => p.done).length / progressItems.length) * 100)
   const progressLabel = getProgressLabel(progress, lang)
@@ -451,7 +636,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const pillBtn: React.CSSProperties = { background: 'rgba(255,255,255,.92)', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, boxShadow: '0 4px 14px rgba(20,10,40,.18)', whiteSpace: 'nowrap' as const }
   const fieldInput: React.CSSProperties = { border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 15, fontWeight: 600, color: te.tileText, padding: '7px 8px', borderRadius: 9, outline: 'none', width: '100%', boxSizing: 'border-box' as const }
   const inputStyle: React.CSSProperties = { border: `1.5px solid ${te.accentBg}`, background: te.tileBg, fontFamily: FSYS, fontSize: 14, color: te.tileText, padding: '8px 12px', borderRadius: 10, outline: 'none', width: '100%', boxSizing: 'border-box' as const }
-  const dashedBtn: React.CSSProperties = { border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }
+  const dashedBtn = (label: string): React.ReactElement => <button onClick={() => {}} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{label}</button>
   const addBtn: React.CSSProperties = { border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }
   const cancelBtn: React.CSSProperties = { border: 'none', background: '#f0edf8', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }
   const deleteBtn: React.CSSProperties = { border: 'none', background: '#fee2e2', color: '#dc2626', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
@@ -468,24 +653,20 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           ))}
         </div>
       </div>
-
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.font}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {FUENTE_ORDER.map(k => (
             <button key={k} onClick={() => { setFuente(k); guardarCampo('fuente', k) }} style={{ border: fuente === k ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', background: fuente === k ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', transition: 'all .15s', textAlign: 'left' as const }}>
-              <div style={{ fontFamily: FUENTES[k].font, fontSize: 17, fontWeight: 700, lineHeight: 1.2, marginBottom: 3, color: fuente === k ? '#2a2440' : '#fff' }}>
-                {titleRef.current?.innerText || celebracion?.nombre || 'Mi celebración'}
-              </div>
+              <div style={{ fontFamily: FUENTES[k].font, fontSize: 17, fontWeight: 700, lineHeight: 1.2, marginBottom: 3, color: fuente === k ? '#2a2440' : '#fff' }}>{titleRef.current?.innerText || celebracion?.nombre || 'Mi celebración'}</div>
               <div style={{ fontFamily: FSYS, fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: fuente === k ? '#534AB7' : 'rgba(255,255,255,.5)', textTransform: 'uppercase' as const }}>{FUENTES[k].label}</div>
             </button>
           ))}
         </div>
       </div>
-
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-          {lang === 'en' ? 'Title size' : 'Tamaño'} · {tituloSize}px
+          {lang === 'en' ? 'Size' : 'Tamaño'} · {tituloSize}px
         </div>
         <input type="range" min={MIN_SIZE} max={MAX_SIZE} value={tituloSize}
           onChange={e => { const v = Number(e.target.value); setTituloSize(v); clearTimeout(saveTimeout.current); saveTimeout.current = setTimeout(() => guardarCampo('titulo_size', v), 300) }}
@@ -496,66 +677,52 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           <span style={{ fontSize: 18, color: 'rgba(255,255,255,.4)', fontFamily: F, fontWeight: 700 }}>A</span>
         </div>
       </div>
-
       <div>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>
-          {lang === 'en' ? 'Alignment' : 'Alineación'}
-        </div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{lang === 'en' ? 'Alignment' : 'Alineación'}</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {(['normal-left', 'normal-center', 'spaced'] as TituloEstilo[]).map(s => {
             const labels: Record<string, string> = { 'normal-left': '⬛ Izq.', 'normal-center': '⬜ Cen.', 'spaced': 'S·P·A·C·E' }
             return (
-              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s === 'normal-center' || s === 'spaced') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }}
-                style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS, transition: 'all .15s' }}>
+              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s !== 'normal-left') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }}
+                style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS }}>
                 {labels[s]}
               </button>
             )
           })}
         </div>
       </div>
-
       <div>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>
-          {lang === 'en' ? 'Format' : 'Formato'}
-        </div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{lang === 'en' ? 'Format' : 'Formato'}</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {[{ cmd: 'bold', label: 'B', style: { fontWeight: 900 } }, { cmd: 'italic', label: 'I', style: { fontStyle: 'italic' } }, { cmd: 'underline', label: 'U', style: { textDecoration: 'underline' } }, { cmd: 'strikeThrough', label: 'S', style: { textDecoration: 'line-through' } }].map(f => (
-            <button key={f.cmd} onClick={() => applyFormat(f.cmd)} style={{ width: 40, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', ...f.style }}>{f.label}</button>
+          {[{ cmd: 'bold', label: 'B', s: { fontWeight: 900 } }, { cmd: 'italic', label: 'I', s: { fontStyle: 'italic' } }, { cmd: 'underline', label: 'U', s: { textDecoration: 'underline' } }, { cmd: 'strikeThrough', label: 'S', s: { textDecoration: 'line-through' } }].map(f => (
+            <button key={f.cmd} onClick={() => applyFormat(f.cmd)} style={{ width: 40, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', ...f.s }}>{f.label}</button>
           ))}
           <button onClick={() => { titleRef.current?.focus(); document.execCommand('removeFormat'); setTimeout(saveTitleHtml, 100) }} style={{ flex: 1, height: 40, borderRadius: 10, border: '2px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.6)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS }}>
             {lang === 'en' ? 'Clear' : 'Limpiar'}
           </button>
         </div>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', margin: '8px 0 0', lineHeight: 1.4 }}>
-          {lang === 'en' ? 'Select text in the title then tap a format.' : 'Selecciona texto en el título y aplica el formato.'}
-        </p>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', margin: '8px 0 0' }}>{lang === 'en' ? 'Select text in the title then tap format.' : 'Selecciona texto en el título y aplica.'}</p>
       </div>
-
       <button onClick={() => setShowCustomize(false)} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>{tx.save_close}</button>
     </div>
   )
 
   const TileContent = ({ tileKey, tileSize }: { tileKey: string; tileSize: string }) => {
-    // PORTADA
     if (tileKey === 'portada') return (
-      <div onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)}
-        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) subirPortada(f) }}
+      <div onDragOver={e => { e.preventDefault(); setDragOverPortada(true) }} onDragLeave={() => setDragOverPortada(false)}
+        onDrop={e => { e.preventDefault(); setDragOverPortada(false); const f = e.dataTransfer.files?.[0]; if (f) subirPortada(f) }}
         onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
-        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', borderRadius: '0 0 18px 18px', overflow: 'hidden', position: 'relative' as const }}>
-        <div style={{ height: tileSize === 'lg' ? (isMobile ? 260 : 420) : (isMobile ? 180 : 240), background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', borderRadius: '0 0 18px 18px', overflow: 'hidden' }}>
+        <div style={{ height: tileSize === 'xl' ? (isMobile ? 380 : 560) : tileSize === 'lg' ? (isMobile ? 260 : 400) : tileSize === 'md' ? (isMobile ? 200 : 300) : (isMobile ? 150 : 200), background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOverPortada ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'height .3s' }}>
           {subiendoPortada
             ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
             : portadaUrl
-              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', zIndex: 2, backdropFilter: 'blur(4px)' }}>{tx.change_image}</div>
-              : <div style={{ textAlign: 'center' as const, color: '#a39ec0', pointerEvents: 'none' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div>
-                  <div style={{ fontSize: 12 }}>{tx.cover_hint}</div>
-                </div>}
+              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', backdropFilter: 'blur(4px)', zIndex: 2 }}>{tx.change_image}</div>
+              : <div style={{ textAlign: 'center' as const, color: '#a39ec0', pointerEvents: 'none' }}><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div><div style={{ fontSize: 12 }}>{tx.cover_hint}</div></div>}
         </div>
       </div>
     )
 
-    // INVITADOS
     if (tileKey === 'invitados') return (
       <div>
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
@@ -576,9 +743,9 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 <div style={{ width: 30, height: 30, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial(inv.nombre)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, color: te.tileText, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{inv.nombre}</div>
-                  {inv.email && <div style={{ fontSize: 11, color: '#a39ec0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{inv.email}</div>}
+                  {inv.email && <div style={{ fontSize: 11, color: '#a39ec0' }}>{inv.email}</div>}
                 </div>
-                <button onClick={() => enviarWA(inv.nombre)} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>W</button>
+                <button onClick={() => enviarWA(inv.nombre)} style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>W</button>
                 <button onClick={() => borrarInvitado(inv.id)} style={{ ...deleteBtn }}>×</button>
               </div>
             ))}
@@ -596,18 +763,28 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         {!limiteAlcanzado && (
           showAddInvitado ? (
             <div style={{ marginTop: 4 }}>
-              <input value={nuevoInvitado} onChange={e => setNuevoInvitado(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarInvitado()} placeholder="Nombre, email o teléfono" autoFocus style={{ ...inputStyle, marginBottom: 8 }} />
+              <input
+                value={nuevoInvitado}
+                onChange={e => setNuevoInvitado(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && agregarInvitado()}
+                placeholder={lang === 'en' ? 'Email or phone number' : 'Email o número de teléfono'}
+                autoFocus
+                style={{ ...inputStyle, marginBottom: 8 }}
+              />
+              <div style={{ fontSize: 11, color: '#a39ec0', marginBottom: 8 }}>
+                {lang === 'en' ? 'Enter email or phone. Name will be set when they join.' : 'Escribe email o teléfono. El nombre se definirá cuando entren.'}
+              </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <button onClick={agregarInvitado} disabled={guardandoInvitado} style={{ ...addBtn, flex: 1 }}>{guardandoInvitado ? '...' : tx.add_guest_btn}</button>
                 <button onClick={() => { setShowAddInvitado(false); setNuevoInvitado('') }} style={cancelBtn}>{tx.cancel}</button>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => enviarWA()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>WhatsApp</button>
-                <button onClick={enviarSMS} style={{ flex: 1, border: 'none', background: '#534AB7', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>SMS</button>
+                <button onClick={() => { const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre}. El plan: https://joincheers.app/${celebracion?.slug}`); window.open(`sms:?&body=${msg}`, '_blank') }} style={{ flex: 1, border: 'none', background: '#534AB7', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>SMS</button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setShowAddInvitado(true)} style={{ ...dashedBtn, width: '100%', textAlign: 'center' as const }}>
+            <button onClick={() => setShowAddInvitado(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: 12, borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, width: '100%', marginTop: 4 }}>
               {tx.add_guest(invitadosList.length, LIMITE_FREE)}
             </button>
           )
@@ -630,7 +807,6 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       </div>
     )
 
-    // APERTURAS
     if (tileKey === 'aperturas') return (
       <div>
         <div style={{ fontSize: 13, color: '#7a7494', fontWeight: 700, marginBottom: 8 }}>{tx.no_openings}</div>
@@ -638,7 +814,6 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       </div>
     )
 
-    // REGALOS
     if (tileKey === 'regalos') return (
       <div>
         {regalos.length > 0 && (
@@ -652,7 +827,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                   <div style={{ fontSize: 14, fontWeight: 600, color: r.reservado ? '#1f8a5b' : te.tileText, textDecoration: r.reservado ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.nombre}</div>
                   {r.precio && <div style={{ fontSize: 11, color: '#a39ec0' }}>${r.precio}</div>}
                 </div>
-                {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '4px 10px', borderRadius: 99, textDecoration: 'none', flexShrink: 0 }}>Ver</a>}
+                {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '4px 10px', borderRadius: 99, textDecoration: 'none', flexShrink: 0 }}>{lang === 'en' ? 'See' : 'Ver'}</a>}
                 <button onClick={() => borrarRegalo(r.id)} style={{ ...deleteBtn }}>×</button>
               </div>
             ))}
@@ -662,8 +837,8 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input value={nuevoRegalo.nombre} onChange={e => setNuevoRegalo(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Gift name' : 'Nombre del regalo'} style={inputStyle} autoFocus />
             <div style={{ display: 'flex', gap: 8 }}>
-              <input value={nuevoRegalo.precio} onChange={e => setNuevoRegalo(p => ({ ...p, precio: e.target.value }))} placeholder={lang === 'en' ? 'Price (optional)' : 'Precio (opcional)'} style={{ ...inputStyle, flex: 1 }} />
-              <input value={nuevoRegalo.link} onChange={e => setNuevoRegalo(p => ({ ...p, link: e.target.value }))} placeholder="Link (opcional)" style={{ ...inputStyle, flex: 2 }} />
+              <input value={nuevoRegalo.precio} onChange={e => setNuevoRegalo(p => ({ ...p, precio: e.target.value }))} placeholder={lang === 'en' ? 'Price' : 'Precio'} style={{ ...inputStyle, flex: 1 }} />
+              <input value={nuevoRegalo.link} onChange={e => setNuevoRegalo(p => ({ ...p, link: e.target.value }))} placeholder="Link" style={{ ...inputStyle, flex: 2 }} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={agregarRegalo} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
@@ -671,12 +846,11 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowAddRegalo(true)} style={dashedBtn}>{tx.add_gift}</button>
+          <button onClick={() => setShowAddRegalo(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.add_gift}</button>
         )}
       </div>
     )
 
-    // ITINERARIO
     if (tileKey === 'itinerario') return (
       <div>
         {paradas.filter(p => p.id).length > 0 && (
@@ -686,9 +860,9 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: te.tileText }}>{p.lugar}</div>
-                  {p.hora && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, marginTop: 1 }}>{p.hora}</div>}
-                  {p.nota && <div style={{ fontSize: 12, color: '#a39ec0', marginTop: 1 }}>{p.nota}</div>}
-                  {p.lugar && <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 2 }}>{tx.see_map}</a>}
+                  {p.hora && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>{p.hora}</div>}
+                  {p.nota && <div style={{ fontSize: 12, color: '#a39ec0' }}>{p.nota}</div>}
+                  <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 2 }}>{tx.see_map}</a>
                 </div>
                 <button onClick={() => borrarParada(p.id)} style={{ ...deleteBtn, marginTop: 2 }}>×</button>
               </div>
@@ -697,10 +871,10 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         )}
         {showAddParada ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} autoFocus />
+            <input value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <input value={nuevaParada.hora} onChange={e => setNuevaParada(p => ({ ...p, hora: e.target.value }))} placeholder={lang === 'en' ? 'Time (e.g. 8pm)' : 'Hora (ej: 8pm)'} style={{ ...inputStyle, flex: 1 }} />
-              <input value={nuevaParada.nota} onChange={e => setNuevaParada(p => ({ ...p, nota: e.target.value }))} placeholder={lang === 'en' ? 'Note (optional)' : 'Nota (opcional)'} style={{ ...inputStyle, flex: 2 }} />
+              <input value={nuevaParada.hora} onChange={e => setNuevaParada(p => ({ ...p, hora: e.target.value }))} placeholder={lang === 'en' ? 'Time (e.g. 8pm)' : 'Hora (ej: 8pm)'} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+              <input value={nuevaParada.nota} onChange={e => setNuevaParada(p => ({ ...p, nota: e.target.value }))} placeholder={lang === 'en' ? 'Note' : 'Nota'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={agregarParada} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add stop' : 'Agregar parada'}</button>
@@ -708,12 +882,11 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowAddParada(true)} style={dashedBtn}>{tx.add_stop}</button>
+          <button onClick={() => setShowAddParada(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.add_stop}</button>
         )}
       </div>
     )
 
-    // QUÉ LLEVAR
     if (tileKey === 'quellevar') return (
       <div>
         {quellevar.length > 0 && (
@@ -731,26 +904,25 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         )}
         {showAddItem ? (
           <div style={{ display: 'flex', gap: 8 }}>
-            <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarItem()} placeholder={lang === 'en' ? 'Item to bring' : 'Artículo a llevar'} style={{ ...inputStyle, flex: 1 }} autoFocus />
+            <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarItem()} placeholder={lang === 'en' ? 'Item to bring' : 'Artículo a llevar'} style={{ ...inputStyle, flex: 1 }} autoFocus onFocus={e => e.stopPropagation()} />
             <button onClick={agregarItem} style={addBtn}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
             <button onClick={() => { setShowAddItem(false); setNuevoItem('') }} style={cancelBtn}>×</button>
           </div>
         ) : (
-          <button onClick={() => setShowAddItem(true)} style={dashedBtn}>{tx.add_item}</button>
+          <button onClick={() => setShowAddItem(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.add_item}</button>
         )}
       </div>
     )
 
-    // QUIÉN TRAE QUÉ
     if (tileKey === 'menu') return (
       <div>
-        {menu.length > 0 && (
+        {menuItems.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-            {menu.map(plato => (
+            {menuItems.map(plato => (
               <div key={plato.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1.5px solid #f0edf8' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: te.tileText }}>{plato.nombre}</div>
-                  {plato.quien && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, marginTop: 1 }}>→ {plato.quien}</div>}
+                  {plato.quien && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>→ {plato.quien}</div>}
                 </div>
                 <button onClick={() => borrarPlato(plato.id)} style={{ ...deleteBtn }}>×</button>
               </div>
@@ -759,38 +931,69 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         )}
         {showAddPlato ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input value={nuevoPlato.nombre} onChange={e => setNuevoPlato(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Dish or item' : 'Platillo o artículo'} style={inputStyle} autoFocus />
-            <input value={nuevoPlato.quien} onChange={e => setNuevoPlato(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Who brings it? (optional)' : '¿Quién lo trae? (opcional)'} style={inputStyle} />
+            <input value={nuevoPlato.nombre} onChange={e => setNuevoPlato(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Dish or item' : 'Platillo o artículo'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
+            <input value={nuevoPlato.quien} onChange={e => setNuevoPlato(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Who brings it?' : '¿Quién lo trae?'} style={inputStyle} onFocus={e => e.stopPropagation()} />
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={agregarPlato} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
               <button onClick={() => { setShowAddPlato(false); setNuevoPlato({ nombre: '', quien: '' }) }} style={cancelBtn}>{tx.cancel}</button>
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowAddPlato(true)} style={dashedBtn}>{tx.assign_dish}</button>
+          <button onClick={() => setShowAddPlato(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.assign_dish}</button>
         )}
       </div>
     )
 
-    // MENSAJES
-    if (tileKey === 'mensajes') return <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.messages_empty}</p>
-
-    // PRESUPUESTO
-    if (tileKey === 'presupuesto') return <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.budget_empty}</p>
-
-    // RESERVACIÓN
-    if (tileKey === 'reservacion') return (
-      <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 16, padding: 18, color: '#fff' }}>
-        <p style={{ fontSize: 14, margin: 0 }}>{tx.reservation_empty}</p>
+    if (tileKey === 'presupuesto') return (
+      <div>
+        {presupuesto.length > 0 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '8px 12px', background: '#EEEDFE', borderRadius: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#534AB7' }}>{lang === 'en' ? 'Total' : 'Total'}</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: '#534AB7' }}>${totalPresupuesto.toLocaleString()}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+              {presupuesto.map((g: any) => (
+                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1.5px solid #f0edf8' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: te.tileText }}>{g.nombre}</div>
+                    {g.quien && <div style={{ fontSize: 12, color: '#a39ec0' }}>{lang === 'en' ? 'Paid by' : 'Pagó'}: {g.quien}</div>}
+                  </div>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#534AB7', flexShrink: 0 }}>${g.monto?.toLocaleString()}</span>
+                  <button onClick={() => borrarGasto(g.id)} style={{ ...deleteBtn }}>×</button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {showAddGasto ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input value={nuevoGasto.nombre} onChange={e => setNuevoGasto(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Expense name' : 'Nombre del gasto'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={nuevoGasto.monto} onChange={e => setNuevoGasto(p => ({ ...p, monto: e.target.value }))} placeholder={lang === 'en' ? 'Amount' : 'Monto'} type="number" style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+              <input value={nuevoGasto.quien} onChange={e => setNuevoGasto(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Paid by' : '¿Quién pagó?'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={agregarGasto} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add expense' : 'Agregar gasto'}</button>
+              <button onClick={() => { setShowAddGasto(false); setNuevoGasto({ nombre: '', monto: '', quien: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddGasto(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>
+            {lang === 'en' ? '+ Add expense' : '+ Agregar gasto'}
+          </button>
+        )}
       </div>
     )
 
+    if (tileKey === 'mensajes') return <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.messages_empty}</p>
+    if (tileKey === 'reservacion') return <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 16, padding: 18, color: '#fff' }}><p style={{ fontSize: 14, margin: 0 }}>{tx.reservation_empty}</p></div>
     return null
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: te.bg, fontFamily: FSYS }}>
-      <style>{`@keyframes starPulse { 0%,100%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1)} } [contenteditable]:empty:before{content:attr(data-placeholder);color:#a39ec0} [contenteditable]:focus{outline:none}`}</style>
+      <style>{`@keyframes starPulse{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1)}} [contenteditable]:empty:before{content:attr(data-placeholder);color:#a39ec0} [contenteditable]:focus{outline:none}`}</style>
 
       {/* Estrellitas */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99 }}>
@@ -804,14 +1007,13 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       {/* Lightbox */}
       {showLightbox && portadaUrl && (
         <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <img src={portadaUrl} alt="portada" style={{ width: '90vw', maxWidth: 600, height: '70vw', maxHeight: 500, borderRadius: 20, objectFit: 'cover', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
+          <img src={portadaUrl} alt="portada" style={{ width: '90vw', maxWidth: 600, height: '70vw', maxHeight: 500, borderRadius: 20, objectFit: 'cover' }} onClick={e => e.stopPropagation()} />
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }} onClick={e => e.stopPropagation()}>
             {[{ val: 'top', label: lang === 'en' ? 'Top' : 'Arriba' }, { val: 'center', label: lang === 'en' ? 'Center' : 'Centro' }, { val: 'bottom', label: lang === 'en' ? 'Bottom' : 'Abajo' }].map(p => (
               <button key={p.val} onClick={() => setImgPosition(p.val)} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{p.label}</button>
             ))}
             <button onClick={() => { setShowLightbox(false); fileInputRef.current?.click() }} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</button>
           </div>
-          <p style={{ color: 'rgba(255,255,255,.4)', fontSize: 12, marginTop: 12 }}>{lang === 'en' ? 'Click outside to close' : 'Clic fuera para cerrar'}</p>
         </div>
       )}
 
@@ -820,8 +1022,8 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 24, padding: '28px 24px', maxWidth: 360, width: '100%' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#2a2440', marginBottom: 8 }}>WhatsApp</div>
-            <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 16px' }}>{lang === 'en' ? `Confirm number for ${invitadoPendienteWA?.nombre}` : `Confirma el número de ${invitadoPendienteWA?.nombre}`}</p>
-            <input value={waPhone} onChange={e => setWaPhone(e.target.value)} placeholder="+52 81 1234 5678" style={{ ...inputStyle, marginBottom: 12 }} />
+            <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 16px' }}>{lang === 'en' ? `Send invite to ${invitadoPendienteWA?.nombre}` : `Enviar invitación a ${invitadoPendienteWA?.nombre}`}</p>
+            <input value={waPhone} onChange={e => setWaPhone(e.target.value)} placeholder="+52 81 1234 5678" style={{ border: '1.5px solid #EEEDFE', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 12 }} />
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { setShowWAPrompt(false); setWaPhone('') }} style={{ flex: 1, border: '1.5px solid #e0ddf5', background: 'none', color: '#7a7494', fontSize: 14, fontWeight: 700, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Skip' : 'Omitir'}</button>
               <button onClick={() => enviarWA(invitadoPendienteWA?.nombre, waPhone)} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Send' : 'Enviar'}</button>
@@ -903,7 +1105,6 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
               </button>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => router.push(`/${celebracion?.slug}/r`)} style={{ ...pillBtn, background: 'rgba(255,255,255,.15)', color: textColor, border: '1px solid rgba(255,255,255,.3)' }}>{tx.view_as_guest}</button>
               <button onClick={() => setShowCustomize(v => !v)} style={{ ...pillBtn, background: showCustomize ? '#534AB7' : 'rgba(255,255,255,.92)', color: showCustomize ? '#fff' : '#534AB7' }}>{tx.customize}</button>
             </div>
           </div>
@@ -940,7 +1141,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             </div>
           </div>
 
-          {/* Upsell Lifetime colapsable */}
+          {/* Lifetime colapsable */}
           {lifetimeExpanded ? (
             <div style={{ borderRadius: 22, padding: '20px 22px', marginBottom: 18, background: 'linear-gradient(120deg,#534AB7,#7b46a8 55%,#D4537E)', boxShadow: '0 16px 42px rgba(83,74,183,.35)', color: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
@@ -956,9 +1157,9 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
               </div>
             </div>
           ) : (
-            <button onClick={() => setLifetimeExpanded(true)} style={{ width: '100%', marginBottom: 18, padding: '10px 20px', background: 'rgba(83,74,183,.12)', border: '1px dashed rgba(83,74,183,.3)', borderRadius: 14, color: '#534AB7', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <button onClick={() => setLifetimeExpanded(true)} style={{ width: '100%', marginBottom: 18, padding: '10px 20px', background: te.dark ? 'rgba(83,74,183,.15)' : 'rgba(83,74,183,.08)', border: `1px dashed ${te.dark ? 'rgba(83,74,183,.4)' : 'rgba(83,74,183,.3)'}`, borderRadius: 14, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <span style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>Cheers Lifetime</span>
-              <span style={{ color: '#a39ec0', fontSize: 12 }}>— {lang === 'en' ? 'Unlock everything' : 'Desbloquea todo'} ↑</span>
+              <span style={{ color: te.dark ? 'rgba(255,255,255,.5)' : 'rgba(0,0,0,.4)', fontSize: 12 }}>— {lang === 'en' ? 'Unlock everything' : 'Desbloquea todo'} ↑</span>
             </button>
           )}
 
@@ -968,19 +1169,35 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           </div>
 
           {/* Grid tiles */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gridAutoRows: 'auto', gap: 16 }}>
             {tiles.map((tile, i) => {
               const info = TINFO[tile.key] || { label: '?', title_key: '' }
               const isLg = tile.size === 'lg' || tile.size === 'xl'
               const visible = tilesVisibles[tile.key] !== false
               const tileLabel = tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || tile.key
               return (
-                <div key={tile.key} draggable onDragStart={() => setDragIdx(i)} onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }} onDragOver={e => { e.preventDefault(); setDragOverIdx(i) }} onDragLeave={() => setDragOverIdx(null)} onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null); setDragOverIdx(null) }}
-                  style={{ gridColumn: isLg && !isMobile ? '1 / -1' : 'auto', gridRow: tile.key === 'portada' && tile.size === 'xl' ? 'span 2' : 'auto', background: dragOverIdx === i && dragIdx !== i ? 'transparent' : te.tileBg, borderRadius: 22, padding: '20px 18px', boxShadow: dragOverIdx === i && dragIdx !== i ? 'none' : '0 8px 24px rgba(25,12,50,.1)', opacity: visible ? (dragIdx === i ? 0.4 : 1) : 0.65, border: dragOverIdx === i && dragIdx !== i ? '2.5px dashed rgba(83,74,183,.5)' : 'none', transition: 'all .15s', color: te.tileText }}>
+                <div key={tile.key} draggable
+                  onDragStart={() => setDragIdx(i)}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
+                  onDragOver={e => { e.preventDefault(); setDragOverIdx(i) }}
+                  onDragLeave={() => setDragOverIdx(null)}
+                  onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null); setDragOverIdx(null) }}
+                  style={{
+                    gridColumn: isLg && !isMobile ? '1 / -1' : 'auto',
+                    background: dragOverIdx === i && dragIdx !== i ? 'transparent' : te.tileBg,
+                    borderRadius: 22,
+                    padding: tile.key === 'portada' ? '16px 18px 0' : '20px 18px',
+                    boxShadow: dragOverIdx === i && dragIdx !== i ? 'none' : '0 8px 24px rgba(25,12,50,.1)',
+                    opacity: visible ? (dragIdx === i ? 0.4 : 1) : 0.65,
+                    border: dragOverIdx === i && dragIdx !== i ? '2.5px dashed rgba(83,74,183,.5)' : 'none',
+                    overflow: tile.key === 'portada' ? 'hidden' : 'visible',
+                    transition: 'all .15s',
+                    color: te.tileText,
+                  }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
                     <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 15 }}>⠿</span>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: te.accentText, letterSpacing: '.3px' }}>{info.label}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: te.accentText }}>{info.label}</span>
                     </div>
                     <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: te.tileText }}>{tileLabel}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
