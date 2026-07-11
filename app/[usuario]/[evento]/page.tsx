@@ -41,6 +41,7 @@ const DEFAULT_TILES_VISIBLES: Record<string, boolean> = {
 }
 
 const TINFO: Record<string, { label: string; title_key: string }> = {
+  portada:     { label: 'IMG', title_key: 'tile_portada' }, // handled separately
   invitados:   { label: 'INV', title_key: 'tile_invitados' },
   aperturas:   { label: 'APE', title_key: 'tile_aperturas' },
   regalos:     { label: 'REG', title_key: 'tile_regalos' },
@@ -71,14 +72,14 @@ const STARS = [
 
 function tilesForType(type: string, sub?: string) {
   const SETS: Record<string, string[]> = {
-    cumple:  ['invitados', 'aperturas', 'regalos', 'mensajes'],
-    cena:    sub === 'restaurante' ? ['invitados', 'aperturas', 'reservacion'] : ['invitados', 'aperturas', 'menu'],
-    viaje:   ['invitados', 'aperturas', 'itinerario', 'presupuesto', 'quellevar'],
-    reunion: ['invitados', 'aperturas', 'menu'],
-    evento:  ['invitados', 'aperturas', 'regalos'],
-    otro:    ['invitados', 'aperturas', 'regalos'],
+    cumple:  ['portada', 'invitados', 'aperturas', 'regalos', 'mensajes'],
+    cena:    sub === 'restaurante' ? ['portada', 'invitados', 'aperturas', 'reservacion'] : ['portada', 'invitados', 'aperturas', 'menu'],
+    viaje:   ['portada', 'invitados', 'aperturas', 'itinerario', 'presupuesto', 'quellevar'],
+    reunion: ['portada', 'invitados', 'aperturas', 'menu'],
+    evento:  ['portada', 'invitados', 'aperturas', 'regalos'],
+    otro:    ['portada', 'invitados', 'aperturas', 'regalos'],
   }
-  const LG: Record<string, boolean> = { regalos: true, itinerario: true, menu: true, mensajes: true }
+  const LG: Record<string, boolean> = { portada: true, regalos: true, itinerario: true, menu: true, mensajes: true }
   const keys = SETS[type] || ['invitados', 'aperturas', 'regalos']
   return keys.map(k => ({ key: k, size: LG[k] ? 'lg' : 'sm' }))
 }
@@ -548,6 +549,27 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       </div>
     )
 
+    if (tileKey === 'portada') return (
+      <div
+        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
+        style={{ margin: '-20px -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative' }}
+      >
+        <div style={{ height: 240, background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+          {subiendoPortada
+            ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
+            : portadaUrl
+              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</div>
+              : <div style={{ textAlign: 'center' as const, color: '#a39ec0', pointerEvents: 'none' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div>
+                  <div style={{ fontSize: 12 }}>{tx.cover_hint}</div>
+                </div>}
+        </div>
+      </div>
+    )
+
     if (tileKey === 'aperturas') return (
       <div>
         <div style={{ fontSize: 13, color: '#7a7494', fontWeight: 700, marginBottom: 8 }}>{tx.no_openings}</div>
@@ -790,26 +812,6 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
             {guardandoToggle && <div style={{ fontSize: 12, color: textColor, opacity: 0.6 }}>{tx.saving}</div>}
           </div>
 
-          {/* Tile portada */}
-          <div
-            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', marginBottom: 16, boxShadow: '0 8px 24px rgba(25,12,50,.1)', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative' }}
-            onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
-          >
-            <div style={{ height: isMobile ? 200 : 280, background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              {subiendoPortada
-                ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
-                : portadaUrl
-                  ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</div>
-                  : <div style={{ textAlign: 'center' as const, color: '#a39ec0' }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div>
-                      <div style={{ fontSize: 12 }}>{tx.cover_hint}</div>
-                    </div>}
-            </div>
-          </div>
-
           {/* Grid tiles */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
             {tiles.map((tile, i) => {
@@ -822,7 +824,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
                     <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 15 }}>⠿</span>
                     <TileIcon label={info.label} accentBg={te.accentBg} accentText={te.accentText} />
-                    <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: te.tileText }}>{(tx as any)[info.title_key]}</span>
+                    <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: te.tileText }}>{tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key]}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 11, color: '#a39ec0', fontWeight: 600 }}>{visible ? tx.visible : tx.hidden}</span>
                       <Toggle on={visible} onToggle={() => toggleVisibilidad(tile.key)} />
