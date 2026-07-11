@@ -250,10 +250,15 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     setTiles(prev => {
       const next = prev.map((x, j) => {
         if (j !== i) return x
-        const sizes = ['sm', 'md', 'lg']
-        const idx = sizes.indexOf(x.size)
-        const newSize = sizes[(idx + 1) % sizes.length]
-        return { ...x, size: newSize }
+        // Portada tiene 4 tamaños de alto: sm->md->lg->xl
+        if (x.key === 'portada') {
+          const sizes = ['sm', 'md', 'lg', 'xl']
+          const idx = sizes.indexOf(x.size)
+          const newSize = sizes[(idx + 1) % sizes.length]
+          return { ...x, size: newSize }
+        }
+        // Otros tiles: sm <-> lg (ancho)
+        return { ...x, size: x.size === 'sm' ? 'lg' : 'sm' }
       })
       guardarCampo('tiles_order', JSON.stringify(next))
       return next
@@ -955,7 +960,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
             {tiles.map((tile, i) => {
               const info = TINFO[tile.key] || { label: '?', title_key: '' }
-              const isLg = tile.size === 'lg'
+              const isLg = tile.size === 'lg' || tile.size === 'xl'
               const visible = tilesVisibles[tile.key] !== false
               const tileLabel = tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || tile.key
               return (
@@ -971,7 +976,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                       <span style={{ fontSize: 11, color: '#a39ec0', fontWeight: 600 }}>{visible ? tx.visible : tx.hidden}</span>
                       <Toggle on={visible} onToggle={() => toggleVisibilidad(tile.key)} />
                     </div>
-                    <button onClick={() => cycleSize(i)} style={{ border: 'none', background: te.accentBg, color: te.accentText, width: 28, height: 28, borderRadius: 9, cursor: 'pointer', fontSize: 13, fontFamily: FSYS }}>⤢</button>
+                    <button onClick={() => cycleSize(i)} title={tile.key === 'portada' ? (lang === 'en' ? 'Change height' : 'Cambiar alto') : (lang === 'en' ? 'Change width' : 'Cambiar ancho')} style={{ border: 'none', background: te.accentBg, color: te.accentText, width: 28, height: 28, borderRadius: 9, cursor: 'pointer', fontSize: 13, fontFamily: FSYS }}>⤢</button>
                   </div>
                   <TileContent tileKey={tile.key} tileSize={tile.size} />
                 </div>
