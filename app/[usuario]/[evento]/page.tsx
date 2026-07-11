@@ -148,6 +148,8 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
   const [nuevoInvitado, setNuevoInvitado] = useState('')
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
   const [showWAPrompt, setShowWAPrompt] = useState(false)
+  const [showLightbox, setShowLightbox] = useState(false)
+  const [imgPosition, setImgPosition] = useState('center')
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
@@ -579,6 +581,24 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         ))}
       </div>
 
+      {/* Lightbox portada */}
+      {showLightbox && portadaUrl && (
+        <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <img src={portadaUrl} alt="portada" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 16, objectFit: 'contain', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
+          <div style={{ display: 'flex', gap: 10, marginTop: 20 }} onClick={e => e.stopPropagation()}>
+            {[{val:'top',label:'Arriba'},{val:'center',label:'Centro'},{val:'bottom',label:'Abajo'}].map(p => (
+              <button key={p.val} onClick={() => setImgPosition(p.val)} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>
+                {p.label}
+              </button>
+            ))}
+            <button onClick={() => { setShowLightbox(false); fileInputRef.current?.click() }} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>
+              Cambiar imagen
+            </button>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,.4)', fontSize: 12, marginTop: 12 }}>Clic fuera para cerrar</p>
+        </div>
+      )}
+
       {/* Modal WhatsApp */}
       {showWAPrompt && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -719,12 +739,13 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           {/* Hero card */}
           <div style={{ background: te.tileBg, borderRadius: 26, overflow: 'hidden', boxShadow: '0 18px 46px rgba(25,12,50,.22)', marginBottom: 16 }}>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-            <div onClick={() => !subiendoPortada && fileInputRef.current?.click()} onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
-              style={{ height: 188, background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: subiendoPortada ? 'wait' : 'pointer', position: 'relative', border: dragOver ? '2px dashed #534AB7' : 'none' }}>
+            <div onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
+              style={{ height: 188, background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: portadaUrl ? 'zoom-in' : subiendoPortada ? 'wait' : 'pointer', position: 'relative', border: dragOver ? '2px dashed #534AB7' : 'none' }}
+              onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}>
               {subiendoPortada
                 ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
                 : portadaUrl
-                  ? <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.5)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99 }}>{tx.change_image}</div>
+                  ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>{tx.change_image}</div>
                   : <div style={{ textAlign: 'center', color: '#a39ec0' }}><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div><div style={{ fontSize: 12 }}>{tx.cover_hint}</div></div>}
             </div>
 
