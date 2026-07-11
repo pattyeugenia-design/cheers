@@ -476,7 +476,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
     </div>
   )
 
-  const TileContent = ({ tileKey }: { tileKey: string }) => {
+  const TileContent = ({ tileKey, tileSize }: { tileKey: string; tileSize: string }) => {
     if (tileKey === 'invitados') return (
       <div>
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
@@ -499,7 +499,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                   <div style={{ fontSize: 14, color: te.tileText, fontWeight: 600 }}>{inv.nombre}</div>
                   {inv.email && <div style={{ fontSize: 11, color: '#a39ec0' }}>{inv.email}</div>}
                 </div>
-                <button onClick={() => enviarWhatsApp()} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>W</button>
+                <button onClick={() => { const msg = encodeURIComponent(`¡Hola ${inv.nombre}! Te invito a ${celebracion?.nombre}. Aquí está todo el plan: https://joincheers.app/${celebracion?.slug}/r`); window.open(`https://wa.me/?text=${msg}`, '_blank') }} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>W</button>
               </div>
             ))}
           </div>
@@ -535,7 +535,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
 
         {rsvps.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${te.accentBg}` }}>
-            {rsvps.slice(0, 6).map((r, j) => (
+            {rsvps.map((r, j) => (
               <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 30, height: 30, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initial(r.nombre)}</div>
                 <span style={{ flex: 1, fontSize: 14, color: te.tileText, fontWeight: 600 }}>{r.nombre}</span>
@@ -557,7 +557,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
         onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
         style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative', borderRadius: '0 0 22px 22px', overflow: 'hidden' }}
       >
-        <div style={{ height: 240, background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <div style={{ height: tileSize === 'lg' ? (isMobile ? 220 : 360) : 180, background: portadaUrl ? `url(${portadaUrl}) center/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           {subiendoPortada
             ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
             : portadaUrl
@@ -831,7 +831,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                     </div>
                     <button onClick={() => cycleSize(i)} style={{ border: 'none', background: te.accentBg, color: te.accentText, width: 28, height: 28, borderRadius: 9, cursor: 'pointer', fontSize: 13, fontFamily: FSYS }}>⤢</button>
                   </div>
-                  <TileContent tileKey={tile.key} />
+                  <TileContent tileKey={tile.key} tileSize={tile.size} />
                 </div>
               )
             })}
