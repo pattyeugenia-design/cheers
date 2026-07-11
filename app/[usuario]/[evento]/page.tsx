@@ -584,7 +584,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
       {/* Lightbox portada */}
       {showLightbox && portadaUrl && (
         <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <img src={portadaUrl} alt="portada" style={{ width: '90vw', maxWidth: 600, height: '90vw', maxHeight: 600, borderRadius: 20, objectFit: 'cover', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
+          <img src={portadaUrl} alt="portada" style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 16, objectFit: 'contain', boxShadow: '0 24px 60px rgba(0,0,0,.6)' }} onClick={e => e.stopPropagation()} />
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }} onClick={e => e.stopPropagation()}>
             {[{val:'top',label:'Arriba'},{val:'center',label:'Centro'},{val:'bottom',label:'Abajo'}].map(p => (
               <button key={p.val} onClick={() => setImgPosition(p.val)} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>
@@ -740,7 +740,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           <div style={{ background: te.tileBg, borderRadius: 26, overflow: 'hidden', boxShadow: '0 18px 46px rgba(25,12,50,.22)', marginBottom: 16 }}>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
             <div onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
-              style={{ height: 320, background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: portadaUrl ? 'zoom-in' : subiendoPortada ? 'wait' : 'pointer', position: 'relative', border: dragOver ? '2px dashed #534AB7' : 'none' }}
+              style={{ height: 188, background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: portadaUrl ? 'zoom-in' : subiendoPortada ? 'wait' : 'pointer', position: 'relative', border: dragOver ? '2px dashed #534AB7' : 'none' }}
               onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}>
               {subiendoPortada
                 ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
@@ -798,6 +798,26 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 12px' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: textColor, opacity: 0.8 }}>{tx.drag_hint}</div>
             {guardandoToggle && <div style={{ fontSize: 12, color: textColor, opacity: 0.6 }}>{tx.saving}</div>}
+          </div>
+
+          {/* Tile portada */}
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', marginBottom: 16, boxShadow: '0 8px 24px rgba(25,12,50,.1)', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative' }}
+            onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
+          >
+            <div style={{ height: 320, background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOver ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+              {subiendoPortada
+                ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
+                : portadaUrl
+                  ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</div>
+                  : <div style={{ textAlign: 'center' as const, color: '#a39ec0' }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div>
+                      <div style={{ fontSize: 12 }}>{tx.cover_hint}</div>
+                    </div>}
+            </div>
           </div>
 
           {/* Grid tiles */}
