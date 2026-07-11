@@ -689,9 +689,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                     <div style={{ width: 48, height: 4, borderRadius: 99, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}>
                       <div style={{ width: `${progress}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.5)' }}>{progress}%</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>·</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,.45)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{progressLabel}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.85)' }}>{progress}% · {progressLabel}</span>
                   </>
                 )}
               </button>
