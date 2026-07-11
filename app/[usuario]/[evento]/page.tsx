@@ -434,7 +434,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
               'spaced': 'S P A C I A D O',
             }
             return (
-              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s) }} style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS, transition: 'all .15s', textAlign: 'center' as const }}>
+              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s === 'normal-center' || s === 'spaced') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }} style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS, transition: 'all .15s', textAlign: 'center' as const }}>
                 {labels[s]}
               </button>
             )
@@ -675,7 +675,7 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 }}
                 style={{
                   fontFamily: F,
-                  fontSize: Math.min(tituloSize, isMobile ? 18 : 24),
+                  fontSize: tituloSize,
                   fontWeight: 800,
                   color: textColor,
                   maxWidth: isMobile ? 180 : 360,
