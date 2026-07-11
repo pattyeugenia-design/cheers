@@ -664,18 +664,17 @@ export default function Dashboard({ params }: { params: Promise<{ usuario: strin
                 onInput={saveTitleHtml}
                 style={{
                   fontFamily: F,
-                  fontSize: Math.min(tituloSize, isMobile ? 18 : 22),
+                  fontSize: Math.min(tituloSize, isMobile ? 16 : 20),
                   fontWeight: 800,
                   color: textColor,
-                  maxWidth: isMobile ? 160 : 300,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' as const,
+                  maxWidth: isMobile ? 180 : 340,
                   textAlign: tituloEstilo === 'normal-center' || tituloEstilo === 'spaced' ? 'center' : 'left',
-                  letterSpacing: tituloEstilo === 'spaced' ? '4px' : 'normal',
+                  letterSpacing: tituloEstilo === 'spaced' ? '3px' : 'normal',
                   outline: 'none',
                   cursor: 'text',
                   minWidth: 80,
+                  wordBreak: 'break-word' as const,
+                  lineHeight: 1.2,
                 }}
               />
               {/* Termómetro clickeable */}

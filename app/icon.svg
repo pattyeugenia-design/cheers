@@ -1,1 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#534AB7"/><stop offset="100%" stop-color="#D4537E"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><text x="16" y="23" font-family="system-ui" font-size="17" font-weight="800" fill="white" text-anchor="middle">Ch</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#534AB7"/>
+      <stop offset="100%" stop-color="#D4537E"/>
+    </linearGradient>
+    <linearGradient id="liq" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f5c842" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f7d76b"/>
+    </linearGradient>
+    <clipPath id="c1"><path d="M4,4 L7,13 Q9,15 11,13 L14,4 Z"/></clipPath>
+    <clipPath id="c2"><path d="M18,4 L21,13 Q23,15 25,13 L28,4 Z"/></clipPath>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#g)"/>
+  <g transform="rotate(-8, 9, 26)">
+    <path d="M4,4 L7,13 Q9,15 11,13 L14,4 Z" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.55)" stroke-width="0.6"/>
+    <rect x="4" y="9" width="10" height="5" fill="url(#liq)" opacity="0.85" clip-path="url(#c1)"/>
+    <rect x="8.3" y="13.5" width="1.4" height="7" fill="rgba(255,255,255,0.28)" rx="0.7"/>
+    <rect x="5.5" y="20" width="7" height="1" fill="rgba(255,255,255,0.28)" rx="0.5"/>
+  </g>
+  <g transform="rotate(8, 23, 26)">
+    <path d="M18,4 L21,13 Q23,15 25,13 L28,4 Z" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.55)" stroke-width="0.6"/>
+    <rect x="18" y="9" width="10" height="5" fill="url(#liq)" opacity="0.85" clip-path="url(#c2)"/>
+    <rect x="22.3" y="13.5" width="1.4" height="7" fill="rgba(255,255,255,0.28)" rx="0.7"/>
+    <rect x="19.5" y="20" width="7" height="1" fill="rgba(255,255,255,0.28)" rx="0.5"/>
+  </g>
+  <circle cx="16" cy="3.5" r="1" fill="#f7d76b" opacity="0.95"/>
+  <circle cx="13" cy="2.5" r="0.55" fill="#fff" opacity="0.85"/>
+  <circle cx="19" cy="2.5" r="0.55" fill="#fff" opacity="0.85"/>
+</svg>
