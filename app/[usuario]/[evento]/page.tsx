@@ -761,7 +761,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         <div style={{ display: 'flex', gap: 6 }}>
           {(['normal-left', 'normal-center', 'spaced'] as TituloEstilo[]).map(s => {
             const labels: Record<string, string> = { 'normal-left': '⬛ Izq.', 'normal-center': '⬜ Cen.', 'spaced': 'S·P·A' }
-            return <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s !== 'normal-left') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }}
+            return <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s) }}
               style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS }}>
               {labels[s]}
             </button>
