@@ -1213,7 +1213,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   isDragging={dragIdx === i}
                   isDragOver={dragOverIdx === i && dragIdx !== i}
                 >
-                  <TileBody tileKey={layout.key} />
+                  {TileBody({ tileKey: layout.key })}
                 </ResizableTile>
               )
             })}
