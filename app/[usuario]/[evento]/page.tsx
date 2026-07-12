@@ -6,6 +6,10 @@ import { getLang, t } from '../../i18n'
 
 const LIMITE_FREE = 3
 const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+const COLS = 12 // columnas del grid
+const ROW_H = 60 // altura de cada fila en px
+const GAP = 12 // gap entre tiles
+
 const BG_INVITADO = 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)'
 
 const TEMAS: Record<string, { label_key: string; bg: string; dark: boolean; tileBg: string; tileText: string; accentBg: string; accentText: string }> = {
@@ -30,48 +34,74 @@ const FUENTE_ORDER = ['system', 'verdana', 'georgia', 'cursive']
 
 type TituloEstilo = 'normal-left' | 'normal-center' | 'spaced'
 
+// Tile layout: col (1-based), row (1-based), colSpan, rowSpan
+interface TileLayout {
+  key: string
+  col: number
+  row: number
+  colSpan: number
+  rowSpan: number
+  visible: boolean
+}
+
 const DEFAULT_TILES_VISIBLES: Record<string, boolean> = {
-  portada: true, invitados: true, aperturas: true, regalos: true, mensajes: true,
+  portada: true, invitados: true, regalos: true, mensajes: true,
   itinerario: true, presupuesto: true, quellevar: true, menu: true, reservacion: true
 }
 
 const TINFO: Record<string, { label: string; title_key: string }> = {
-  portada:     { label: 'IMG', title_key: 'tile_portada' },
-  invitados:   { label: 'INV', title_key: 'tile_invitados' },
-  aperturas:   { label: 'APE', title_key: 'tile_aperturas' },
-  regalos:     { label: 'REG', title_key: 'tile_regalos' },
-  itinerario:  { label: 'ITE', title_key: 'tile_itinerario' },
-  presupuesto: { label: 'PRE', title_key: 'tile_presupuesto' },
-  quellevar:   { label: 'QLL', title_key: 'tile_quellevar' },
-  menu:        { label: 'MEN', title_key: 'tile_menu' },
-  reservacion: { label: 'RES', title_key: 'tile_reservacion' },
-  mensajes:    { label: 'MSG', title_key: 'tile_mensajes' },
+  portada:    { label: 'IMG', title_key: 'tile_portada' },
+  invitados:  { label: 'INV', title_key: 'tile_invitados' },
+  regalos:    { label: 'REG', title_key: 'tile_regalos' },
+  itinerario: { label: 'ITE', title_key: 'tile_itinerario' },
+  presupuesto:{ label: 'PRE', title_key: 'tile_presupuesto' },
+  quellevar:  { label: 'QLL', title_key: 'tile_quellevar' },
+  menu:       { label: 'MEN', title_key: 'tile_menu' },
+  reservacion:{ label: 'RES', title_key: 'tile_reservacion' },
+  mensajes:   { label: 'MSG', title_key: 'tile_mensajes' },
 }
 
 const STARS = [
   { top: '4%',  left: '2%',  size: 18, delay: '0s',   dur: '3.2s' },
   { top: '8%',  left: '92%', size: 24, delay: '1.1s', dur: '2.8s' },
   { top: '15%', left: '5%',  size: 12, delay: '0.5s', dur: '3.5s' },
-  { top: '22%', left: '96%', size: 16, delay: '2.1s', dur: '2.6s' },
   { top: '30%', left: '1%',  size: 20, delay: '0.8s', dur: '3.8s' },
   { top: '52%', left: '95%', size: 22, delay: '0.3s', dur: '4.0s' },
-  { top: '68%', left: '94%', size: 12, delay: '0.7s', dur: '3.3s' },
   { top: '75%', left: '4%',  size: 26, delay: '1.3s', dur: '2.7s' },
   { top: '88%', left: '6%',  size: 18, delay: '0.4s', dur: '3.1s' },
 ]
 
-function tilesForType(type: string, sub?: string) {
+function defaultLayouts(type: string, sub?: string): TileLayout[] {
+  // 12 cols, tiles en grid de 2 columnas (6 cols cada una)
   const SETS: Record<string, string[]> = {
-    cumple:  ['portada', 'invitados', 'aperturas', 'regalos', 'mensajes'],
-    cena:    sub === 'restaurante' ? ['portada', 'invitados', 'aperturas', 'reservacion'] : ['portada', 'invitados', 'aperturas', 'menu'],
-    viaje:   ['portada', 'invitados', 'aperturas', 'itinerario', 'presupuesto', 'quellevar'],
-    reunion: ['portada', 'invitados', 'aperturas', 'menu'],
-    evento:  ['portada', 'invitados', 'aperturas', 'regalos'],
-    otro:    ['portada', 'invitados', 'aperturas', 'regalos'],
+    cumple:  ['portada', 'invitados', 'regalos', 'mensajes'],
+    cena:    sub === 'restaurante' ? ['portada', 'invitados', 'reservacion'] : ['portada', 'invitados', 'menu'],
+    viaje:   ['portada', 'invitados', 'itinerario', 'presupuesto', 'quellevar'],
+    reunion: ['portada', 'invitados', 'menu'],
+    evento:  ['portada', 'invitados', 'regalos'],
+    otro:    ['portada', 'invitados', 'regalos'],
   }
-  const LG: Record<string, string> = { portada: 'lg', regalos: 'lg', itinerario: 'lg', menu: 'lg', mensajes: 'lg' }
-  const keys = SETS[type] || ['portada', 'invitados', 'aperturas', 'regalos']
-  return keys.map(k => ({ key: k, size: LG[k] || 'sm' }))
+  const keys = SETS[type] || ['portada', 'invitados', 'regalos']
+
+  const layouts: TileLayout[] = []
+  let row = 1
+
+  // Portada siempre ancho completo, 4 filas
+  layouts.push({ key: 'portada', col: 1, row, colSpan: 12, rowSpan: 4, visible: true })
+  row += 4
+
+  // Resto en pares de 2 columnas de 6
+  const rest = keys.filter(k => k !== 'portada')
+  for (let i = 0; i < rest.length; i += 2) {
+    const rowSpan = 4
+    layouts.push({ key: rest[i], col: 1, row, colSpan: 6, rowSpan, visible: true })
+    if (rest[i + 1]) {
+      layouts.push({ key: rest[i + 1], col: 7, row, colSpan: 6, rowSpan, visible: true })
+    }
+    row += rowSpan
+  }
+
+  return layouts
 }
 
 const initial = (n: string) => (n || '?').trim()[0].toUpperCase()
@@ -92,9 +122,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
-// ============================================================
-// VISTA DEL INVITADO/MIEMBRO
-// ============================================================
+// Vista del invitado
 function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
   const router = useRouter()
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
@@ -123,7 +151,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
     setTimeout(() => setGuardado(false), 3000)
   }
 
-  const paradas = celebracion.paradas || []
+  const paradas = (celebracion.paradas || []).filter((p: any) => p.id)
   const regalos = celebracion.gifts || []
   const tiles = celebracion.tiles_visibles || {}
   const fecha = celebracion.fecha
@@ -138,74 +166,42 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
 
   return (
     <div style={{ minHeight: '100vh', background: BG_INVITADO, fontFamily: FSYS }}>
-      <style>{`@keyframes starPulse2{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:.8;transform:scale(1)}}`}</style>
-
-      {/* Estrellitas */}
+      <style>{`@keyframes sp2{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:.8;transform:scale(1)}}`}</style>
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-        {STARS.map((s, i) => (
-          <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: 'rgba(255,255,255,0.4)', lineHeight: 1, animation: `starPulse2 ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>
-        ))}
+        {STARS.map((s, i) => <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: 'rgba(255,255,255,.4)', lineHeight: 1, animation: `sp2 ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>)}
       </div>
-
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 600, margin: '0 auto', padding: '32px 18px 60px' }}>
-
-        {/* Header Cheers */}
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-.3px' }}>Cheers</div>
+          <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
         </div>
-
-        {/* Portada si existe */}
         {celebracion.portada_url && (
           <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)' }}>
             <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }} />
           </div>
         )}
-
-        {/* Info del evento */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
             {lang === 'en' ? "You're invited" : 'Estás invitado'}
           </div>
-          <h1
-            style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 10px', letterSpacing: '-.5px', lineHeight: 1.1 }}
-            dangerouslySetInnerHTML={{ __html: celebracion.nombre_html || celebracion.nombre }}
-          />
-          {celebracion.tagline && (
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,.8)', margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-            {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: 0 }}>{fecha}</p>}
-            {paradas?.[0]?.lugar && (
-              <a href={`https://maps.google.com/?q=${encodeURIComponent(paradas[0].lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>
-                {paradas[0].lugar} →
-              </a>
-            )}
-            {celebracion.festejado_nombre && (
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', margin: 0 }}>
-                {lang === 'en' ? `Organized for ${celebracion.festejado_nombre}` : `Para ${celebracion.festejado_nombre}`}
-              </p>
-            )}
-          </div>
+          <h1 style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 10px', letterSpacing: '-.5px', lineHeight: 1.1 }}
+            dangerouslySetInnerHTML={{ __html: celebracion.nombre_html || celebracion.nombre }} />
+          {celebracion.tagline && <p style={{ fontSize: 15, color: 'rgba(255,255,255,.8)', margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>}
+          {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
+          {paradas[0]?.lugar && <a href={`https://maps.google.com/?q=${encodeURIComponent(paradas[0].lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>{paradas[0].lugar} →</a>}
+          {celebracion.festejado_nombre && <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', margin: '4px 0 0' }}>{lang === 'en' ? `For ${celebracion.festejado_nombre}` : `Para ${celebracion.festejado_nombre}`}</p>}
         </div>
 
-        {/* Card RSVP */}
         <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>
             {rsvpExistente ? (lang === 'en' ? 'Your RSVP' : 'Tu confirmación') : (lang === 'en' ? 'Will you be there?' : '¿Vas a ir?')}
           </div>
-
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             {(['si', 'no', 'talvez'] as const).map(op => {
               const c = rsvpColors[op]
               const sel = asistencia === op
-              return (
-                <button key={op} onClick={() => setAsistencia(op)} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>
-                  {c.label}
-                </button>
-              )
+              return <button key={op} onClick={() => setAsistencia(op)} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>{c.label}</button>
             })}
           </div>
-
           {tiles.mensajes !== false && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>
@@ -214,49 +210,29 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
               <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder={lang === 'en' ? 'Write something nice...' : 'Escribe algo bonito...'} rows={3} style={{ border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'none', lineHeight: 1.5 }} />
             </div>
           )}
-
-          <button onClick={guardarRsvp} disabled={!asistencia || guardando} style={{ width: '100%', padding: '14px', background: asistencia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: asistencia ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: asistencia ? 'pointer' : 'default', fontFamily: FSYS, transition: 'all .15s' }}>
+          <button onClick={guardarRsvp} disabled={!asistencia || guardando} style={{ width: '100%', padding: '14px', background: asistencia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: asistencia ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: asistencia ? 'pointer' : 'default', fontFamily: FSYS }}>
             {guardando ? '...' : guardado ? (lang === 'en' ? '✓ Confirmed!' : '✓ ¡Confirmado!') : rsvpExistente ? (lang === 'en' ? 'Update RSVP' : 'Actualizar') : (lang === 'en' ? 'Confirm attendance' : 'Confirmar asistencia')}
           </button>
         </div>
 
-        {/* Itinerario */}
-        {tiles.itinerario !== false && paradas.filter((p: any) => p.id).length > 0 && (
+        {paradas.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'The plan' : 'El plan'}</div>
-            {paradas.filter((p: any) => p.id).map((p: any, i: number) => (
+            {paradas.map((p: any, i: number) => (
               <div key={p.id} style={{ display: 'flex', gap: 14, marginBottom: i < paradas.length - 1 ? 14 : 0, paddingBottom: i < paradas.length - 1 ? 14 : 0, borderBottom: i < paradas.length - 1 ? '1px solid #f0edf8' : 'none' }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#2a2440' }}>{p.lugar}</div>
                   {p.hora && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, marginTop: 1 }}>{p.hora}</div>}
                   {p.nota && <div style={{ fontSize: 12, color: '#a39ec0', marginTop: 1 }}>{p.nota}</div>}
-                  <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>
-                    {lang === 'en' ? 'See on Maps →' : 'Ver en Maps →'}
-                  </a>
+                  <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>{lang === 'en' ? 'See on Maps →' : 'Ver en Maps →'}</a>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Qué llevar */}
-        {tiles.quellevar !== false && (celebracion.quellevar || []).length > 0 && (
-          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'What to bring' : 'Qué llevar'}</div>
-            {(celebracion.quellevar || []).map((item: any) => (
-              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <div style={{ width: 18, height: 18, borderRadius: 5, border: '2px solid #cfc8ec', background: item.listo ? '#534AB7' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {item.listo && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
-                </div>
-                <span style={{ fontSize: 14, color: '#2a2440', opacity: item.listo ? 0.5 : 1 }}>{item.nombre}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Lista de regalos */}
-        {tiles.regalos !== false && regalos.length > 0 && (
+        {regalos.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'Gift ideas' : 'Ideas de regalo'}</div>
             {regalos.map((r: any) => (
@@ -265,15 +241,13 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
                   <div style={{ fontSize: 14, fontWeight: 600, color: r.reservado ? '#1f8a5b' : '#2a2440', textDecoration: r.reservado ? 'line-through' : 'none' }}>{r.nombre}</div>
                   {r.precio && <div style={{ fontSize: 11, color: '#a39ec0' }}>${r.precio}</div>}
                 </div>
-                {r.reservado
-                  ? <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a5b', background: '#d8f3dc', padding: '3px 10px', borderRadius: 99 }}>{lang === 'en' ? 'Reserved' : 'Reservado'}</span>
+                {r.reservado ? <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a5b', background: '#d8f3dc', padding: '3px 10px', borderRadius: 99 }}>{lang === 'en' ? 'Reserved' : 'Reservado'}</span>
                   : r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '5px 12px', borderRadius: 99, textDecoration: 'none' }}>{lang === 'en' ? 'See →' : 'Ver →'}</a>}
               </div>
             ))}
           </div>
         )}
 
-        {/* Footer Cheers */}
         <div style={{ textAlign: 'center', marginTop: 32 }}>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginBottom: 4 }}>{lang === 'en' ? 'Organized with' : 'Organizado con'}</div>
           <div style={{ fontSize: 18, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
@@ -281,20 +255,128 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
             {lang === 'en' ? 'Create your own →' : 'Crea el tuyo →'}
           </button>
         </div>
-
       </div>
     </div>
   )
 }
 
-// ============================================================
-// DASHBOARD DEL ORGANIZADOR
-// ============================================================
+// Componente Tile con resize
+function ResizableTile({
+  layout, totalRows, containerWidth, isMobile, te, tx, lang, children, tileLabel, info,
+  onResizeEnd, onDragStart, onDrop, isDragging, isDragOver, visible, onToggleVisible
+}: {
+  layout: TileLayout; totalRows: number; containerWidth: number; isMobile: boolean;
+  te: any; tx: any; lang: string; children: React.ReactNode; tileLabel: string; info: any;
+  onResizeEnd: (colSpan: number, rowSpan: number) => void;
+  onDragStart: () => void; onDrop: () => void;
+  isDragging: boolean; isDragOver: boolean; visible: boolean; onToggleVisible: () => void;
+}) {
+  const resizingRef = useRef(false)
+  const startRef = useRef({ x: 0, y: 0, colSpan: 0, rowSpan: 0 })
+  const colW = (containerWidth + GAP) / COLS
+
+  function startResize(e: React.MouseEvent | React.TouchEvent) {
+    e.stopPropagation()
+    e.preventDefault()
+    resizingRef.current = true
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    startRef.current = { x: clientX, y: clientY, colSpan: layout.colSpan, rowSpan: layout.rowSpan }
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      if (!resizingRef.current) return
+      const cx = 'touches' in ev ? ev.touches[0].clientX : ev.clientX
+      const cy = 'touches' in ev ? ev.touches[0].clientY : ev.clientY
+      const dx = cx - startRef.current.x
+      const dy = cy - startRef.current.y
+      const newColSpan = Math.max(isMobile ? 12 : 3, Math.min(12, Math.round(startRef.current.colSpan + dx / colW)))
+      const newRowSpan = Math.max(2, Math.min(12, Math.round(startRef.current.rowSpan + dy / (ROW_H + GAP))))
+      onResizeEnd(newColSpan, newRowSpan)
+    }
+
+    const onUp = () => {
+      resizingRef.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+  }
+
+  const width = isMobile ? '100%' : `${layout.colSpan * colW - GAP}px`
+  const height = `${layout.rowSpan * (ROW_H + GAP) - GAP}px`
+  const left = isMobile ? 0 : `${(layout.col - 1) * colW}px`
+  const top = `${(layout.row - 1) * (ROW_H + GAP)}px`
+
+  return (
+    <div
+      draggable={!resizingRef.current}
+      onDragStart={onDragStart}
+      onDragOver={e => e.preventDefault()}
+      onDrop={onDrop}
+      style={{
+        position: isMobile ? 'relative' : 'absolute',
+        left, top, width, height,
+        background: isDragOver && !isDragging ? 'transparent' : te.tileBg,
+        borderRadius: 18,
+        border: isDragOver && !isDragging ? '2.5px dashed rgba(83,74,183,.5)' : 'none',
+        boxShadow: isDragOver && !isDragging ? 'none' : '0 6px 20px rgba(25,12,50,.1)',
+        opacity: isDragging ? 0.4 : visible ? 1 : 0.55,
+        overflow: 'hidden',
+        transition: 'opacity .2s, box-shadow .2s',
+        color: te.tileText,
+        display: 'flex',
+        flexDirection: 'column',
+        marginBottom: isMobile ? GAP : 0,
+      }}
+    >
+      {/* Header del tile */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 8px', flexShrink: 0 }}>
+        <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 14, userSelect: 'none' }}>⠿</span>
+        <div style={{ width: 26, height: 26, borderRadius: 7, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ fontSize: 9, fontWeight: 800, color: te.accentText }}>{info.label}</span>
+        </div>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 800, color: te.tileText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{tileLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 10, color: '#a39ec0', fontWeight: 600 }}>{visible ? (tx.visible || 'Visible') : (tx.hidden || 'Oculto')}</span>
+          <Toggle on={visible} onToggle={onToggleVisible} />
+        </div>
+      </div>
+
+      {/* Contenido */}
+      <div style={{ flex: 1, padding: '0 14px 14px', overflowY: 'auto' }}>
+        {children}
+      </div>
+
+      {/* Handle de resize */}
+      <div
+        onMouseDown={startResize}
+        onTouchStart={startResize}
+        style={{
+          position: 'absolute', bottom: 0, right: 0, width: 20, height: 20,
+          cursor: 'nwse-resize', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
+          padding: '3px', userSelect: 'none', zIndex: 10,
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M9 1L1 9M9 5L5 9M9 9H5" stroke={te.accentText === '#fff' ? 'rgba(255,255,255,.4)' : 'rgba(83,74,183,.4)'} strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </div>
+    </div>
+  )
+}
+
 export default function EventoPage({ params }: { params: Promise<{ usuario: string; evento: string }> }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const saveTimeout = useRef<any>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
 
   const [tx, setTx] = useState(t.es)
   const [lang, setLang] = useState('es')
@@ -306,19 +388,16 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [rol, setRol] = useState<'organizador' | 'invitado' | 'sin_acceso' | null>(null)
   const [user, setUser] = useState<any>(null)
 
-  // Hero
   const [tagline, setTagline] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
   const [lugar, setLugar] = useState('')
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
-  const [dragOverPortada, setDragOverPortada] = useState(false)
   const [imgPosition, setImgPosition] = useState('center')
   const [showLightbox, setShowLightbox] = useState(false)
 
-  // Tiles
-  const [tiles, setTiles] = useState<{ key: string; size: string }[]>([])
+  const [layouts, setLayouts] = useState<TileLayout[]>([])
   const [tilesVisibles, setTilesVisibles] = useState<Record<string, boolean>>(DEFAULT_TILES_VISIBLES)
   const [tema, setTema] = useState('morado')
   const [fuente, setFuente] = useState('system')
@@ -329,10 +408,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [lifetimeExpanded, setLifetimeExpanded] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
-  const [guardandoToggle, setGuardandoToggle] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [containerWidth, setContainerWidth] = useState(800)
 
-  // Invitados
   const [showAddInvitado, setShowAddInvitado] = useState(false)
   const [nuevoInvitado, setNuevoInvitado] = useState('')
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
@@ -340,7 +418,6 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
-  // Tiles data
   const [regalos, setRegalos] = useState<any[]>([])
   const [showAddRegalo, setShowAddRegalo] = useState(false)
   const [nuevoRegalo, setNuevoRegalo] = useState({ nombre: '', precio: '', link: '' })
@@ -359,19 +436,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l]); setLocale(l === 'en' ? 'en-US' : 'es-MX')
-    const check = () => setIsMobile(window.innerWidth < 600)
-    check(); window.addEventListener('resize', check)
+    const check = () => {
+      setIsMobile(window.innerWidth < 600)
+      if (gridRef.current) setContainerWidth(gridRef.current.offsetWidth)
+    }
+    check()
+    window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
 
   useEffect(() => {
     params.then(async ({ usuario, evento }) => {
       const { data: { user: authUser } } = await supabase.auth.getUser()
-
-      if (!authUser) {
-        if (typeof window !== 'undefined') sessionStorage.setItem('redirect_after_login', `/${usuario}/${evento}`)
-        router.push('/login'); return
-      }
+      if (!authUser) { router.push('/login'); return }
       setUser(authUser)
 
       let cel: any = null
@@ -385,20 +462,15 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       if (!cel) { setRol('sin_acceso'); setCargando(false); return }
 
-      // Detectar rol
       if (cel.organizador_id === authUser.id) {
         setRol('organizador')
       } else {
-        // Buscar si es invitado
         let inv: any = null
         const { data: invPorId } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('user_id', authUser.id).single()
         if (invPorId) { inv = invPorId }
         else {
           const { data: invPorEmail } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('email', authUser.email || '').is('user_id', null).single()
-          if (invPorEmail) {
-            await supabase.from('invitados').update({ user_id: authUser.id }).eq('id', invPorEmail.id)
-            inv = { ...invPorEmail, user_id: authUser.id }
-          }
+          if (invPorEmail) { await supabase.from('invitados').update({ user_id: authUser.id }).eq('id', invPorEmail.id); inv = invPorEmail }
         }
         setRol(inv ? 'invitado' : 'sin_acceso')
       }
@@ -415,8 +487,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setMenuItems(cel.menu || [])
       setPresupuesto(cel.presupuesto || [])
 
-      if (cel.tiles_order) { try { setTiles(JSON.parse(cel.tiles_order)) } catch { setTiles(tilesForType(cel.tipo, cel.sub_tipo)) } }
-      else { setTiles(tilesForType(cel.tipo, cel.sub_tipo)) }
+      if (cel.tile_layouts) {
+        try { setLayouts(JSON.parse(cel.tile_layouts)) } catch { setLayouts(defaultLayouts(cel.tipo, cel.sub_tipo)) }
+      } else {
+        setLayouts(defaultLayouts(cel.tipo, cel.sub_tipo))
+      }
 
       setTilesVisibles({ ...DEFAULT_TILES_VISIBLES, ...(cel.tiles_visibles || {}) })
       if (cel.tema) setTema(cel.tema)
@@ -441,27 +516,31 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   function applyFormat(cmd: string) { titleRef.current?.focus(); document.execCommand(cmd, false); setTimeout(saveTitleHtml, 100) }
 
-  function moveTile(from: number, to: number) {
-    if (from == null || from === to) return
-    setTiles(prev => { const t = [...prev]; const [m] = t.splice(from, 1); t.splice(to, 0, m); guardarCampo('tiles_order', JSON.stringify(t)); return t })
+  function saveLayouts(newLayouts: TileLayout[]) {
+    setLayouts(newLayouts)
+    if (celebracion) supabase.from('celebraciones').update({ tile_layouts: JSON.stringify(newLayouts) }).eq('slug', celebracion.slug)
   }
 
-  function cycleSize(i: number) {
-    setTiles(prev => {
-      const next = prev.map((x, j) => {
-        if (j !== i) return x
-        if (x.key === 'portada') { const sizes = ['sm', 'md', 'lg', 'xl']; return { ...x, size: sizes[(sizes.indexOf(x.size) + 1) % sizes.length] } }
-        return { ...x, size: x.size === 'sm' ? 'lg' : 'sm' }
-      })
-      guardarCampo('tiles_order', JSON.stringify(next)); return next
-    })
+  function moveLayout(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return
+    const next = [...layouts]
+    // Swap positions
+    const fromLayout = { ...next[fromIdx] }
+    const toLayout = { ...next[toIdx] }
+    next[fromIdx] = { ...fromLayout, col: toLayout.col, row: toLayout.row }
+    next[toIdx] = { ...toLayout, col: fromLayout.col, row: fromLayout.row }
+    saveLayouts(next)
   }
 
-  async function toggleVisibilidad(key: string) {
+  function resizeLayout(idx: number, colSpan: number, rowSpan: number) {
+    const next = layouts.map((l, i) => i === idx ? { ...l, colSpan, rowSpan } : l)
+    saveLayouts(next)
+  }
+
+  async function toggleVisible(key: string) {
     const nuevo = { ...tilesVisibles, [key]: !tilesVisibles[key] }
-    setTilesVisibles(nuevo); setGuardandoToggle(true)
-    await supabase.from('celebraciones').update({ tiles_visibles: nuevo }).eq('slug', celebracion.slug)
-    setGuardandoToggle(false)
+    setTilesVisibles(nuevo)
+    if (celebracion) await supabase.from('celebraciones').update({ tiles_visibles: nuevo }).eq('slug', celebracion.slug)
   }
 
   async function guardarCampo(campo: string, valor: any) {
@@ -583,14 +662,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     setPresupuesto(nuevo); await supabase.from('celebraciones').update({ presupuesto: nuevo }).eq('slug', celebracion.slug)
   }
 
-  // Loading
   if (cargando) return (
     <div style={{ minHeight: '100vh', background: TEMAS.morado.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: '#EEEDFE', fontSize: 16 }}>{t[lang as 'es' | 'en'].loading}</p>
     </div>
   )
 
-  // Sin acceso
   if (rol === 'sin_acceso') return (
     <div style={{ minHeight: '100vh', background: BG_INVITADO, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FSYS }}>
       <div style={{ background: '#fff', borderRadius: 24, padding: '2.5rem', maxWidth: 400, textAlign: 'center' }}>
@@ -604,10 +681,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     </div>
   )
 
-  // Vista invitado
   if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} />
 
-  // ---- DASHBOARD ORGANIZADOR ----
+  // DASHBOARD ORGANIZADOR
   const te = TEMAS[tema] || TEMAS.morado
   const F = FUENTES[fuente]?.font || FSYS
   const textColor = te.dark ? '#ffffff' : '#2a2440'
@@ -618,6 +694,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const limiteAlcanzado = invitadosList.length >= LIMITE_FREE
   const MIN_SIZE = 16, MAX_SIZE = isMobile ? 36 : 52
   const totalPresupuesto = presupuesto.reduce((s: number, g: any) => s + (g.monto || 0), 0)
+  const totalRows = layouts.reduce((max, l) => Math.max(max, l.row + l.rowSpan - 1), 1)
 
   const progressItems = [
     { label: lang === 'en' ? 'Cover photo' : 'Foto de portada', done: !!portadaUrl },
@@ -636,13 +713,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const pillBtn: React.CSSProperties = { background: 'rgba(255,255,255,.92)', border: 'none', color: '#534AB7', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, boxShadow: '0 4px 14px rgba(20,10,40,.18)', whiteSpace: 'nowrap' as const }
   const fieldInput: React.CSSProperties = { border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 15, fontWeight: 600, color: te.tileText, padding: '7px 8px', borderRadius: 9, outline: 'none', width: '100%', boxSizing: 'border-box' as const }
   const inputStyle: React.CSSProperties = { border: `1.5px solid ${te.accentBg}`, background: te.tileBg, fontFamily: FSYS, fontSize: 14, color: te.tileText, padding: '8px 12px', borderRadius: 10, outline: 'none', width: '100%', boxSizing: 'border-box' as const }
-  const dashedBtn = (label: string): React.ReactElement => <button onClick={() => {}} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{label}</button>
+  const dashedBtn: React.CSSProperties = { border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 13, fontWeight: 700, padding: '9px 14px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }
   const addBtn: React.CSSProperties = { border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }
   const cancelBtn: React.CSSProperties = { border: 'none', background: '#f0edf8', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }
   const deleteBtn: React.CSSProperties = { border: 'none', background: '#fee2e2', color: '#dc2626', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
 
   const SidebarContent = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.theme}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -681,13 +758,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{lang === 'en' ? 'Alignment' : 'Alineación'}</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {(['normal-left', 'normal-center', 'spaced'] as TituloEstilo[]).map(s => {
-            const labels: Record<string, string> = { 'normal-left': '⬛ Izq.', 'normal-center': '⬜ Cen.', 'spaced': 'S·P·A·C·E' }
-            return (
-              <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s !== 'normal-left') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }}
-                style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS }}>
-                {labels[s]}
-              </button>
-            )
+            const labels: Record<string, string> = { 'normal-left': '⬛ Izq.', 'normal-center': '⬜ Cen.', 'spaced': 'S·P·A' }
+            return <button key={s} onClick={() => { setTituloEstilo(s); guardarCampo('titulo_align', s); titleRef.current?.focus(); if (s !== 'normal-left') document.execCommand('justifyCenter'); else document.execCommand('justifyLeft') }}
+              style={{ flex: 1, border: tituloEstilo === s ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 10, padding: '8px 4px', cursor: 'pointer', background: tituloEstilo === s ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)', color: tituloEstilo === s ? '#534AB7' : '#fff', fontSize: 10, fontWeight: 700, fontFamily: FSYS }}>
+              {labels[s]}
+            </button>
           })}
         </div>
       </div>
@@ -701,293 +776,230 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             {lang === 'en' ? 'Clear' : 'Limpiar'}
           </button>
         </div>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', margin: '8px 0 0' }}>{lang === 'en' ? 'Select text in the title then tap format.' : 'Selecciona texto en el título y aplica.'}</p>
       </div>
       <button onClick={() => setShowCustomize(false)} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>{tx.save_close}</button>
     </div>
   )
 
-  const TileContent = ({ tileKey, tileSize }: { tileKey: string; tileSize: string }) => {
+  function TileBody({ tileKey }: { tileKey: string }) {
     if (tileKey === 'portada') return (
-      <div onDragOver={e => { e.preventDefault(); setDragOverPortada(true) }} onDragLeave={() => setDragOverPortada(false)}
-        onDrop={e => { e.preventDefault(); setDragOverPortada(false); const f = e.dataTransfer.files?.[0]; if (f) subirPortada(f) }}
-        onClick={() => { if (portadaUrl) setShowLightbox(true); else if (!subiendoPortada) fileInputRef.current?.click() }}
-        style={{ margin: '0 -18px -20px', cursor: portadaUrl ? 'zoom-in' : 'pointer', borderRadius: '0 0 18px 18px', overflow: 'hidden' }}>
-        <div style={{ height: tileSize === 'xl' ? (isMobile ? 380 : 560) : tileSize === 'lg' ? (isMobile ? 260 : 400) : tileSize === 'md' ? (isMobile ? 200 : 300) : (isMobile ? 150 : 200), background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : dragOverPortada ? '#EDE9FF' : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'height .3s' }}>
+      <div style={{ height: '100%', margin: '-8px -14px -14px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative', borderRadius: '0 0 18px 18px', overflow: 'hidden' }}
+        onClick={() => { if (portadaUrl) setShowLightbox(true); else fileInputRef.current?.click() }}>
+        <div style={{ height: '100%', background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           {subiendoPortada
             ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
             : portadaUrl
-              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', backdropFilter: 'blur(4px)', zIndex: 2 }}>{tx.change_image}</div>
-              : <div style={{ textAlign: 'center' as const, color: '#a39ec0', pointerEvents: 'none' }}><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div><div style={{ fontSize: 12 }}>{tx.cover_hint}</div></div>}
+              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>{tx.change_image}</div>
+              : <div style={{ textAlign: 'center' as const, color: '#a39ec0' }}><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div><div style={{ fontSize: 12 }}>{tx.cover_hint}</div></div>}
         </div>
       </div>
     )
 
     if (tileKey === 'invitados') return (
       <div>
-        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-          <div style={{ flex: 1, background: '#ECF7F0', borderRadius: 14, padding: '12px 14px' }}>
-            <div style={{ fontSize: 26, fontWeight: 850, color: '#1f8a5b', lineHeight: 1 }}>{confirmados}</div>
-            <div style={{ fontSize: 12, color: '#1f8a5b', fontWeight: 700, marginTop: 3 }}>{tx.confirmed}</div>
+        {/* Stats */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <div style={{ flex: 1, background: '#ECF7F0', borderRadius: 12, padding: '10px 12px' }}>
+            <div style={{ fontSize: 22, fontWeight: 850, color: '#1f8a5b', lineHeight: 1 }}>{confirmados}</div>
+            <div style={{ fontSize: 11, color: '#1f8a5b', fontWeight: 700, marginTop: 2 }}>{tx.confirmed}</div>
           </div>
-          <div style={{ flex: 1, background: '#FFF4E6', borderRadius: 14, padding: '12px 14px' }}>
-            <div style={{ fontSize: 26, fontWeight: 850, color: '#c98a1e', lineHeight: 1 }}>{porConfirmar}</div>
-            <div style={{ fontSize: 12, color: '#c98a1e', fontWeight: 700, marginTop: 3 }}>{tx.to_confirm}</div>
+          <div style={{ flex: 1, background: '#FFF4E6', borderRadius: 12, padding: '10px 12px' }}>
+            <div style={{ fontSize: 22, fontWeight: 850, color: '#c98a1e', lineHeight: 1 }}>{porConfirmar}</div>
+            <div style={{ fontSize: 11, color: '#c98a1e', fontWeight: 700, marginTop: 2 }}>{tx.to_confirm}</div>
           </div>
         </div>
 
+        {/* Lista de invitados con estado de apertura */}
         {invitadosList.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-            {invitadosList.map(inv => (
-              <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial(inv.nombre)}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, color: te.tileText, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{inv.nombre}</div>
-                  {inv.email && <div style={{ fontSize: 11, color: '#a39ec0' }}>{inv.email}</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+            {invitadosList.map(inv => {
+              const rsvp = rsvps.find(r => r.nombre === inv.nombre || r.nombre === inv.email)
+              return (
+                <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: te.accentBg + '33', borderRadius: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {initial(inv.nombre)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: te.tileText, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{inv.nombre}</div>
+                    {rsvp && <div style={{ fontSize: 10, fontWeight: 700, color: rsvp.asistencia === 'si' ? '#1f8a5b' : rsvp.asistencia === 'no' ? '#dc2626' : '#c98a1e', marginTop: 1 }}>
+                      {rsvp.asistencia === 'si' ? tx.going : rsvp.asistencia === 'no' ? tx.not_going : tx.maybe}
+                    </div>}
+                  </div>
+                  <button onClick={() => enviarWA(inv.nombre)} style={{ border: 'none', background: '#25D366', color: '#fff', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>W</button>
+                  <button onClick={() => borrarInvitado(inv.id)} style={{ ...deleteBtn, width: 24, height: 24, fontSize: 12 }}>×</button>
                 </div>
-                <button onClick={() => enviarWA(inv.nombre)} style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>W</button>
-                <button onClick={() => borrarInvitado(inv.id)} style={{ ...deleteBtn }}>×</button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
-        {limiteAlcanzado && (
-          <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 14, padding: '12px 14px', marginBottom: 10, color: '#fff' }}>
-            <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>{tx.free_limit_title(LIMITE_FREE)}</div>
-            <div style={{ fontSize: 12, opacity: 0.9, lineHeight: 1.4, marginBottom: 8 }}>{tx.free_limit_desc}</div>
-            <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 12, fontWeight: 800, padding: '7px 14px', borderRadius: 9, cursor: 'pointer', fontFamily: FSYS }}>{tx.upgrade_cta}</button>
+        {limiteAlcanzado ? (
+          <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.free_limit_title(LIMITE_FREE)}</div>
+            <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.free_limit_desc}</div>
+            <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{tx.upgrade_cta}</button>
           </div>
-        )}
-
-        {!limiteAlcanzado && (
-          showAddInvitado ? (
-            <div style={{ marginTop: 4 }}>
-              <input
-                value={nuevoInvitado}
-                onChange={e => setNuevoInvitado(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && agregarInvitado()}
-                placeholder={lang === 'en' ? 'Email or phone number' : 'Email o número de teléfono'}
-                autoFocus
-                style={{ ...inputStyle, marginBottom: 8 }}
-              />
-              <div style={{ fontSize: 11, color: '#a39ec0', marginBottom: 8 }}>
-                {lang === 'en' ? 'Enter email or phone. Name will be set when they join.' : 'Escribe email o teléfono. El nombre se definirá cuando entren.'}
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <button onClick={agregarInvitado} disabled={guardandoInvitado} style={{ ...addBtn, flex: 1 }}>{guardandoInvitado ? '...' : tx.add_guest_btn}</button>
-                <button onClick={() => { setShowAddInvitado(false); setNuevoInvitado('') }} style={cancelBtn}>{tx.cancel}</button>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => enviarWA()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>WhatsApp</button>
-                <button onClick={() => { const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre}. El plan: https://joincheers.app/${celebracion?.slug}`); window.open(`sms:?&body=${msg}`, '_blank') }} style={{ flex: 1, border: 'none', background: '#534AB7', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>SMS</button>
-              </div>
+        ) : showAddInvitado ? (
+          <div>
+            <input value={nuevoInvitado} onChange={e => setNuevoInvitado(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarInvitado()} placeholder={lang === 'en' ? 'Email or phone' : 'Email o teléfono'} autoFocus style={{ ...inputStyle, marginBottom: 6 }} onFocus={e => e.stopPropagation()} />
+            <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+              <button onClick={agregarInvitado} disabled={guardandoInvitado} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{guardandoInvitado ? '...' : tx.add_guest_btn}</button>
+              <button onClick={() => { setShowAddInvitado(false); setNuevoInvitado('') }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
-          ) : (
-            <button onClick={() => setShowAddInvitado(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: 12, borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, width: '100%', marginTop: 4 }}>
-              {tx.add_guest(invitadosList.length, LIMITE_FREE)}
-            </button>
-          )
-        )}
-
-        {rsvps.length > 0 && (
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${te.accentBg}` }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 8 }}>RSVPs</div>
-            {rsvps.map(r => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial(r.nombre)}</div>
-                <span style={{ flex: 1, fontSize: 13, color: te.tileText, fontWeight: 600 }}>{r.nombre}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: r.asistencia === 'si' ? '#1f8a5b' : r.asistencia === 'no' ? '#dc2626' : '#c98a1e', background: r.asistencia === 'si' ? '#ECF7F0' : r.asistencia === 'no' ? '#FEE2E2' : '#FFF4E6', padding: '2px 8px', borderRadius: 99 }}>
-                  {r.asistencia === 'si' ? tx.going : r.asistencia === 'no' ? tx.not_going : tx.maybe}
-                </span>
-              </div>
-            ))}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => enviarWA()} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px', borderRadius: 9, cursor: 'pointer', fontFamily: FSYS }}>WhatsApp</button>
+              <button onClick={() => { const msg = encodeURIComponent(`¡Hola! Te invito a ${celebracion?.nombre}. El plan: https://joincheers.app/${celebracion?.slug}`); window.open(`sms:?&body=${msg}`, '_blank') }} style={{ flex: 1, border: 'none', background: '#534AB7', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px', borderRadius: 9, cursor: 'pointer', fontFamily: FSYS }}>SMS</button>
+            </div>
           </div>
+        ) : (
+          <button onClick={() => setShowAddInvitado(true)} style={{ ...dashedBtn, width: '100%', textAlign: 'center' as const }}>
+            {tx.add_guest(invitadosList.length, LIMITE_FREE)}
+          </button>
         )}
-      </div>
-    )
-
-    if (tileKey === 'aperturas') return (
-      <div>
-        <div style={{ fontSize: 13, color: '#7a7494', fontWeight: 700, marginBottom: 8 }}>{tx.no_openings}</div>
-        <div style={{ height: 8, background: te.accentBg, borderRadius: 99 }} />
       </div>
     )
 
     if (tileKey === 'regalos') return (
       <div>
-        {regalos.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-            {regalos.map(r => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: r.reservado ? '#f0faf4' : '#fafafa', borderRadius: 12, border: r.reservado ? '1.5px solid #d8f3dc' : '1.5px solid #f0edf8' }}>
-                <button onClick={() => toggleRegalo(r.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${r.reservado ? '#1f8a5b' : '#cfc8ec'}`, background: r.reservado ? '#1f8a5b' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {r.reservado && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
-                </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: r.reservado ? '#1f8a5b' : te.tileText, textDecoration: r.reservado ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.nombre}</div>
-                  {r.precio && <div style={{ fontSize: 11, color: '#a39ec0' }}>${r.precio}</div>}
-                </div>
-                {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '4px 10px', borderRadius: 99, textDecoration: 'none', flexShrink: 0 }}>{lang === 'en' ? 'See' : 'Ver'}</a>}
-                <button onClick={() => borrarRegalo(r.id)} style={{ ...deleteBtn }}>×</button>
-              </div>
-            ))}
+        {regalos.map(r => (
+          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 10px', background: r.reservado ? '#f0faf4' : '#fafafa', borderRadius: 10, marginBottom: 6, border: `1.5px solid ${r.reservado ? '#d8f3dc' : '#f0edf8'}` }}>
+            <button onClick={() => toggleRegalo(r.id)} style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${r.reservado ? '#1f8a5b' : '#cfc8ec'}`, background: r.reservado ? '#1f8a5b' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {r.reservado && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
+            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: r.reservado ? '#1f8a5b' : te.tileText, textDecoration: r.reservado ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.nombre}</div>
+              {r.precio && <div style={{ fontSize: 10, color: '#a39ec0' }}>${r.precio}</div>}
+            </div>
+            {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '3px 8px', borderRadius: 99, textDecoration: 'none', flexShrink: 0 }}>Ver</a>}
+            <button onClick={() => borrarRegalo(r.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
           </div>
-        )}
+        ))}
         {showAddRegalo ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input value={nuevoRegalo.nombre} onChange={e => setNuevoRegalo(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Gift name' : 'Nombre del regalo'} style={inputStyle} autoFocus />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={nuevoRegalo.precio} onChange={e => setNuevoRegalo(p => ({ ...p, precio: e.target.value }))} placeholder={lang === 'en' ? 'Price' : 'Precio'} style={{ ...inputStyle, flex: 1 }} />
-              <input value={nuevoRegalo.link} onChange={e => setNuevoRegalo(p => ({ ...p, link: e.target.value }))} placeholder="Link" style={{ ...inputStyle, flex: 2 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <input value={nuevoRegalo.nombre} onChange={e => setNuevoRegalo(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Gift name' : 'Nombre del regalo'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={nuevoRegalo.precio} onChange={e => setNuevoRegalo(p => ({ ...p, precio: e.target.value }))} placeholder={lang === 'en' ? 'Price' : 'Precio'} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+              <input value={nuevoRegalo.link} onChange={e => setNuevoRegalo(p => ({ ...p, link: e.target.value }))} placeholder="Link" style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={agregarRegalo} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
-              <button onClick={() => { setShowAddRegalo(false); setNuevoRegalo({ nombre: '', precio: '', link: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={agregarRegalo} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
+              <button onClick={() => { setShowAddRegalo(false); setNuevoRegalo({ nombre: '', precio: '', link: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
           </div>
-        ) : (
-          <button onClick={() => setShowAddRegalo(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.add_gift}</button>
-        )}
+        ) : <button onClick={() => setShowAddRegalo(true)} style={dashedBtn}>{tx.add_gift}</button>}
       </div>
     )
 
     if (tileKey === 'itinerario') return (
       <div>
-        {paradas.filter(p => p.id).length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 }}>
-            {paradas.filter(p => p.id).map((p, i) => (
-              <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: te.tileText }}>{p.lugar}</div>
-                  {p.hora && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>{p.hora}</div>}
-                  {p.nota && <div style={{ fontSize: 12, color: '#a39ec0' }}>{p.nota}</div>}
-                  <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 2 }}>{tx.see_map}</a>
-                </div>
-                <button onClick={() => borrarParada(p.id)} style={{ ...deleteBtn, marginTop: 2 }}>×</button>
-              </div>
-            ))}
+        {paradas.filter(p => p.id).map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${te.accentBg}` }}>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: te.tileText }}>{p.lugar}</div>
+              {p.hora && <div style={{ fontSize: 11, color: '#534AB7', fontWeight: 600 }}>{p.hora}</div>}
+              {p.nota && <div style={{ fontSize: 11, color: '#a39ec0' }}>{p.nota}</div>}
+            </div>
+            <button onClick={() => borrarParada(p.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
           </div>
-        )}
+        ))}
         {showAddParada ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <input value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={nuevaParada.hora} onChange={e => setNuevaParada(p => ({ ...p, hora: e.target.value }))} placeholder={lang === 'en' ? 'Time (e.g. 8pm)' : 'Hora (ej: 8pm)'} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={nuevaParada.hora} onChange={e => setNuevaParada(p => ({ ...p, hora: e.target.value }))} placeholder={lang === 'en' ? 'Time' : 'Hora'} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
               <input value={nuevaParada.nota} onChange={e => setNuevaParada(p => ({ ...p, nota: e.target.value }))} placeholder={lang === 'en' ? 'Note' : 'Nota'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={agregarParada} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add stop' : 'Agregar parada'}</button>
-              <button onClick={() => { setShowAddParada(false); setNuevaParada({ lugar: '', hora: '', nota: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={agregarParada} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add stop' : 'Agregar'}</button>
+              <button onClick={() => { setShowAddParada(false); setNuevaParada({ lugar: '', hora: '', nota: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
           </div>
-        ) : (
-          <button onClick={() => setShowAddParada(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.add_stop}</button>
-        )}
+        ) : <button onClick={() => setShowAddParada(true)} style={dashedBtn}>{tx.add_stop}</button>}
       </div>
     )
 
     if (tileKey === 'quellevar') return (
       <div>
-        {quellevar.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-            {quellevar.map(item => (
-              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button onClick={() => toggleItem(item.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${item.listo ? '#534AB7' : '#cfc8ec'}`, background: item.listo ? '#534AB7' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {item.listo && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
-                </button>
-                <span style={{ flex: 1, fontSize: 14, color: te.tileText, textDecoration: item.listo ? 'line-through' : 'none', opacity: item.listo ? 0.5 : 1 }}>{item.nombre}</span>
-                <button onClick={() => borrarItem(item.id)} style={{ ...deleteBtn }}>×</button>
-              </div>
-            ))}
+        {quellevar.map(item => (
+          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <button onClick={() => toggleItem(item.id)} style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${item.listo ? '#534AB7' : '#cfc8ec'}`, background: item.listo ? '#534AB7' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {item.listo && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
+            </button>
+            <span style={{ flex: 1, fontSize: 13, color: te.tileText, textDecoration: item.listo ? 'line-through' : 'none', opacity: item.listo ? 0.5 : 1 }}>{item.nombre}</span>
+            <button onClick={() => borrarItem(item.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
           </div>
-        )}
+        ))}
         {showAddItem ? (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
             <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarItem()} placeholder={lang === 'en' ? 'Item to bring' : 'Artículo a llevar'} style={{ ...inputStyle, flex: 1 }} autoFocus onFocus={e => e.stopPropagation()} />
-            <button onClick={agregarItem} style={addBtn}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
-            <button onClick={() => { setShowAddItem(false); setNuevoItem('') }} style={cancelBtn}>×</button>
+            <button onClick={agregarItem} style={{ ...addBtn, fontSize: 12 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
+            <button onClick={() => { setShowAddItem(false); setNuevoItem('') }} style={{ ...cancelBtn, fontSize: 12 }}>×</button>
           </div>
-        ) : (
-          <button onClick={() => setShowAddItem(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.add_item}</button>
-        )}
+        ) : <button onClick={() => setShowAddItem(true)} style={dashedBtn}>{tx.add_item}</button>}
       </div>
     )
 
     if (tileKey === 'menu') return (
       <div>
-        {menuItems.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-            {menuItems.map(plato => (
-              <div key={plato.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1.5px solid #f0edf8' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: te.tileText }}>{plato.nombre}</div>
-                  {plato.quien && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>→ {plato.quien}</div>}
-                </div>
-                <button onClick={() => borrarPlato(plato.id)} style={{ ...deleteBtn }}>×</button>
-              </div>
-            ))}
+        {menuItems.map(plato => (
+          <div key={plato.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: te.tileText }}>{plato.nombre}</div>
+              {plato.quien && <div style={{ fontSize: 11, color: '#534AB7', fontWeight: 600 }}>→ {plato.quien}</div>}
+            </div>
+            <button onClick={() => borrarPlato(plato.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
           </div>
-        )}
+        ))}
         {showAddPlato ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input value={nuevoPlato.nombre} onChange={e => setNuevoPlato(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Dish or item' : 'Platillo o artículo'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <input value={nuevoPlato.nombre} onChange={e => setNuevoPlato(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Dish or item' : 'Platillo'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
             <input value={nuevoPlato.quien} onChange={e => setNuevoPlato(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Who brings it?' : '¿Quién lo trae?'} style={inputStyle} onFocus={e => e.stopPropagation()} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={agregarPlato} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
-              <button onClick={() => { setShowAddPlato(false); setNuevoPlato({ nombre: '', quien: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={agregarPlato} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
+              <button onClick={() => { setShowAddPlato(false); setNuevoPlato({ nombre: '', quien: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
           </div>
-        ) : (
-          <button onClick={() => setShowAddPlato(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>{tx.assign_dish}</button>
-        )}
+        ) : <button onClick={() => setShowAddPlato(true)} style={dashedBtn}>{tx.assign_dish}</button>}
       </div>
     )
 
     if (tileKey === 'presupuesto') return (
       <div>
         {presupuesto.length > 0 && (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '8px 12px', background: '#EEEDFE', borderRadius: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#534AB7' }}>{lang === 'en' ? 'Total' : 'Total'}</span>
-              <span style={{ fontSize: 18, fontWeight: 900, color: '#534AB7' }}>${totalPresupuesto.toLocaleString()}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-              {presupuesto.map((g: any) => (
-                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1.5px solid #f0edf8' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: te.tileText }}>{g.nombre}</div>
-                    {g.quien && <div style={{ fontSize: 12, color: '#a39ec0' }}>{lang === 'en' ? 'Paid by' : 'Pagó'}: {g.quien}</div>}
-                  </div>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#534AB7', flexShrink: 0 }}>${g.monto?.toLocaleString()}</span>
-                  <button onClick={() => borrarGasto(g.id)} style={{ ...deleteBtn }}>×</button>
-                </div>
-              ))}
-            </div>
-          </>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '8px 10px', background: '#EEEDFE', borderRadius: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#534AB7' }}>Total</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: '#534AB7' }}>${totalPresupuesto.toLocaleString()}</span>
+          </div>
         )}
-        {showAddGasto ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input value={nuevoGasto.nombre} onChange={e => setNuevoGasto(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Expense name' : 'Nombre del gasto'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={nuevoGasto.monto} onChange={e => setNuevoGasto(p => ({ ...p, monto: e.target.value }))} placeholder={lang === 'en' ? 'Amount' : 'Monto'} type="number" style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
-              <input value={nuevoGasto.quien} onChange={e => setNuevoGasto(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Paid by' : '¿Quién pagó?'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
+        {presupuesto.map((g: any) => (
+          <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: te.tileText }}>{g.nombre}</div>
+              {g.quien && <div style={{ fontSize: 11, color: '#a39ec0' }}>{lang === 'en' ? 'Paid by' : 'Pagó'}: {g.quien}</div>}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={agregarGasto} style={{ ...addBtn, flex: 1 }}>{lang === 'en' ? 'Add expense' : 'Agregar gasto'}</button>
-              <button onClick={() => { setShowAddGasto(false); setNuevoGasto({ nombre: '', monto: '', quien: '' }) }} style={cancelBtn}>{tx.cancel}</button>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#534AB7', flexShrink: 0 }}>${g.monto?.toLocaleString()}</span>
+            <button onClick={() => borrarGasto(g.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
+          </div>
+        ))}
+        {showAddGasto ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <input value={nuevoGasto.nombre} onChange={e => setNuevoGasto(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Expense' : 'Gasto'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={nuevoGasto.monto} onChange={e => setNuevoGasto(p => ({ ...p, monto: e.target.value }))} placeholder={lang === 'en' ? 'Amount' : 'Monto'} type="number" style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+              <input value={nuevoGasto.quien} onChange={e => setNuevoGasto(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Who paid?' : '¿Quién pagó?'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={agregarGasto} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
+              <button onClick={() => { setShowAddGasto(false); setNuevoGasto({ nombre: '', monto: '', quien: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
           </div>
-        ) : (
-          <button onClick={() => setShowAddGasto(true)} style={{ border: '1.5px dashed #cfc8ec', background: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '10px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS, marginTop: 8 }}>
-            {lang === 'en' ? '+ Add expense' : '+ Agregar gasto'}
-          </button>
-        )}
+        ) : <button onClick={() => setShowAddGasto(true)} style={dashedBtn}>{lang === 'en' ? '+ Add expense' : '+ Agregar gasto'}</button>}
       </div>
     )
 
     if (tileKey === 'mensajes') return <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.messages_empty}</p>
-    if (tileKey === 'reservacion') return <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 16, padding: 18, color: '#fff' }}><p style={{ fontSize: 14, margin: 0 }}>{tx.reservation_empty}</p></div>
+    if (tileKey === 'reservacion') return <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: 14, color: '#fff' }}><p style={{ fontSize: 13, margin: 0 }}>{tx.reservation_empty}</p></div>
     return null
   }
 
@@ -997,9 +1009,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       {/* Estrellitas */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99 }}>
-        {STARS.map((s, i) => (
-          <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: `${starColor}0.45)`, lineHeight: 1, userSelect: 'none', animation: `starPulse ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>
-        ))}
+        {STARS.map((s, i) => <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: `${starColor}0.45)`, lineHeight: 1, userSelect: 'none', animation: `starPulse ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>)}
       </div>
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }} style={{ display: 'none' }} />
@@ -1097,44 +1107,42 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 {isComplete
                   ? <span style={{ fontSize: 11, fontWeight: 800, color: te.dark ? '#f7d76b' : '#534AB7' }}>Cheers full! ✦</span>
                   : <>
-                      <div style={{ width: 48, height: 4, borderRadius: 99, background: te.dark ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.12)', overflow: 'hidden' }}>
-                        <div style={{ width: `${progress}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.6)' }}>{progress}% · {progressLabel}</span>
-                    </>}
+                    <div style={{ width: 48, height: 4, borderRadius: 99, background: te.dark ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.12)', overflow: 'hidden' }}>
+                      <div style={{ width: `${progress}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#a89df0,#f08cb0)', transition: 'width .4s' }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: te.dark ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.6)' }}>{progress}% · {progressLabel}</span>
+                  </>}
               </button>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => setShowCustomize(v => !v)} style={{ ...pillBtn, background: showCustomize ? '#534AB7' : 'rgba(255,255,255,.92)', color: showCustomize ? '#fff' : '#534AB7' }}>{tx.customize}</button>
-            </div>
+            <button onClick={() => setShowCustomize(v => !v)} style={{ ...pillBtn, background: showCustomize ? '#534AB7' : 'rgba(255,255,255,.92)', color: showCustomize ? '#fff' : '#534AB7' }}>{tx.customize}</button>
           </div>
 
           {/* Hero card */}
-          <div style={{ background: te.tileBg, borderRadius: 26, overflow: 'hidden', boxShadow: '0 18px 46px rgba(25,12,50,.22)', marginBottom: 16 }}>
-            <div style={{ padding: '16px 18px 20px' }}>
+          <div style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', boxShadow: '0 12px 32px rgba(25,12,50,.18)', marginBottom: 14 }}>
+            <div style={{ padding: '14px 16px 16px' }}>
               <input value={tagline} onChange={e => setTagline(e.target.value)} onBlur={e => guardarCampo('tagline', e.target.value)} placeholder={tx.tagline_placeholder} style={{ border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 13, color: '#7a7494', padding: '3px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' as const, marginBottom: 8 }} />
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 16px', padding: '0 4px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '6px 14px', padding: '0 4px' }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.celebrated}</div>
-                  <input style={fieldInput} value={festejado} onChange={e => setFestejado(e.target.value)} onBlur={e => guardarCampo('festejado_nombre', e.target.value)} placeholder={tx.nueva_festejado_placeholder} />
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.celebrated}</div>
+                  <input style={{ ...fieldInput, fontSize: 14 }} value={festejado} onChange={e => setFestejado(e.target.value)} onBlur={e => guardarCampo('festejado_nombre', e.target.value)} placeholder={tx.nueva_festejado_placeholder} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.date}</div>
-                  <input type="date" style={fieldInput} value={fecha} onChange={e => setFecha(e.target.value)} onBlur={e => guardarCampo('fecha', e.target.value)} />
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.date}</div>
+                  <input type="date" style={{ ...fieldInput, fontSize: 14 }} value={fecha} onChange={e => setFecha(e.target.value)} onBlur={e => guardarCampo('fecha', e.target.value)} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.place}</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.place}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 12, color: '#a39ec0' }}>{tx.location}</span>
-                    <input style={{ ...fieldInput, flex: 1 }} value={lugar} onChange={e => setLugar(e.target.value)} onBlur={e => guardarLugar(e.target.value)} placeholder="Google Maps" />
-                    {lugar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '5px 10px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const }}>{tx.see_map}</a>}
+                    <span style={{ fontSize: 11, color: '#a39ec0' }}>{tx.location}</span>
+                    <input style={{ ...fieldInput, flex: 1, fontSize: 14 }} value={lugar} onChange={e => setLugar(e.target.value)} onBlur={e => guardarLugar(e.target.value)} placeholder="Google Maps" />
+                    {lugar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const }}>{tx.see_map}</a>}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.guest_link}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px' }}>
-                    <span style={{ fontSize: 13, color: '#534AB7', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{shareUrl}</span>
-                    <button onClick={() => navigator.clipboard.writeText(`https://${shareUrl}`)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>{tx.copy}</button>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.guest_link}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px' }}>
+                    <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{shareUrl}</span>
+                    <button onClick={() => navigator.clipboard.writeText(`https://${shareUrl}`)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>{tx.copy}</button>
                   </div>
                 </div>
               </div>
@@ -1143,71 +1151,65 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
           {/* Lifetime colapsable */}
           {lifetimeExpanded ? (
-            <div style={{ borderRadius: 22, padding: '20px 22px', marginBottom: 18, background: 'linear-gradient(120deg,#534AB7,#7b46a8 55%,#D4537E)', boxShadow: '0 16px 42px rgba(83,74,183,.35)', color: '#fff' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const }}>
-                <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ borderRadius: 18, padding: '18px 20px', marginBottom: 14, background: 'linear-gradient(120deg,#534AB7,#7b46a8 55%,#D4537E)', color: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' as const }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', opacity: 0.8 }}>{tx.lifetime_label}</div>
-                  <div style={{ fontSize: isMobile ? 17 : 20, fontWeight: 850, letterSpacing: '-.4px', marginTop: 4 }}>{tx.lifetime_title}</div>
-                  <div style={{ fontSize: 13, opacity: 0.88, marginTop: 6, lineHeight: 1.5 }}>{tx.lifetime_desc}</div>
+                  <div style={{ fontSize: isMobile ? 16 : 19, fontWeight: 850, marginTop: 4 }}>{tx.lifetime_title}</div>
+                  <div style={{ fontSize: 12, opacity: 0.88, marginTop: 5, lineHeight: 1.5 }}>{tx.lifetime_desc}</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                  <button style={{ background: '#fff', color: '#534AB7', border: 'none', borderRadius: 13, padding: '12px 18px', fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS }}>{tx.lifetime_cta}</button>
-                  <button onClick={() => setLifetimeExpanded(false)} style={{ background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 13, padding: '8px 18px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Remind me later' : 'Después'}</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                  <button style={{ background: '#fff', color: '#534AB7', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS }}>{tx.lifetime_cta}</button>
+                  <button onClick={() => setLifetimeExpanded(false)} style={{ background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 12, padding: '7px 16px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Remind me later' : 'Después'}</button>
                 </div>
               </div>
             </div>
           ) : (
-            <button onClick={() => setLifetimeExpanded(true)} style={{ width: '100%', marginBottom: 18, padding: '10px 20px', background: te.dark ? 'rgba(83,74,183,.15)' : 'rgba(83,74,183,.08)', border: `1px dashed ${te.dark ? 'rgba(83,74,183,.4)' : 'rgba(83,74,183,.3)'}`, borderRadius: 14, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <button onClick={() => setLifetimeExpanded(true)} style={{ width: '100%', marginBottom: 14, padding: '9px 18px', background: te.dark ? 'rgba(83,74,183,.12)' : 'rgba(83,74,183,.07)', border: `1px dashed ${te.dark ? 'rgba(83,74,183,.4)' : 'rgba(83,74,183,.3)'}`, borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <span style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>Cheers Lifetime</span>
-              <span style={{ color: te.dark ? 'rgba(255,255,255,.5)' : 'rgba(0,0,0,.4)', fontSize: 12 }}>— {lang === 'en' ? 'Unlock everything' : 'Desbloquea todo'} ↑</span>
+              <span style={{ color: te.dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.4)', fontSize: 11 }}>— {lang === 'en' ? 'Unlock everything' : 'Desbloquea todo'} ↑</span>
             </button>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 12px' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: textColor, opacity: 0.8 }}>{tx.drag_hint}</div>
-            {guardandoToggle && <div style={{ fontSize: 12, color: textColor, opacity: 0.6 }}>{tx.saving}</div>}
+          <div style={{ fontSize: 12, fontWeight: 600, color: textColor, opacity: 0.6, marginBottom: 12 }}>
+            {lang === 'en' ? 'Drag to move · Drag corner to resize' : 'Arrastra para mover · Arrastra la esquina para cambiar el tamaño'}
           </div>
 
-          {/* Grid tiles */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gridAutoRows: 'auto', gap: 16 }}>
-            {tiles.map((tile, i) => {
-              const info = TINFO[tile.key] || { label: '?', title_key: '' }
-              const isLg = tile.size === 'lg' || tile.size === 'xl'
-              const visible = tilesVisibles[tile.key] !== false
-              const tileLabel = tile.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || tile.key
+          {/* GRID DE TILES */}
+          <div
+            ref={gridRef}
+            style={{
+              position: isMobile ? 'relative' : 'relative',
+              width: '100%',
+              height: isMobile ? 'auto' : `${totalRows * (ROW_H + GAP)}px`,
+            }}
+          >
+            {layouts.map((layout, i) => {
+              const info = TINFO[layout.key] || { label: '?', title_key: '' }
+              const tileLabel = layout.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || layout.key
+              const visible = tilesVisibles[layout.key] !== false
               return (
-                <div key={tile.key} draggable
+                <ResizableTile
+                  key={layout.key}
+                  layout={layout}
+                  totalRows={totalRows}
+                  containerWidth={containerWidth}
+                  isMobile={isMobile}
+                  te={te}
+                  tx={tx}
+                  lang={lang}
+                  tileLabel={tileLabel}
+                  info={info}
+                  visible={visible}
+                  onToggleVisible={() => toggleVisible(layout.key)}
+                  onResizeEnd={(colSpan, rowSpan) => resizeLayout(i, colSpan, rowSpan)}
                   onDragStart={() => setDragIdx(i)}
-                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
-                  onDragOver={e => { e.preventDefault(); setDragOverIdx(i) }}
-                  onDragLeave={() => setDragOverIdx(null)}
-                  onDrop={() => { moveTile(dragIdx!, i); setDragIdx(null); setDragOverIdx(null) }}
-                  style={{
-                    gridColumn: isLg && !isMobile ? '1 / -1' : 'auto',
-                    background: dragOverIdx === i && dragIdx !== i ? 'transparent' : te.tileBg,
-                    borderRadius: 22,
-                    padding: tile.key === 'portada' ? '16px 18px 0' : '20px 18px',
-                    boxShadow: dragOverIdx === i && dragIdx !== i ? 'none' : '0 8px 24px rgba(25,12,50,.1)',
-                    opacity: visible ? (dragIdx === i ? 0.4 : 1) : 0.65,
-                    border: dragOverIdx === i && dragIdx !== i ? '2.5px dashed rgba(83,74,183,.5)' : 'none',
-                    overflow: tile.key === 'portada' ? 'hidden' : 'visible',
-                    transition: 'all .15s',
-                    color: te.tileText,
-                  }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
-                    <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 15 }}>⠿</span>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: te.accentText }}>{info.label}</span>
-                    </div>
-                    <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: te.tileText }}>{tileLabel}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 11, color: '#a39ec0', fontWeight: 600 }}>{visible ? tx.visible : tx.hidden}</span>
-                      <Toggle on={visible} onToggle={() => toggleVisibilidad(tile.key)} />
-                    </div>
-                    <button onClick={() => cycleSize(i)} title={tile.key === 'portada' ? (lang === 'en' ? 'Change height' : 'Cambiar alto') : (lang === 'en' ? 'Change width' : 'Cambiar ancho')} style={{ border: 'none', background: te.accentBg, color: te.accentText, width: 28, height: 28, borderRadius: 9, cursor: 'pointer', fontSize: 13, fontFamily: FSYS }}>⤢</button>
-                  </div>
-                  <TileContent tileKey={tile.key} tileSize={tile.size} />
-                </div>
+                  onDrop={() => { if (dragIdx !== null) { moveLayout(dragIdx, i); setDragIdx(null); setDragOverIdx(null) } }}
+                  isDragging={dragIdx === i}
+                  isDragOver={dragOverIdx === i && dragIdx !== i}
+                >
+                  <TileBody tileKey={layout.key} />
+                </ResizableTile>
               )
             })}
           </div>
