@@ -466,7 +466,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         if (invPorId) { inv = invPorId }
         else {
           const { data: invPorEmail } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('email', authUser.email || '').is('user_id', null).single()
-          if (invPorEmail) { await supabase.from('invitados').update({ user_id: authUser.id }).eq('id', invPorEmail.id); inv = invPorEmail }
+          if (invPorEmail) {
+            const nombreReal = authUser.user_metadata?.name
+            const update: any = { user_id: authUser.id }
+            if (nombreReal && invPorEmail.nombre === invPorEmail.email) update.nombre = nombreReal
+            await supabase.from('invitados').update(update).eq('id', invPorEmail.id)
+            inv = { ...invPorEmail, ...update }
+          }
         }
         setRol(inv ? 'invitado' : 'sin_acceso')
       }
