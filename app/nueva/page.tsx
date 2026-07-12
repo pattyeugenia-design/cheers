@@ -7,9 +7,14 @@ import { getLang, t } from '../i18n'
 
 declare global { interface Window { google: any } }
 
-type Step = 'type' | 'role' | 'celebrating' | 'success' | 'invite'
+type Step = 'type' | 'details' | 'link' | 'invite'
 type TipoEvento = 'cumple' | 'cena' | 'viaje' | 'reunion' | 'evento' | 'otro' | null
 type Rol = 'yo' | 'otro' | 'sorpresa' | null
+
+const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+const BG = 'radial-gradient(circle at 12% 18%,rgba(127,119,221,.55),transparent 45%),radial-gradient(circle at 88% 82%,rgba(212,83,126,.5),transparent 50%),linear-gradient(160deg,#534AB7 0%,#7b46a8 52%,#D4537E 100%)'
+const DRAFT_KEY = 'cheers_draft'
+const DRAFT_TTL = 7 * 24 * 60 * 60 * 1000 // 7 días
 
 const CHIPS: Record<string, string> = {
   cumple: 'BDAY', cena: 'DINE', viaje: 'TRIP', reunion: 'MEET', evento: 'EVENT', otro: 'OTHER'
@@ -21,13 +26,33 @@ function slugify(str: string) {
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40)
 }
 
+function saveDraft(data: any) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...data, savedAt: Date.now() }))
+}
+
+function loadDraft() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    if (Date.now() - data.savedAt > DRAFT_TTL) { localStorage.removeItem(DRAFT_KEY); return null }
+    return data
+  } catch { return null }
+}
+
+function clearDraft() {
+  if (typeof window !== 'undefined') localStorage.removeItem(DRAFT_KEY)
+}
+
 export default function NuevaCelebracion() {
   const router = useRouter()
   const [tx, setTx] = useState(t.es)
+  const [lang, setLang] = useState('es')
   const [step, setStep] = useState<Step>('type')
   const [tipo, setTipo] = useState<TipoEvento>(null)
   const [rol, setRol] = useState<Rol>(null)
-  const [customEvent, setCustomEvent] = useState('')
   const [titulo, setTitulo] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
@@ -42,51 +67,54 @@ export default function NuevaCelebracion() {
   const [invitados, setInvitados] = useState<{ id: string; name: string; email: string }[]>([])
   const [invited, setInvited] = useState<Record<string, boolean>>({})
   const [guardandoInvitados, setGuardandoInvitados] = useState(false)
-  const [verificando, setVerificando] = useState(true)
   const [mapsListo, setMapsListo] = useState(false)
   const [userNombre, setUserNombre] = useState('')
   const [slugFinal, setSlugFinal] = useState('')
+  const [hasDraft, setHasDraft] = useState(false)
+  const [verificando, setVerificando] = useState(true)
   const lugarRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const lang = getLang()
-    setTx(t[lang])
+    const l = getLang(); setLang(l); setTx(t[l])
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
       const nombre = user.user_metadata?.name?.split(' ')[0] || 'tu'
       setUserNombre(nombre)
+
       const { data: perfil } = await supabase.from('perfiles').select('username').eq('user_id', user.id).single()
       setUserSlug(perfil?.username || slugify(nombre))
       setVerificando(false)
-    })
-  }, [router])
 
-  useEffect(() => {
-    const COLORS = ['#D4537E', '#534AB7', '#7F77DD']
-    let last = 0
-    const sparkle = (e: MouseEvent) => {
-      const now = performance.now()
-      if (now - last < 22) return
-      last = now
-      const el = document.createElement('div')
-      el.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;pointer-events:none;z-index:9999;font-size:${Math.random() * 10 + 10}px;color:${COLORS[Math.floor(Math.random() * 3)]};animation:destello 0.6s ease-out forwards;`
-      el.textContent = '✦'
-      document.body.appendChild(el)
-      setTimeout(() => el.remove(), 600)
-    }
-    document.addEventListener('mousemove', sparkle)
-    return () => document.removeEventListener('mousemove', sparkle)
+      // Cargar draft si existe
+      const draft = loadDraft()
+      if (draft) {
+        setHasDraft(true)
+        if (draft.tipo) setTipo(draft.tipo)
+        if (draft.rol) setRol(draft.rol)
+        if (draft.titulo) setTitulo(draft.titulo)
+        if (draft.festejado) setFestejado(draft.festejado)
+        if (draft.fecha) setFecha(draft.fecha)
+        if (draft.lugar) setLugar(draft.lugar)
+        if (draft.eventSlug) setEventSlug(draft.eventSlug)
+        if (draft.step) setStep(draft.step)
+      }
+    })
   }, [])
+
+  // Auto-guardar draft al cambiar cualquier campo
+  useEffect(() => {
+    if (verificando) return
+    saveDraft({ tipo, rol, titulo, festejado, fecha, lugar, eventSlug, step })
+  }, [tipo, rol, titulo, festejado, fecha, lugar, eventSlug, step])
 
   useEffect(() => {
     if (!mapsListo || !lugarRef.current || lugarRef.current.dataset.init) return
-    const ac = new window.google.maps.places.Autocomplete(lugarRef.current, { fields: ['name', 'place_id', 'formatted_address'] })
+    const ac = new window.google.maps.places.Autocomplete(lugarRef.current, { fields: ['name', 'formatted_address'] })
     ac.addListener('place_changed', () => {
       const p = ac.getPlace()
-      if (!p) return
-      setLugar(p.name || lugarRef.current?.value || '')
+      if (p) setLugar(p.name || lugarRef.current?.value || '')
     })
     lugarRef.current.dataset.init = 'true'
   }, [mapsListo, step])
@@ -95,65 +123,37 @@ export default function NuevaCelebracion() {
     if (!linkConfirmed && titulo) setEventSlug(slugify(titulo))
   }, [titulo, linkConfirmed])
 
+  // Confetti
   useEffect(() => {
-    if (step !== 'celebrating') return
-    fireConfetti(0)
-    fireConfetti(550)
-    setTimeout(() => setStep('success'), 1800)
-  }, [step])
-
-  function fireConfetti(delay: number) {
-    setTimeout(() => {
-      const cv = canvasRef.current; if (!cv) return
-      const ctx = cv.getContext('2d'); if (!ctx) return
-      const dpr = window.devicePixelRatio || 1
-      const W = cv.offsetWidth, H = cv.offsetHeight
-      cv.width = W * dpr; cv.height = H * dpr
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      const colors = ['#534AB7', '#D4537E', '#EEEDFE', '#F5C04E', '#fff', '#8b7fe8']
-      const parts: any[] = []
-      for (let i = 0; i < 150; i++) {
-        const a = Math.random() * Math.PI * 2
-        const sp = 4 + Math.random() * 9
-        parts.push({ x: W / 2, y: H * 0.4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, color: colors[Math.floor(Math.random() * colors.length)], w: 6 + Math.random() * 8, h: 3 + Math.random() * 5, rot: Math.random() * 360, rsp: (Math.random() - 0.5) * 8, life: 1 })
-      }
-      let raf: number
-      const draw = () => {
-        ctx.clearRect(0, 0, W, H)
-        let alive = false
-        for (const p of parts) {
-          p.vy += 0.18; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.rot += p.rsp; p.life -= 0.012
-          if (p.life <= 0) continue; alive = true
-          ctx.save(); ctx.globalAlpha = Math.max(0, p.life)
-          ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180)
-          ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h)
-          ctx.restore()
-        }
-        if (alive) raf = requestAnimationFrame(draw)
-      }
-      raf = requestAnimationFrame(draw)
-      setTimeout(() => cancelAnimationFrame(raf), 4000)
-    }, delay)
-  }
+    const COLORS = ['#D4537E', '#534AB7', '#EEEDFE', '#F5C04E', '#fff', '#8b7fe8']
+    let last = 0
+    const sparkle = (e: MouseEvent) => {
+      const now = performance.now()
+      if (now - last < 22) return; last = now
+      const el = document.createElement('div')
+      el.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;pointer-events:none;z-index:9999;font-size:${Math.random() * 10 + 10}px;color:${COLORS[Math.floor(Math.random() * COLORS.length)]};animation:destello 0.6s ease-out forwards;`
+      el.textContent = '✦'; document.body.appendChild(el)
+      setTimeout(() => el.remove(), 600)
+    }
+    document.addEventListener('mousemove', sparkle)
+    return () => document.removeEventListener('mousemove', sparkle)
+  }, [])
 
   async function guardar() {
     setSaving(true); setErrorMsg('')
     const { data: { user } } = await supabase.auth.getUser()
-    const slug = `${userSlug}/${eventSlug || slugify(titulo || customEvent || tipo || 'celebracion')}`
+    const slug = `${userSlug}/${eventSlug || slugify(titulo || tipo || 'celebracion')}`
     setSlugFinal(slug)
     const { error } = await supabase.from('celebraciones').insert({
-      nombre: titulo || customEvent || tipo,
-      tipo,
-      festejado_nombre: rol === 'yo' ? userNombre : festejado,
-      organizador_id: user?.id || 'anonimo',
-      slug,
-      es_sorpresa: rol === 'sorpresa',
+      nombre: titulo || tipo,
+      tipo, festejado_nombre: rol === 'yo' ? userNombre : festejado,
+      organizador_id: user?.id,
+      slug, es_sorpresa: rol === 'sorpresa',
       paradas: lugar ? [{ lugar, hora: '', nota: '' }] : [],
-      gifts: [],
-      created_at: new Date().toISOString(),
+      gifts: [], created_at: new Date().toISOString(),
     })
     setSaving(false)
-    if (!error) { setStep('celebrating') }
+    if (!error) { clearDraft(); setStep('invite') }
     else if (error.code === '23505') setErrorMsg(tx.nueva_slug_error)
     else setErrorMsg(tx.nueva_error)
   }
@@ -162,16 +162,13 @@ export default function NuevaCelebracion() {
     setGuardandoInvitados(true)
     const seleccionados = invitados.filter(i => invited[i.id])
     if (seleccionados.length > 0) {
-      const rows = seleccionados.map(inv => ({
-        celebracion_slug: slugFinal,
-        email: inv.email.includes('@') ? inv.email : null,
-        nombre: inv.name,
-        user_id: null,
-        created_at: new Date().toISOString(),
-      }))
-      await supabase.from('invitados').insert(rows)
+      await supabase.from('invitados').insert(seleccionados.map(inv => ({
+        celebracion_slug: slugFinal, email: inv.email.includes('@') ? inv.email : null,
+        nombre: inv.name, user_id: null, created_at: new Date().toISOString(),
+      })))
     }
     setGuardandoInvitados(false)
+    clearDraft()
     router.push(`/${slugFinal}`)
   }
 
@@ -188,62 +185,57 @@ export default function NuevaCelebracion() {
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
-  const TIPOS = [
-    { key: 'cumple',  label: tx.tipo_cumple },
-    { key: 'cena',    label: tx.tipo_cena },
-    { key: 'viaje',   label: tx.tipo_viaje },
-    { key: 'reunion', label: tx.tipo_reunion },
-    { key: 'evento',  label: tx.tipo_evento },
-    { key: 'otro',    label: tx.tipo_otro },
-  ]
-
-  const STEP2_CFG: Record<string, { title: string; sub: string; open?: boolean; placeholder?: string }> = {
-    viaje:   { title: tx.viaje_title, sub: tx.viaje_sub, open: true, placeholder: tx.viaje_placeholder },
-    cena:    { title: tx.nueva_role_title, sub: tx.nueva_role_sub },
-    otro:    { title: tx.otro_title, sub: tx.otro_sub, open: true, placeholder: tx.otro_placeholder },
-    cumple:  { title: tx.nueva_role_title, sub: tx.nueva_role_sub },
-    reunion: { title: tx.nueva_role_title, sub: tx.nueva_role_sub },
-    evento:  { title: tx.nueva_role_title, sub: tx.nueva_role_sub },
+  function handleTipoSelect(key: TipoEvento) {
+    setTipo(key)
   }
 
-  const ROLES = [
-    { key: 'yo',       label: tx.role_me,       sub: tx.role_me_sub },
-    { key: 'otro',     label: tx.role_other,     sub: tx.role_other_sub },
-    { key: 'sorpresa', label: tx.role_surprise,  sub: tx.role_surprise_sub },
-  ]
-
-  const CENA_ROLES = [
-    { key: 'casa',        label: tx.cena_home,       sub: tx.cena_home_sub },
-    { key: 'restaurante', label: tx.cena_restaurant, sub: tx.cena_restaurant_sub },
-  ]
-
-  const chosenTipo = TIPOS.find(t => t.key === tipo)
-  const step2cfg = tipo ? STEP2_CFG[tipo] : null
-  const shareUrl = `joincheers.app/${userSlug}/${eventSlug || 'mi-evento'}`
-  const invitedCount = Object.values(invited).filter(Boolean).length
+  function handleTipoDobleClick(key: TipoEvento) {
+    setTipo(key)
+    setStep('details')
+  }
 
   if (verificando) return (
-    <main style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#faf9ff,#fff5f8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system,sans-serif' }}>
-      <p style={{ color: '#aeaeb2', fontSize: 14 }}>{tx.loading}</p>
+    <main style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FSYS }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 24, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 12 }}>Cheers</div>
+        <p style={{ color: 'rgba(255,255,255,.5)', fontSize: 14 }}>{tx.loading}</p>
+      </div>
     </main>
   )
 
-  const F = '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif'
-  const bg = 'radial-gradient(circle at 12% 18%,rgba(127,119,221,.55),transparent 45%),radial-gradient(circle at 88% 82%,rgba(212,83,126,.5),transparent 50%),linear-gradient(160deg,#534AB7 0%,#7b46a8 52%,#D4537E 100%)'
+  const TIPOS = [
+    { key: 'cumple', label: tx.tipo_cumple, chip: 'BDAY' },
+    { key: 'cena',   label: tx.tipo_cena,   chip: 'DINE' },
+    { key: 'viaje',  label: tx.tipo_viaje,  chip: 'TRIP' },
+    { key: 'reunion',label: tx.tipo_reunion, chip: 'MEET' },
+    { key: 'evento', label: tx.tipo_evento,  chip: 'EVENT' },
+    { key: 'otro',   label: tx.tipo_otro,    chip: 'OTHER' },
+  ]
+
+  const ROLES = [
+    { key: 'yo',       label: tx.role_me,      sub: tx.role_me_sub },
+    { key: 'otro',     label: tx.role_other,   sub: tx.role_other_sub },
+    { key: 'sorpresa', label: tx.role_surprise, sub: tx.role_surprise_sub },
+  ]
+
+  const shareUrl = `joincheers.app/${userSlug}/${eventSlug || 'mi-evento'}`
+  const invitedCount = Object.values(invited).filter(Boolean).length
+  const tipoSeleccionado = TIPOS.find(t => t.key === tipo)
 
   const btnPrimary = (disabled = false): React.CSSProperties => ({
     width: '100%', border: 'none', borderRadius: 18, padding: '17px', fontSize: 17, fontWeight: 700,
-    fontFamily: F, cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#a79fc4' : '#fff',
+    fontFamily: FSYS, cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#a79fc4' : '#fff',
     background: disabled ? '#EAE7F6' : 'linear-gradient(135deg,#534AB7,#D4537E)',
     boxShadow: disabled ? 'none' : '0 12px 28px rgba(83,74,183,.32)',
   })
 
   const cardStyle = (sel: boolean): React.CSSProperties => ({
-    position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: 10, padding: '20px 12px', borderRadius: 20, cursor: 'pointer', transition: 'all .15s',
     background: sel ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff',
     border: sel ? 'none' : '1.5px solid #f0f0f0',
     boxShadow: sel ? '0 8px 24px rgba(212,83,126,.3)' : '0 2px 8px rgba(0,0,0,.04)',
+    position: 'relative',
   })
 
   const roleCardStyle = (sel: boolean): React.CSSProperties => ({
@@ -256,272 +248,222 @@ export default function NuevaCelebracion() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box', padding: '13px 16px', border: '2px solid #EEEDFE',
-    borderRadius: 14, fontSize: 15, fontFamily: F, color: '#2a2440', outline: 'none',
-    background: '#fff', marginBottom: 14,
+    borderRadius: 14, fontSize: 15, fontFamily: FSYS, color: '#2a2440', outline: 'none', background: '#fff', marginBottom: 14,
   }
 
   return (
     <>
       <style>{`
-        @keyframes cheersRise { 0%{opacity:0;transform:translateY(14px)} 100%{opacity:1;transform:translateY(0)} }
-        @keyframes cheersPop  { 0%{transform:scale(.5);opacity:0} 60%{transform:scale(1.12);opacity:1} 100%{transform:scale(1)} }
-        @keyframes cheersPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
-        @keyframes destello   { 0%{transform:translate(-50%,-50%) scale(0) rotate(0deg);opacity:1} 100%{transform:translate(-50%,-50%) scale(1) rotate(45deg) translateY(-20px);opacity:0} }
+        @keyframes cheersRise{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
+        @keyframes destello{0%{transform:translate(-50%,-50%) scale(0) rotate(0deg);opacity:1}100%{transform:translate(-50%,-50%) scale(1) rotate(45deg) translateY(-20px);opacity:0}}
       `}</style>
 
       <Script src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places`} strategy="afterInteractive" onLoad={() => setMapsListo(true)} />
 
       <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 50 }} />
 
-      <main style={{ minHeight: '100vh', width: '100%', background: bg, fontFamily: F, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px', boxSizing: 'border-box' }}>
+      <main style={{ minHeight: '100vh', background: BG, fontFamily: FSYS, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', maxWidth: 468, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {(step === 'type' || step === 'role' || step === 'celebrating' || step === 'success') && (
-          <div style={{ width: '100%', maxWidth: 468, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: (step === 'success' || step === 'celebrating') ? 0 : 22 }}>
-
-            <div style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-.5px', color: '#fff', textShadow: '0 2px 14px rgba(40,20,70,.35)' }}>{tx.cheers}</div>
-
-            <div style={{ width: '100%', background: '#fff', borderRadius: 30, boxShadow: '0 24px 64px rgba(83,74,183,.13)', padding: '34px 30px 30px', boxSizing: 'border-box', position: 'relative', overflow: 'hidden' }}>
-
-              {(step === 'type' || step === 'role') && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 26 }}>
-                  <div style={{ height: 6, flex: 1, borderRadius: 99, background: 'linear-gradient(135deg,#534AB7,#D4537E)' }} />
-                  <div style={{ height: 6, flex: 1, borderRadius: 99, background: step === 'role' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE' }} />
-                </div>
-              )}
-
-              {step === 'type' && (
-                <div style={{ animation: 'cheersRise .35s ease' }}>
-                  <h1 style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-.6px', margin: '0 0 4px', color: '#1c1830' }}>{tx.nueva_step1_title}</h1>
-                  <p style={{ fontSize: 15, color: '#6b6585', margin: '0 0 24px' }}>{tx.nueva_step1_sub}</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    {TIPOS.map(t => (
-                      <div key={t.key} style={cardStyle(tipo === t.key)} onClick={() => setTipo(t.key as TipoEvento)}>
-                        {tipo === t.key && <div style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>}
-                        <div style={{ fontSize: 15, fontWeight: 700, color: tipo === t.key ? '#fff' : '#534AB7', background: tipo === t.key ? 'rgba(255,255,255,.2)' : '#EEEDFE', padding: '6px 10px', borderRadius: 8 }}>
-                          {CHIPS[t.key]}
-                        </div>
-                        <div style={{ fontSize: 15, fontWeight: 650, textAlign: 'center', color: tipo === t.key ? '#fff' : '#2a2440' }}>{t.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {step === 'role' && step2cfg && (
-                <div style={{ animation: 'cheersRise .35s ease' }}>
-                  <button onClick={() => { setStep('type'); setRol(null) }} style={{ background: 'none', border: 'none', color: '#534AB7', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 14, fontFamily: F }}>{tx.nueva_back}</button>
-                  <h1 style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-.6px', margin: '0 0 4px', color: '#1c1830' }}>{step2cfg.title}</h1>
-                  <p style={{ fontSize: 15, color: '#6b6585', margin: '0 0 24px' }}>{step2cfg.sub}</p>
-
-                  {step2cfg.open && (
-                    <>
-                      <input value={customEvent} onChange={e => setCustomEvent(e.target.value)} placeholder={step2cfg.placeholder} style={inputStyle} />
-                      <p style={{ fontSize: 13, color: '#7a7494', margin: '-8px 2px 16px' }}>{tx.appears_as}</p>
-                    </>
-                  )}
-
-                  {tipo === 'cena' && (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {CENA_ROLES.map(r => (
-                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 16, fontWeight: 650, color: rol === r.key ? '#fff' : '#2a2440' }}>{r.label}</div>
-                            <div style={{ fontSize: 13, color: rol === r.key ? 'rgba(255,255,255,.75)' : '#7a7494', marginTop: 2 }}>{r.sub}</div>
-                          </div>
-                          {rol === r.key && <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {!step2cfg.open && tipo !== 'cena' && (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {ROLES.map(r => (
-                        <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 16, fontWeight: 650, color: rol === r.key ? '#fff' : '#2a2440' }}>{r.label}</div>
-                            <div style={{ fontSize: 13, color: rol === r.key ? 'rgba(255,255,255,.75)' : '#7a7494', marginTop: 2 }}>{r.sub}</div>
-                          </div>
-                          {rol === r.key && <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div style={{ marginTop: 8 }}>
-                    <label style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>{tx.nueva_event_title_label}</label>
-                    <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={`${chosenTipo?.label}...`} style={inputStyle} />
-
-                    {(rol === 'otro' || rol === 'sorpresa') && (
-                      <>
-                        <label style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>{tx.nueva_festejado_label}</label>
-                        <input value={festejado} onChange={e => setFestejado(e.target.value)} placeholder={tx.nueva_festejado_placeholder} style={inputStyle} />
-                      </>
-                    )}
-
-                    <label style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>{tx.nueva_date_label}</label>
-                    <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
-
-                    <label style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>{tx.nueva_place_label}</label>
-                    <input ref={lugarRef} value={lugar} onChange={e => setLugar(e.target.value)} placeholder={tx.nueva_place_placeholder} style={{ ...inputStyle, marginBottom: 0 }} />
-                  </div>
-                </div>
-              )}
-
-              {step === 'celebrating' && (
-                <div style={{ minHeight: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, textAlign: 'center' }}>
-                  <div style={{ animation: 'cheersPulse .7s ease-in-out infinite' }}>
-                    <div style={{ width: 72, height: 72, borderRadius: 22, background: 'linear-gradient(135deg,#534AB7,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{CHIPS[tipo || ''] || 'CHR'}</span>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 19, fontWeight: 700, color: '#534AB7' }}>{tx.nueva_planning}</div>
-                </div>
-              )}
-
-              {step === 'success' && (
-                <div style={{ textAlign: 'center', padding: '8px 0', animation: 'cheersRise .4s ease' }}>
-                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4, animation: 'cheersPop .6s ease both' }}>
-                    <div style={{ width: 80, height: 80, borderRadius: 24, background: 'linear-gradient(135deg,#534AB7,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>✓</span>
-                    </div>
-                  </div>
-                  <h1 style={{ fontSize: 34, fontWeight: 850, letterSpacing: -1, margin: '14px 0 6px', background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{tx.nueva_success_title}</h1>
-                  <p style={{ fontSize: 15, color: '#6b6585', margin: '0 0 20px' }}>{tx.nueva_success_sub}</p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 6px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' }}>{tx.nueva_title_label}</span>
-                  </div>
-                  <div style={{ position: 'relative', marginBottom: 18 }}>
-                    <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={chosenTipo?.label} spellCheck={false} style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center', border: '2px solid #d8d4f5', background: '#fff', borderRadius: 14, padding: '13px 40px', fontSize: 18, fontWeight: 800, color: '#2a2440', fontFamily: F, outline: 'none' }} />
-                    <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#b3adcc', pointerEvents: 'none' }}>✎</span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 6px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' }}>{tx.nueva_link_label}</span>
-                    {!linkConfirmed && <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' }}>{tx.nueva_personalize}</span>}
-                    {linkConfirmed && <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#1f8a5b', textTransform: 'uppercase' }}>{tx.confirm}</span>}
-                  </div>
-
-                  {!linkConfirmed && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, textAlign: 'left', background: '#FFF4E6', borderRadius: 13, padding: '11px 13px', marginBottom: 12 }}>
-                        <span style={{ fontSize: 15, lineHeight: 1.3, flexShrink: 0, color: '#c98a1e', fontWeight: 800 }}>!</span>
-                        <span style={{ fontSize: 12.5, color: '#9a6a13', fontWeight: 600, lineHeight: 1.45 }}>{tx.nueva_link_warning}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#EEEDFE', borderRadius: 16, padding: '11px 12px', marginBottom: 16 }}>
-                        <div style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14.5, color: '#534AB7', fontWeight: 700, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                          <span style={{ opacity: .55 }}>joincheers.app/</span>
-                          <input value={userSlug} onChange={e => setUserSlug(slugify(e.target.value))} spellCheck={false} style={{ minWidth: 70, border: 'none', background: '#fff', color: '#534AB7', fontFamily: F, fontSize: 14.5, fontWeight: 800, padding: '3px 7px', borderRadius: 8, outline: 'none' }} />
-                          <span style={{ opacity: .55 }}>/</span>
-                          <input value={eventSlug} onChange={e => setEventSlug(slugify(e.target.value))} spellCheck={false} style={{ minWidth: 90, border: 'none', background: '#fff', color: '#534AB7', fontFamily: F, fontSize: 14.5, fontWeight: 800, padding: '3px 7px', borderRadius: 8, outline: 'none' }} />
-                        </div>
-                      </div>
-                      <button onClick={() => setLinkConfirmed(true)} style={btnPrimary()}>{tx.nueva_confirm_link}</button>
-                    </>
-                  )}
-
-                  {linkConfirmed && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#ECF7F0', border: '1.5px solid #cdeedd', borderRadius: 16, padding: '13px 14px', marginBottom: 10 }}>
-                        <div style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14.5, color: '#2a2440', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shareUrl}</div>
-                        <button onClick={copyLink} style={{ flexShrink: 0, border: 'none', background: '#fff', color: '#534AB7', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 11, cursor: 'pointer', fontFamily: F }}>
-                          {copied ? tx.copied : tx.copy}
-                        </button>
-                      </div>
-                      <div style={{ textAlign: 'left', fontSize: 12.5, color: '#1f8a5b', fontWeight: 700, margin: '0 4px 16px' }}>{tx.nueva_link_confirmed}</div>
-                      <button onClick={() => setStep('invite')} style={btnPrimary()}>{tx.nueva_invite_btn}</button>
-                    </>
-                  )}
-
-                  {errorMsg && (
-                    <div style={{ background: 'rgba(212,83,126,.08)', border: '1px solid rgba(212,83,126,.25)', borderRadius: 12, padding: '12px 14px', margin: '12px 0' }}>
-                      <p style={{ fontSize: 13, color: '#D4537E', margin: 0, fontWeight: 500 }}>{errorMsg}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {(step === 'type' || step === 'role') && (
-              <button
-                onClick={() => {
-                  if (step === 'type') { if (tipo) setStep('role') }
-                  else {
-                    const canAdvance = step2cfg?.open ? !!customEvent : !!rol
-                    if (canAdvance && titulo) guardar()
-                  }
-                }}
-                style={btnPrimary(step === 'type' ? !tipo : (step2cfg?.open ? !customEvent : !rol))}
-              >
-                {step === 'type' ? tx.nueva_continue : saving ? tx.nueva_creating : tx.nueva_create}
-              </button>
+          {/* Header con Cheers y tipo seleccionado */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-.5px' }}>Cheers</div>
+            {tipoSeleccionado && step !== 'type' && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.15)', borderRadius: 99, padding: '4px 12px', marginTop: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', letterSpacing: '.5px' }}>{tipoSeleccionado.chip}</span>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', fontWeight: 600 }}>{tipoSeleccionado.label}</span>
+                <button onClick={() => setStep('type')} style={{ border: 'none', background: 'none', color: 'rgba(255,255,255,.5)', fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: FSYS }}>✕</button>
+              </div>
             )}
           </div>
-        )}
 
-        {step === 'invite' && (
-          <div style={{ width: '100%', maxWidth: 468, display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <button onClick={() => setStep('success')} style={{ background: 'rgba(255,255,255,.92)', border: 'none', color: '#534AB7', fontSize: 14, fontWeight: 700, padding: '9px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: F, boxShadow: '0 4px 14px rgba(20,10,40,.18)' }}>{tx.nueva_invite_back}</button>
-              <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-.4px', color: '#fff' }}>{tx.cheers}</div>
-              <div style={{ width: 84 }} />
-            </div>
-
-            <div style={{ background: '#fff', borderRadius: 26, padding: '24px 22px', boxShadow: '0 18px 46px rgba(25,12,50,.22)' }}>
-              <h1 style={{ fontSize: 26, fontWeight: 850, letterSpacing: '-.6px', margin: '0 0 4px', color: '#2a2440' }}>{tx.nueva_invite_title}</h1>
-              <p style={{ fontSize: 14.5, color: '#6b6585', margin: '0 0 18px' }}>{tx.nueva_invite_sub}</p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F4FB', border: '1.5px solid #EEEDFE', borderRadius: 14, padding: '10px 14px', marginBottom: 12, opacity: invitados.length >= LIMITE_FREE ? 0.5 : 1 }}>
-                <input
-                  value={inviteQuery}
-                  onChange={e => setInviteQuery(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') agregarInvitado() }}
-                  placeholder={invitados.length >= LIMITE_FREE ? tx.nueva_limit_input(LIMITE_FREE) : tx.nueva_invite_placeholder}
-                  disabled={invitados.length >= LIMITE_FREE}
-                  style={{ flex: 1, border: 'none', background: 'transparent', fontFamily: F, fontSize: 14.5, fontWeight: 600, color: '#2a2440', outline: 'none' }}
-                />
-                {inviteQuery.trim() && invitados.length < LIMITE_FREE && (
-                  <button onClick={agregarInvitado} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', fontFamily: F, flexShrink: 0 }}>
-                    {tx.nueva_invite_add}
-                  </button>
-                )}
+          {/* Draft banner */}
+          {hasDraft && step === 'type' && (
+            <div style={{ background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'You have a draft' : 'Tienes un borrador'}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginTop: 2 }}>{lang === 'en' ? 'It will be deleted in 7 days if you don\'t continue.' : 'Se borra en 7 días si no continúas.'}</div>
               </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button onClick={() => { if (tipo) setStep('details') }} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 12, fontWeight: 800, padding: '7px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Continue' : 'Continuar'}</button>
+                <button onClick={() => { clearDraft(); setHasDraft(false); setTipo(null); setRol(null); setTitulo(''); setFestejado(''); setFecha(''); setLugar(''); setEventSlug('') }} style={{ border: 'none', background: 'rgba(255,255,255,.15)', color: 'rgba(255,255,255,.7)', fontSize: 12, fontWeight: 700, padding: '7px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Discard' : 'Descartar'}</button>
+              </div>
+            </div>
+          )}
 
-              {invitados.length >= LIMITE_FREE && (
-                <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 16, padding: '16px 18px', marginBottom: 12, color: '#fff' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>{tx.nueva_limit_title}</div>
-                  <div style={{ fontSize: 13, lineHeight: 1.5, opacity: 0.92, marginBottom: 12 }}>{tx.nueva_limit_desc}</div>
-                  <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
-                    {tx.nueva_limit_cta}
-                  </button>
-                </div>
-              )}
+          {/* Card principal */}
+          <div style={{ background: '#fff', borderRadius: 30, boxShadow: '0 24px 64px rgba(83,74,183,.13)', padding: '32px 28px', animation: 'cheersRise .35s ease' }}>
 
-              {invitados.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                  {invitados.map(c => (
-                    <div key={c.id} onClick={() => setInvited(prev => ({ ...prev, [c.id]: !prev[c.id] }))} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 14, cursor: 'pointer', border: invited[c.id] ? '1.5px solid #534AB7' : '1.5px solid #EEEDFE', background: invited[c.id] ? '#F3F1FB' : '#fff' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: invited[c.id] ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE', color: invited[c.id] ? '#fff' : '#534AB7', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {c.name[0].toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#2a2440' }}>{c.name}</div>
-                        <div style={{ fontSize: 12, color: '#7a7494' }}>{c.email}</div>
-                      </div>
-                      {invited[c.id] && <span style={{ color: '#534AB7', fontWeight: 800 }}>✓</span>}
+            {/* Progress bar */}
+            {(step === 'type' || step === 'details') && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+                <div style={{ height: 6, flex: 1, borderRadius: 99, background: 'linear-gradient(135deg,#534AB7,#D4537E)' }} />
+                <div style={{ height: 6, flex: 1, borderRadius: 99, background: step === 'details' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE' }} />
+              </div>
+            )}
+
+            {/* STEP 1: TIPO */}
+            {step === 'type' && (
+              <div>
+                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1c1830', margin: '0 0 4px', letterSpacing: '-.5px' }}>{tx.nueva_step1_title}</h1>
+                <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 8px' }}>{tx.nueva_step1_sub}</p>
+                <p style={{ fontSize: 12, color: '#a39ec0', margin: '0 0 20px' }}>{lang === 'en' ? 'Tap once to select, double-tap to continue.' : 'Toca para seleccionar, doble toque para continuar.'}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {TIPOS.map(t => (
+                    <div key={t.key} style={cardStyle(tipo === t.key)}
+                      onClick={() => handleTipoSelect(t.key as TipoEvento)}
+                      onDoubleClick={() => handleTipoDobleClick(t.key as TipoEvento)}
+                    >
+                      {tipo === t.key && <div style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>✓</span></div>}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: tipo === t.key ? '#fff' : '#534AB7', background: tipo === t.key ? 'rgba(255,255,255,.2)' : '#EEEDFE', padding: '6px 10px', borderRadius: 8 }}>{t.chip}</div>
+                      <div style={{ fontSize: 15, fontWeight: 650, color: tipo === t.key ? '#fff' : '#2a2440', textAlign: 'center' }}>{t.label}</div>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              <button onClick={confirmarInvitados} disabled={guardandoInvitados} style={btnPrimary(guardandoInvitados)}>
-                {guardandoInvitados ? tx.nueva_saving_guests : tx.nueva_view_btn(invitedCount)}
-              </button>
-            </div>
+            {/* STEP 2: DETALLES */}
+            {step === 'details' && (
+              <div>
+                <button onClick={() => setStep('type')} style={{ background: 'none', border: 'none', color: '#534AB7', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 14, fontFamily: FSYS }}>{tx.nueva_back}</button>
+                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1c1830', margin: '0 0 4px', letterSpacing: '-.5px' }}>{tx.nueva_role_title}</h1>
+                <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 20px' }}>{tx.nueva_role_sub}</p>
+
+                {ROLES.map(r => (
+                  <div key={r.key} style={roleCardStyle(rol === r.key)} onClick={() => setRol(r.key as Rol)}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 650, color: rol === r.key ? '#fff' : '#2a2440' }}>{r.label}</div>
+                      <div style={{ fontSize: 13, color: rol === r.key ? 'rgba(255,255,255,.75)' : '#7a7494', marginTop: 2 }}>{r.sub}</div>
+                    </div>
+                    {rol === r.key && <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>✓</span></div>}
+                  </div>
+                ))}
+
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_event_title_label}</label>
+                  <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={tipoSeleccionado?.label + '...'} style={inputStyle} />
+
+                  {(rol === 'otro' || rol === 'sorpresa') && (
+                    <>
+                      <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_festejado_label}</label>
+                      <input value={festejado} onChange={e => setFestejado(e.target.value)} placeholder={tx.nueva_festejado_placeholder} style={inputStyle} />
+                    </>
+                  )}
+
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_date_label}</label>
+                  <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_place_label}</label>
+                  <input ref={lugarRef} value={lugar} onChange={e => setLugar(e.target.value)} placeholder={tx.nueva_place_placeholder} style={{ ...inputStyle, marginBottom: 0 }} />
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: LINK */}
+            {step === 'link' && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🥂</div>
+                <h1 style={{ fontSize: 28, fontWeight: 850, color: '#1c1830', margin: '0 0 6px', letterSpacing: '-.5px' }}>{tx.nueva_success_title}</h1>
+                <p style={{ fontSize: 15, color: '#6b6585', margin: '0 0 24px' }}>{tx.nueva_success_sub}</p>
+
+                <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6, textAlign: 'left' }}>{tx.nueva_title_label}</label>
+                <div style={{ position: 'relative', marginBottom: 18 }}>
+                  <input value={titulo} onChange={e => { if (!linkConfirmed) { setTitulo(e.target.value) } }} placeholder={tipoSeleccionado?.label} style={{ ...inputStyle, textAlign: 'center', fontSize: 18, fontWeight: 800, marginBottom: 0, paddingRight: 40 }} readOnly={linkConfirmed} />
+                  {!linkConfirmed && <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#b3adcc', pointerEvents: 'none' }}>✎</span>}
+                </div>
+
+                <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6, textAlign: 'left' }}>{tx.nueva_link_label}</label>
+
+                {!linkConfirmed ? (
+                  <>
+                    <div style={{ background: '#FFF4E6', borderRadius: 12, padding: '10px 14px', marginBottom: 12, textAlign: 'left', display: 'flex', gap: 8 }}>
+                      <span style={{ color: '#c98a1e', fontWeight: 800, fontSize: 14 }}>!</span>
+                      <span style={{ fontSize: 12, color: '#9a6a13', fontWeight: 600, lineHeight: 1.45 }}>{tx.nueva_link_warning}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#EEEDFE', borderRadius: 14, padding: '10px 12px', marginBottom: 14 }}>
+                      <span style={{ fontSize: 13, color: 'rgba(83,74,183,.6)', fontWeight: 700, flexShrink: 0 }}>joincheers.app/</span>
+                      <input value={userSlug} onChange={e => setUserSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', width: 80 }} />
+                      <span style={{ fontSize: 13, color: 'rgba(83,74,183,.4)', fontWeight: 700 }}>/</span>
+                      <input value={eventSlug} onChange={e => setEventSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', flex: 1, minWidth: 80 }} />
+                    </div>
+                    <button onClick={() => setLinkConfirmed(true)} style={btnPrimary()}>{tx.nueva_confirm_link}</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#ECF7F0', border: '1.5px solid #cdeedd', borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: '#2a2440', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shareUrl}</div>
+                      <button onClick={copyLink} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>{copied ? tx.copied : tx.copy}</button>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#1f8a5b', fontWeight: 700, margin: '0 4px 16px', textAlign: 'left' }}>{tx.nueva_link_confirmed}</div>
+                    <button onClick={() => setStep('invite')} style={btnPrimary()}>{tx.nueva_invite_btn}</button>
+                  </>
+                )}
+
+                {errorMsg && <div style={{ background: 'rgba(212,83,126,.08)', border: '1px solid rgba(212,83,126,.25)', borderRadius: 12, padding: '12px 14px', margin: '12px 0' }}><p style={{ fontSize: 13, color: '#D4537E', margin: 0 }}>{errorMsg}</p></div>}
+              </div>
+            )}
+
+            {/* STEP 4: INVITE */}
+            {step === 'invite' && (
+              <div>
+                <h1 style={{ fontSize: 24, fontWeight: 850, color: '#2a2440', margin: '0 0 4px' }}>{tx.nueva_invite_title}</h1>
+                <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 18px' }}>{tx.nueva_invite_sub}</p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F4FB', border: '1.5px solid #EEEDFE', borderRadius: 14, padding: '10px 14px', marginBottom: 10, opacity: invitados.length >= LIMITE_FREE ? 0.5 : 1 }}>
+                  <input value={inviteQuery} onChange={e => setInviteQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarInvitado()} placeholder={invitados.length >= LIMITE_FREE ? tx.nueva_limit_input(LIMITE_FREE) : tx.nueva_invite_placeholder} disabled={invitados.length >= LIMITE_FREE} style={{ flex: 1, border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 14, color: '#2a2440', outline: 'none' }} />
+                  {inviteQuery.trim() && invitados.length < LIMITE_FREE && (
+                    <button onClick={agregarInvitado} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>{tx.nueva_invite_add}</button>
+                  )}
+                </div>
+
+                {invitados.length >= LIMITE_FREE && (
+                  <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 14, padding: '14px 16px', marginBottom: 12, color: '#fff' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 3 }}>{tx.nueva_limit_title}</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.5, opacity: 0.92, marginBottom: 10 }}>{tx.nueva_limit_desc}</div>
+                    <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 12, fontWeight: 800, padding: '7px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>{tx.nueva_limit_cta}</button>
+                  </div>
+                )}
+
+                {invitados.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                    {invitados.map(c => (
+                      <div key={c.id} onClick={() => setInvited(prev => ({ ...prev, [c.id]: !prev[c.id] }))} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 14, cursor: 'pointer', border: invited[c.id] ? '1.5px solid #534AB7' : '1.5px solid #EEEDFE', background: invited[c.id] ? '#F3F1FB' : '#fff' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: invited[c.id] ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EEEDFE', color: invited[c.id] ? '#fff' : '#534AB7', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{c.name[0].toUpperCase()}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#2a2440' }}>{c.name}</div>
+                        </div>
+                        {invited[c.id] && <span style={{ color: '#534AB7', fontWeight: 800 }}>✓</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button onClick={confirmarInvitados} disabled={guardandoInvitados} style={btnPrimary(guardandoInvitados)}>
+                  {guardandoInvitados ? tx.nueva_saving_guests : tx.nueva_view_btn(invitedCount)}
+                </button>
+
+                <button onClick={() => router.push(`/${slugFinal}`)} style={{ width: '100%', border: 'none', background: 'none', color: '#a39ec0', fontSize: 13, fontWeight: 600, padding: '12px', cursor: 'pointer', fontFamily: FSYS, marginTop: 4 }}>
+                  {lang === 'en' ? 'Skip for now →' : 'Omitir por ahora →'}
+                </button>
+              </div>
+            )}
           </div>
-        )}
 
+          {/* Botón continuar (step type y details) */}
+          {(step === 'type' || step === 'details') && (
+            <button
+              onClick={() => {
+                if (step === 'type') { if (tipo) setStep('details') }
+                else { if (rol && titulo) guardar() }
+              }}
+              style={btnPrimary(step === 'type' ? !tipo : (!rol || !titulo || saving))}
+            >
+              {step === 'type' ? tx.nueva_continue : saving ? tx.nueva_creating : tx.nueva_create}
+            </button>
+          )}
+
+        </div>
       </main>
     </>
   )
