@@ -308,11 +308,6 @@ function ResizableTile({
     window.addEventListener('touchend', onUp)
   }
 
-  const width = isMobile ? '100%' : `${layout.colSpan * colW - GAP}px`
-  const height = `${layout.rowSpan * (ROW_H + GAP) - GAP}px`
-  const left = isMobile ? 0 : `${(layout.col - 1) * colW}px`
-  const top = `${(layout.row - 1) * (ROW_H + GAP)}px`
-
   return (
     <div
       draggable={!resizingRef.current}
@@ -320,8 +315,10 @@ function ResizableTile({
       onDragOver={e => e.preventDefault()}
       onDrop={onDrop}
       style={{
-        position: isMobile ? 'relative' : 'absolute',
-        left, top, width, height,
+        gridColumn: isMobile ? undefined : `${layout.col} / span ${layout.colSpan}`,
+        gridRow: isMobile ? undefined : `${layout.row} / span ${layout.rowSpan}`,
+        minHeight: isMobile ? `${layout.rowSpan * (ROW_H + GAP)}px` : undefined,
+        marginBottom: isMobile ? GAP : 0,
         background: isDragOver && !isDragging ? 'transparent' : te.tileBg,
         borderRadius: 18,
         border: isDragOver && !isDragging ? '2.5px dashed rgba(83,74,183,.5)' : 'none',
@@ -332,7 +329,6 @@ function ResizableTile({
         color: te.tileText,
         display: 'flex',
         flexDirection: 'column',
-        marginBottom: isMobile ? GAP : 0,
       }}
     >
       {/* Header del tile */}
@@ -1175,13 +1171,16 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             {lang === 'en' ? 'Drag to move · Drag corner to resize' : 'Arrastra para mover · Arrastra la esquina para cambiar el tamaño'}
           </div>
 
-          {/* GRID DE TILES */}
+          {/* GRID DE TILES - CSS Grid real */}
           <div
             ref={gridRef}
             style={{
-              position: isMobile ? 'relative' : 'relative',
+              display: isMobile ? 'flex' : 'grid',
+              flexDirection: isMobile ? 'column' as const : undefined,
+              gridTemplateColumns: isMobile ? undefined : `repeat(12, 1fr)`,
+              gridAutoRows: `${ROW_H}px`,
+              gap: GAP,
               width: '100%',
-              height: isMobile ? 'auto' : `${totalRows * (ROW_H + GAP)}px`,
             }}
           >
             {layouts.map((layout, i) => {
