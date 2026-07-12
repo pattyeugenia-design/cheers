@@ -87,7 +87,7 @@ function defaultLayouts(type: string, sub?: string): TileLayout[] {
   let row = 1
 
   // Portada siempre ancho completo, 4 filas
-  layouts.push({ key: 'portada', col: 1, row, colSpan: 12, rowSpan: 4, visible: true })
+  layouts.push({ key: 'portada', col: 1, row, colSpan: 6, rowSpan: 4, visible: true })
   row += 4
 
   // Resto en pares de 2 columnas de 6
