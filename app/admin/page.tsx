@@ -56,6 +56,11 @@ export default function Admin() {
     setCelebraciones(prev => prev.filter(c => c.slug !== slug))
   }
 
+  async function cambiarPlan(userId: string, plan: string) {
+    await supabase.from('perfiles').update({ plan }).eq('user_id', userId)
+    setUsuarios(prev => prev.map(u => u.user_id === userId ? { ...u, plan } : u))
+  }
+
   if (cargando) return (
     <div style={{ minHeight:'100vh', background:'#0d0b1a', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:F }}>
       <p style={{ color:'rgba(255,255,255,.4)' }}>Cargando...</p>
@@ -197,7 +202,11 @@ export default function Admin() {
                     {u.nombre_completo && <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{u.nombre_completo}</div>}
                   </div>
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                    <span style={{ fontSize:11, fontWeight:700, color:u.plan==='lifetime'?'#f08cb0':u.plan==='pro'?'#a89df0':'rgba(255,255,255,.3)', textTransform:'uppercase' }}>{u.plan || 'free'}</span>
+                    <select value={u.plan || 'free'} onChange={e => cambiarPlan(u.user_id, e.target.value)} style={{ fontSize:11, fontWeight:700, color:u.plan==='lifetime'?'#f08cb0':u.plan==='pro'?'#a89df0':'rgba(255,255,255,.6)', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.12)', borderRadius:6, padding:'3px 6px', textTransform:'uppercase', cursor:'pointer', fontFamily:F }}>
+                      <option value="free">Free</option>
+                      <option value="pro">Pro</option>
+                      <option value="lifetime">Lifetime</option>
+                    </select>
                     <span style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>{new Date(u.created_at).toLocaleDateString('es-MX')}</span>
                     <a href={`/${u.username}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:700, color:'#a89df0', background:'rgba(168,157,240,.1)', padding:'4px 8px', borderRadius:6, textDecoration:'none' }}>Ver</a>
                   </div>
