@@ -103,6 +103,21 @@ function defaultLayouts(type: string, sub?: string): TileLayout[] {
   return layouts
 }
 
+function packLayouts(order: TileLayout[]): TileLayout[] {
+  const heights = new Array(COLS).fill(0)
+  return order.map(t => {
+    const span = Math.min(t.colSpan, COLS)
+    let bestCol = 0, bestRow = Infinity
+    for (let c = 0; c <= COLS - span; c++) {
+      let rowHere = 0
+      for (let k = c; k < c + span; k++) rowHere = Math.max(rowHere, heights[k])
+      if (rowHere < bestRow) { bestRow = rowHere; bestCol = c }
+    }
+    for (let k = bestCol; k < bestCol + span; k++) heights[k] = bestRow + t.rowSpan
+    return { ...t, col: bestCol + 1, row: bestRow + 1 }
+  })
+}
+
 const initial = (n: string) => (n || '?').trim()[0].toUpperCase()
 
 function getProgressLabel(pct: number, lang: string): string {
@@ -532,17 +547,14 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   function moveLayout(fromIdx: number, toIdx: number) {
     if (fromIdx === toIdx) return
     const next = [...layouts]
-    // Swap positions
-    const fromLayout = { ...next[fromIdx] }
-    const toLayout = { ...next[toIdx] }
-    next[fromIdx] = { ...fromLayout, col: toLayout.col, row: toLayout.row }
-    next[toIdx] = { ...toLayout, col: fromLayout.col, row: fromLayout.row }
-    saveLayouts(next)
+    const [moved] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, moved)
+    saveLayouts(packLayouts(next))
   }
 
   function resizeLayout(idx: number, colSpan: number, rowSpan: number) {
     const next = layouts.map((l, i) => i === idx ? { ...l, colSpan, rowSpan } : l)
-    saveLayouts(next)
+    saveLayouts(packLayouts(next))
   }
 
   async function toggleVisible(key: string) {
