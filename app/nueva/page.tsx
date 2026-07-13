@@ -153,9 +153,26 @@ export default function NuevaCelebracion() {
       gifts: [], created_at: new Date().toISOString(),
     })
     setSaving(false)
-    if (!error) { clearDraft(); setStep('invite') }
+    if (!error) { clearDraft(); setStep('link') }
     else if (error.code === '23505') setErrorMsg(tx.nueva_slug_error)
     else setErrorMsg(tx.nueva_error)
+  }
+
+  async function confirmarLink() {
+    setSaving(true); setErrorMsg('')
+    const nuevoSlug = `${userSlug}/${eventSlug || slugify(titulo || tipo || 'celebracion')}`
+    if (nuevoSlug !== slugFinal) {
+      const { error } = await supabase.from('celebraciones').update({ nombre: titulo || tipo, slug: nuevoSlug }).eq('slug', slugFinal)
+      if (error) {
+        setSaving(false)
+        if (error.code === '23505') setErrorMsg(tx.nueva_slug_error)
+        else setErrorMsg(tx.nueva_error)
+        return
+      }
+      setSlugFinal(nuevoSlug)
+    }
+    setSaving(false)
+    setLinkConfirmed(true)
   }
 
   async function confirmarInvitados() {
@@ -387,7 +404,7 @@ export default function NuevaCelebracion() {
                       <span style={{ fontSize: 13, color: 'rgba(83,74,183,.4)', fontWeight: 700 }}>/</span>
                       <input value={eventSlug} onChange={e => setEventSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', flex: 1, minWidth: 80 }} />
                     </div>
-                    <button onClick={() => setLinkConfirmed(true)} style={btnPrimary()}>{tx.nueva_confirm_link}</button>
+                    <button onClick={confirmarLink} disabled={saving} style={btnPrimary(saving)}>{saving ? tx.nueva_creating : tx.nueva_confirm_link}</button>
                   </>
                 ) : (
                   <>

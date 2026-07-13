@@ -263,12 +263,12 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
 // Componente Tile con resize
 function ResizableTile({
   layout, totalRows, containerWidth, isMobile, te, tx, lang, children, tileLabel, info,
-  onResizeEnd, onDragStart, onDrop, isDragging, isDragOver, visible, onToggleVisible
+  onResizeEnd, onDragStart, onDragEnd, onDrop, isDragging, isDragOver, visible, onToggleVisible
 }: {
   layout: TileLayout; totalRows: number; containerWidth: number; isMobile: boolean;
   te: any; tx: any; lang: string; children: React.ReactNode; tileLabel: string; info: any;
   onResizeEnd: (colSpan: number, rowSpan: number) => void;
-  onDragStart: () => void; onDrop: () => void;
+  onDragStart: () => void; onDragEnd: () => void; onDrop: () => void;
   isDragging: boolean; isDragOver: boolean; visible: boolean; onToggleVisible: () => void;
 }) {
   const resizingRef = useRef(false)
@@ -312,6 +312,7 @@ function ResizableTile({
     <div
       draggable={!resizingRef.current}
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onDragOver={e => e.preventDefault()}
       onDrop={onDrop}
       style={{
@@ -1209,6 +1210,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   onToggleVisible={() => toggleVisible(layout.key)}
                   onResizeEnd={(colSpan, rowSpan) => resizeLayout(i, colSpan, rowSpan)}
                   onDragStart={() => setDragIdx(i)}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
                   onDrop={() => { if (dragIdx !== null) { moveLayout(dragIdx, i); setDragIdx(null); setDragOverIdx(null) } }}
                   isDragging={dragIdx === i}
                   isDragOver={dragOverIdx === i && dragIdx !== i}
