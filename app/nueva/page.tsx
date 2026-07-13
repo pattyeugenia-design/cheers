@@ -400,7 +400,7 @@ export default function NuevaCelebracion() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#EEEDFE', borderRadius: 14, padding: '10px 12px', marginBottom: 14 }}>
                       <span style={{ fontSize: 13, color: 'rgba(83,74,183,.6)', fontWeight: 700, flexShrink: 0 }}>joincheers.app/</span>
-                      <input value={userSlug} onChange={e => setUserSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', width: 80 }} />
+                      <input value={userSlug} onChange={e => setUserSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', width: `calc(${Math.max(userSlug.length + 1, 6)}ch + 16px)`, flexShrink: 0 }} />
                       <span style={{ fontSize: 13, color: 'rgba(83,74,183,.4)', fontWeight: 700 }}>/</span>
                       <input value={eventSlug} onChange={e => setEventSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', flex: 1, minWidth: 80 }} />
                     </div>

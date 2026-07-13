@@ -32,6 +32,7 @@ export default function Perfil() {
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
   const [cerrandoSesion, setCerrandoSesion] = useState(false)
+  const [eliminandoCuenta, setEliminandoCuenta] = useState(false)
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l])
@@ -91,6 +92,32 @@ export default function Perfil() {
     setCerrandoSesion(true)
     await supabase.auth.signOut()
     router.push('/')
+  }
+
+  async function eliminarCuenta() {
+    const msg1 = lang === 'en'
+      ? 'Delete your account permanently? All your celebrations and data will be removed.'
+      : '¿Eliminar tu cuenta permanentemente? Se borrarán todas tus celebraciones y datos.'
+    if (!confirm(msg1)) return
+    const msg2 = lang === 'en'
+      ? 'This cannot be undone. Are you completely sure?'
+      : 'Esto no se puede deshacer. ¿Estás completamente segura?'
+    if (!confirm(msg2)) return
+
+    setEliminandoCuenta(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/eliminar-cuenta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token }),
+    })
+    if (res.ok) {
+      await supabase.auth.signOut()
+      router.push('/')
+    } else {
+      setEliminandoCuenta(false)
+      alert(lang === 'en' ? 'Something went wrong, please try again.' : 'Algo salió mal, intenta de nuevo.')
+    }
   }
 
   if (cargando) return (
@@ -176,6 +203,11 @@ export default function Perfil() {
         {/* Cerrar sesión */}
         <button onClick={cerrarSesion} disabled={cerrandoSesion} style={{ width:'100%', border:'1.5px solid rgba(255,255,255,.1)', background:'none', color:'rgba(255,255,255,.5)', fontSize:14, fontWeight:700, padding:'14px', borderRadius:14, cursor:'pointer', fontFamily:F, marginBottom:12 }}>
           {cerrandoSesion ? '...' : (lang === 'en' ? 'Sign out' : 'Cerrar sesión')}
+        </button>
+
+        {/* Eliminar cuenta */}
+        <button onClick={eliminarCuenta} disabled={eliminandoCuenta} style={{ width:'100%', border:'none', background:'none', color:'rgba(212,83,126,.5)', fontSize:13, fontWeight:600, padding:'10px', cursor:'pointer', fontFamily:F, marginBottom:12 }}>
+          {eliminandoCuenta ? '...' : (lang === 'en' ? 'Delete account' : 'Eliminar cuenta')}
         </button>
 
         <p style={{ textAlign:'center', fontSize:12, color:'rgba(255,255,255,.2)' }}>
