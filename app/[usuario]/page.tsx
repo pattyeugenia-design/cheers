@@ -11,17 +11,23 @@ const CHIPS: Record<string, string> = {
   cumple:'BDAY', cumpleanos:'BDAY', cena:'DINE', viaje:'TRIP', reunion:'MEET', evento:'EVENT', otro:'OTHER'
 }
 
-function agruparPorTrimestre(celebraciones: any[], lang: string) {
+function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string) {
   const ahora = new Date()
+  const tresMesesAtras = new Date()
+  tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3)
   const grupos: Record<string, any[]> = {}
   const pasadas: any[] = []
+  const pasadasBloqueadas: any[] = []
   const sinFecha: any[] = []
 
   celebraciones.forEach(cel => {
     if (cel.archivada) return
     if (!cel.fecha) { sinFecha.push(cel); return }
     const f = new Date(cel.fecha)
-    if (f < ahora) { pasadas.push(cel); return }
+    if (f < ahora) {
+      if (plan === 'free' && f < tresMesesAtras) { pasadasBloqueadas.push(cel) } else { pasadas.push(cel) }
+      return
+    }
     const year = f.getFullYear()
     const quarter = Math.ceil((f.getMonth() + 1) / 3)
     const key = `${year}-Q${quarter}`
@@ -29,7 +35,7 @@ function agruparPorTrimestre(celebraciones: any[], lang: string) {
     grupos[key].push(cel)
   })
 
-  return { grupos, pasadas, sinFecha }
+  return { grupos, pasadas, pasadasBloqueadas, sinFecha }
 }
 
 function quarterLabel(key: string, lang: string) {
@@ -104,10 +110,10 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     </main>
   )
 
-  const { grupos, pasadas, sinFecha } = agruparPorTrimestre(celebraciones, lang)
   const nombre = perfilAuth?.nombre_completo || user?.user_metadata?.name?.split(' ')[0] || username
   const avatar = user?.user_metadata?.avatar_url
   const plan = perfilAuth?.plan || 'free'
+  const { grupos, pasadas, pasadasBloqueadas, sinFecha } = agruparPorTrimestre(celebraciones, lang, plan)
 
   const CelCard = ({ cel }: { cel: any }) => (
     <div onClick={() => router.push(`/${cel.slug}`)} style={{ display:'flex', alignItems:'center', gap:14, padding:'1rem 1.25rem', background:'rgba(255,255,255,.06)', borderRadius:16, cursor:'pointer', border:'1px solid rgba(255,255,255,.08)', marginBottom:10, position:'relative' }}>
@@ -212,14 +218,26 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         ))}
 
         {/* Pasadas */}
-        {pasadas.length > 0 && (
+        {(pasadas.length > 0 || pasadasBloqueadas.length > 0) && (
           <div style={{ marginBottom:24 }}>
             <button onClick={() => setMostrarPasadas(v => !v)} style={{ width:'100%', border:'none', background:'rgba(255,255,255,.04)', color:'#AFA9EC', fontSize:13, fontWeight:700, padding:'12px', borderRadius:12, cursor:'pointer', fontFamily:F, marginBottom:mostrarPasadas?12:0 }}>
               {mostrarPasadas
                 ? (lang==='en'?'Hide past celebrations ↑':'Ocultar pasadas ↑')
-                : `${lang==='en'?'Show past celebrations':'Ver celebraciones pasadas'} (${pasadas.length}) ↓`}
+                : `${lang==='en'?'Show past celebrations':'Ver celebraciones pasadas'} (${pasadas.length + pasadasBloqueadas.length}) ↓`}
             </button>
             {mostrarPasadas && pasadas.map(cel => <CelCard key={cel.slug} cel={cel} />)}
+            {mostrarPasadas && pasadasBloqueadas.length > 0 && (
+              <div style={{ textAlign:'center', padding:'1rem', background:'rgba(83,74,183,.12)', borderRadius:12, marginTop:8 }}>
+                <p style={{ fontSize:13, color:'#AFA9EC', margin:'0 0 8px' }}>
+                  {lang==='en'
+                    ? `${pasadasBloqueadas.length} more celebration${pasadasBloqueadas.length > 1 ? 's' : ''} older than 3 months`
+                    : `${pasadasBloqueadas.length} celebracion${pasadasBloqueadas.length > 1 ? 'es' : ''} más antigua${pasadasBloqueadas.length > 1 ? 's' : ''} de 3 meses`}
+                </p>
+                {esPropio && <button onClick={() => router.push('/perfil')} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:12, fontWeight:800, padding:'8px 16px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
+                  {lang==='en' ? 'Upgrade to see full history →' : 'Mejora tu plan para verlas →'}
+                </button>}
+              </div>
+            )}
           </div>
         )}
 
