@@ -428,6 +428,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [nuevoInvitado, setNuevoInvitado] = useState('')
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
   const [showWAPrompt, setShowWAPrompt] = useState(false)
+  const [mostrarQR, setMostrarQR] = useState(false)
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
@@ -1160,9 +1161,30 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 </div>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.guest_link}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', position: 'relative' }}>
                     <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{shareUrl}</span>
                     <button onClick={() => navigator.clipboard.writeText(`https://${shareUrl}`)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>{tx.copy}</button>
+                    <button onClick={() => setMostrarQR(v => !v)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>QR</button>
+                    {mostrarQR && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 8px 30px rgba(0,0,0,.18)', zIndex: 20, textAlign: 'center' as const }}>
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://${shareUrl}`)}`}
+                          alt="QR"
+                          width={180}
+                          height={180}
+                          style={{ display: 'block', margin: '0 auto 8px' }}
+                        />
+                        <a
+                          href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`https://${shareUrl}`)}`}
+                          download={`qr-${celebracion?.slug?.replace('/', '-')}.png`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', textDecoration: 'none' }}
+                        >
+                          {lang === 'en' ? 'Download' : 'Descargar'}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
