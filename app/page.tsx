@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from './supabase'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif'
@@ -90,6 +91,7 @@ const translations = {
 }
 
 export default function Home() {
+  const router = useRouter()
   const [lang, setLang] = useState<'es'|'en'>('es')
   const [cargando, setCargando] = useState(true)
   const [scrolled, setScrolled] = useState(false)
@@ -107,10 +109,10 @@ export default function Home() {
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.user) {
         const { data: perfil } = await supabase.from('perfiles').select('username').eq('user_id', data.session.user.id).single()
-        window.location.href = perfil?.username ? `/${perfil.username}` : '/onboarding'
-      } else {
-        setCargando(false)
+        router.replace(perfil?.username ? `/${perfil.username}` : '/onboarding')
+        return
       }
+      setCargando(false)
     })
     return () => window.removeEventListener('resize', check)
   }, [])
