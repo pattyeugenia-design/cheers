@@ -65,8 +65,22 @@ export default function Perfil() {
     if (!perfil || guardando) return
     if (username !== perfil.username && usernameDisponible === false) return
     setGuardando(true)
+    const nuevoUsername = username || perfil.username
+    const usernameCambio = nuevoUsername !== perfil.username
+
+    if (usernameCambio) {
+      const { data: celebs } = await supabase.from('celebraciones').select('slug').eq('organizador_id', user.id)
+      if (celebs) {
+        for (const c of celebs) {
+          const eventoSlug = c.slug.split('/').slice(1).join('/')
+          const nuevoSlug = `${nuevoUsername}/${eventoSlug}`
+          await supabase.from('celebraciones').update({ slug: nuevoSlug }).eq('slug', c.slug)
+        }
+      }
+    }
+
     await supabase.from('perfiles').update({
-      username: username || perfil.username,
+      username: nuevoUsername,
       nombre_completo: nombreCompleto,
     }).eq('user_id', user.id)
     setGuardado(true); setGuardando(false)

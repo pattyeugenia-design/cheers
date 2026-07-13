@@ -82,6 +82,17 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     setCelebraciones(prev => prev.map(c => c.slug === slug ? { ...c, archivada: !archivada } : c))
   }
 
+  async function eliminar(slug: string) {
+    const msg = lang === 'en'
+      ? 'Delete this celebration? This cannot be undone.'
+      : '¿Eliminar esta celebración? No se puede deshacer.'
+    if (!confirm(msg)) return
+    await supabase.from('invitados').delete().eq('celebracion_slug', slug)
+    await supabase.from('rsvps').delete().eq('celebracion_slug', slug)
+    await supabase.from('celebraciones').delete().eq('slug', slug)
+    setCelebraciones(prev => prev.filter(c => c.slug !== slug))
+  }
+
   async function cerrarSesion() {
     await supabase.auth.signOut()
     router.push('/')
@@ -115,6 +126,9 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         {cel.es_sorpresa && esPropio && <span style={{ fontSize:11, fontWeight:700, color:'#D4537E', background:'rgba(212,83,126,.15)', padding:'2px 8px', borderRadius:99 }}>{tx.surprise}</span>}
         {esPropio && <button onClick={e => { e.stopPropagation(); archivar(cel.slug, cel.archivada) }} style={{ border:'none', background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.35)', fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
           {cel.archivada ? (lang==='en'?'Unarchive':'Desarchivar') : (lang==='en'?'Archive':'Archivar')}
+        </button>}
+        {esPropio && <button onClick={e => { e.stopPropagation(); eliminar(cel.slug) }} style={{ border:'none', background:'rgba(212,83,126,.1)', color:'rgba(212,83,126,.6)', fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
+          {lang==='en'?'Delete':'Eliminar'}
         </button>}
         <span style={{ fontSize:18, color:'#AFA9EC' }}>→</span>
       </div>
