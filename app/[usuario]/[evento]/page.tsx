@@ -144,6 +144,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
   const [rsvpExistente, setRsvpExistente] = useState<any>(null)
+  const [confirmados, setConfirmados] = useState<any[]>([])
 
   useEffect(() => {
     supabase.from('rsvps').select('*')
@@ -153,6 +154,10 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
       .then(({ data }) => {
         if (data) { setRsvpExistente(data); setAsistencia(data.asistencia); setMensaje(data.mensaje || '') }
       })
+    supabase.from('rsvps').select('nombre')
+      .eq('celebracion_slug', celebracion.slug)
+      .eq('asistencia', 'si')
+      .then(({ data }) => setConfirmados(data || []))
   }, [])
 
   async function guardarRsvp() {
@@ -161,6 +166,8 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
     const payload = { celebracion_slug: celebracion.slug, nombre: user?.user_metadata?.name || user?.email || '', asistencia, mensaje: mensaje.trim() || null }
     if (rsvpExistente) await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
     else await supabase.from('rsvps').insert(payload)
+    const { data } = await supabase.from('rsvps').select('nombre').eq('celebracion_slug', celebracion.slug).eq('asistencia', 'si')
+    setConfirmados(data || [])
     setGuardando(false); setGuardado(true)
     setTimeout(() => setGuardado(false), 3000)
   }
@@ -228,6 +235,21 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
             {guardando ? '...' : guardado ? (lang === 'en' ? '✓ Confirmed!' : '✓ ¡Confirmado!') : rsvpExistente ? (lang === 'en' ? 'Update RSVP' : 'Actualizar') : (lang === 'en' ? 'Confirm attendance' : 'Confirmar asistencia')}
           </button>
         </div>
+
+        {confirmados.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 14 }}>
+              {lang === 'en'
+                ? `${confirmados.length} ${confirmados.length === 1 ? 'person is' : 'people are'} going`
+                : `${confirmados.length} ${confirmados.length === 1 ? 'persona va' : 'personas van'}`}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+              {confirmados.map((c, i) => (
+                <span key={i} style={{ fontSize: 13, fontWeight: 700, color: '#534AB7', background: '#EEEDFE', padding: '6px 14px', borderRadius: 99 }}>{c.nombre}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {paradas.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
