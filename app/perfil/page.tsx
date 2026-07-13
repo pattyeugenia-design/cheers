@@ -29,6 +29,9 @@ export default function Perfil() {
   const [usernameDisponible, setUsernameDisponible] = useState<boolean | null>(null)
   const [verificandoUsername, setVerificandoUsername] = useState(false)
   const [nombreCompleto, setNombreCompleto] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [subiendoAvatar, setSubiendoAvatar] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
   const [cerrandoSesion, setCerrandoSesion] = useState(false)
@@ -44,6 +47,8 @@ export default function Perfil() {
         setPerfil(data)
         setUsername(data.username || '')
         setNombreCompleto(data.nombre_completo || user.user_metadata?.name || '')
+        setTelefono(data.telefono || '')
+        setAvatarUrl(data.avatar_url || user.user_metadata?.avatar_url || '')
       }
       setCargando(false)
     })
@@ -61,6 +66,18 @@ export default function Perfil() {
     }, 500)
     return () => clearTimeout(timeout)
   }, [username, perfil?.username])
+
+  async function subirAvatar(file: File) {
+    if (!file || !user || !file.type.startsWith('image/')) return
+    setSubiendoAvatar(true)
+    const ext = file.name.split('.').pop()
+    const path = `${user.id}-avatar.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (error) { setSubiendoAvatar(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    await supabase.from('perfiles').update({ avatar_url: publicUrl }).eq('user_id', user.id)
+    setAvatarUrl(publicUrl); setSubiendoAvatar(false)
+  }
 
   async function guardar() {
     if (!perfil || guardando) return
@@ -83,6 +100,7 @@ export default function Perfil() {
     await supabase.from('perfiles').update({
       username: nuevoUsername,
       nombre_completo: nombreCompleto,
+      telefono: telefono || null,
     }).eq('user_id', user.id)
     setGuardado(true); setGuardando(false)
     setTimeout(() => setGuardado(false), 3000)
@@ -128,7 +146,7 @@ export default function Perfil() {
 
   const plan = perfil?.plan || 'free'
   const planInfo = PLANES[plan] || PLANES.free
-  const avatar = user?.user_metadata?.avatar_url || perfil?.avatar_url
+  const avatar = avatarUrl
 
   return (
     <main style={{ minHeight:'100vh', background:BG, fontFamily:F, padding:'2rem 1.5rem' }}>
@@ -138,11 +156,14 @@ export default function Perfil() {
 
         {/* Header perfil */}
         <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:32 }}>
-          <div style={{ width:64, height:64, borderRadius:'50%', overflow:'hidden', background:'linear-gradient(135deg,#534AB7,#D4537E)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            {avatar
-              ? <img src={avatar} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-              : <span style={{ fontSize:24, fontWeight:800, color:'#fff' }}>{(nombreCompleto || user?.email || '?')[0].toUpperCase()}</span>}
-          </div>
+          <label style={{ width:64, height:64, borderRadius:'50%', overflow:'hidden', background:'linear-gradient(135deg,#534AB7,#D4537E)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, cursor:'pointer', position:'relative' }}>
+            <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && subirAvatar(e.target.files[0])} style={{ display:'none' }} />
+            {subiendoAvatar
+              ? <span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>...</span>
+              : avatar
+                ? <img src={avatar} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                : <span style={{ fontSize:24, fontWeight:800, color:'#fff' }}>{(nombreCompleto || user?.email || '?')[0].toUpperCase()}</span>}
+          </label>
           <div>
             <div style={{ fontSize:20, fontWeight:800, color:'#EEEDFE', letterSpacing:'-.4px' }}>{nombreCompleto || user?.email}</div>
             <div style={{ fontSize:13, color:'#AFA9EC', marginTop:2 }}>@{perfil?.username}</div>
@@ -159,6 +180,11 @@ export default function Perfil() {
           <div style={{ marginBottom:16 }}>
             <label style={{ fontSize:12, fontWeight:800, color:'#AFA9EC', textTransform:'uppercase', letterSpacing:'.5px', display:'block', marginBottom:6 }}>{lang === 'en' ? 'Full name' : 'Nombre completo'}</label>
             <input value={nombreCompleto} onChange={e => setNombreCompleto(e.target.value)} style={{ width:'100%', boxSizing:'border-box', border:'1.5px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', color:'#EEEDFE', fontFamily:F, fontSize:15, fontWeight:600, padding:'10px 14px', borderRadius:12, outline:'none' }} />
+          </div>
+
+          <div style={{ marginBottom:16 }}>
+            <label style={{ fontSize:12, fontWeight:800, color:'#AFA9EC', textTransform:'uppercase', letterSpacing:'.5px', display:'block', marginBottom:6 }}>{lang === 'en' ? 'Phone' : 'Teléfono'}</label>
+            <input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder={lang === 'en' ? 'Optional' : 'Opcional'} style={{ width:'100%', boxSizing:'border-box', border:'1.5px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', color:'#EEEDFE', fontFamily:F, fontSize:15, fontWeight:600, padding:'10px 14px', borderRadius:12, outline:'none' }} />
           </div>
 
           <div style={{ marginBottom:20 }}>
