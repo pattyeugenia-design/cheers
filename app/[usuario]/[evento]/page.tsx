@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../supabase'
 import { getLang, t } from '../../i18n'
 
-const LIMITE_FREE = 3
 const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const COLS = 12 // columnas del grid
 const ROW_H = 60 // altura de cada fila en px
@@ -379,6 +378,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [lang, setLang] = useState('es')
   const [locale, setLocale] = useState('es-MX')
   const [celebracion, setCelebracion] = useState<any>(null)
+  const [organizadorPlan, setOrganizadorPlan] = useState<string>('free')
+  const limiteInvitados = organizadorPlan === 'lifetime' ? Infinity : organizadorPlan === 'pro' ? 10 : 3
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitadosList, setInvitadosList] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
@@ -479,6 +480,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       }
 
       setCelebracion(cel)
+      if (cel.organizador_id) {
+        const { data: perfilOrg } = await supabase.from('perfiles').select('plan').eq('user_id', cel.organizador_id).single()
+        if (perfilOrg?.plan) setOrganizadorPlan(perfilOrg.plan)
+      }
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
@@ -571,7 +576,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   }
 
   async function agregarInvitado() {
-    if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= LIMITE_FREE) return
+    if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= limiteInvitados) return
     setGuardandoInvitado(true)
     const isPhone = /^\+?[\d\s\-()]{7,}$/.test(nuevoInvitado.trim()) && !nuevoInvitado.includes('@')
     const row = { celebracion_slug: celebracion.slug, email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null, nombre: nuevoInvitado.trim(), user_id: null, created_at: new Date().toISOString() }
@@ -694,7 +699,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const confirmados = rsvps.filter(r => r.asistencia === 'si').length
   const porConfirmar = rsvps.filter(r => r.asistencia !== 'si').length
   const shareUrl = `joincheers.app/${celebracion?.slug}`
-  const limiteAlcanzado = invitadosList.length >= LIMITE_FREE
+  const limiteAlcanzado = invitadosList.length >= limiteInvitados
   const MIN_SIZE = 16, MAX_SIZE = isMobile ? 36 : 52
   const totalPresupuesto = presupuesto.reduce((s: number, g: any) => s + (g.monto || 0), 0)
   const totalRows = layouts.reduce((max, l) => Math.max(max, l.row + l.rowSpan - 1), 1)
@@ -838,7 +843,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
         {limiteAlcanzado ? (
           <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.free_limit_title(LIMITE_FREE)}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.free_limit_title(limiteInvitados)}</div>
             <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.free_limit_desc}</div>
             <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{tx.upgrade_cta}</button>
           </div>
@@ -856,7 +861,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
           </div>
         ) : (
           <button onClick={() => setShowAddInvitado(true)} style={{ ...dashedBtn, width: '100%', textAlign: 'center' as const }}>
-            {tx.add_guest(invitadosList.length, LIMITE_FREE)}
+            {limiteInvitados === Infinity ? (lang === 'en' ? '+ Add guest' : '+ Agregar invitado') : tx.add_guest(invitadosList.length, limiteInvitados)}
           </button>
         )}
       </div>
