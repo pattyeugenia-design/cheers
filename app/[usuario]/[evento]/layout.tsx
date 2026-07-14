@@ -15,6 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ usuario: 
     return {
       title: 'Cheers',
       description: 'La celebración, en un link.',
+      robots: { index: false, follow: false },
     }
   }
 
@@ -24,6 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ usuario: 
   return {
     title,
     description,
+    robots: { index: false, follow: false },
     openGraph: {
       title,
       description,
