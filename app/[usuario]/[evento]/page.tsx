@@ -124,14 +124,30 @@ function formatICSDate(date: Date) {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 }
 
-function calendarLinks(nombre: string, fecha: string, hora: string, lugar: string) {
+const DIAS_ICS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+
+// Si la celebración es una serie recurrente, agrega la línea RRULE para que
+// Apple/Outlook/Google entiendan el patrón de repetición, no solo esta fecha suelta.
+function construirRRULE(tipo?: 'semanal' | 'mensual_nesimo' | null, diaSemana?: number | null, semanaMes?: number | null): string | null {
+  if (!tipo || diaSemana == null || diaSemana < 0 || diaSemana > 6) return null
+  const dia = DIAS_ICS[diaSemana]
+  if (tipo === 'semanal') return `RRULE:FREQ=WEEKLY;BYDAY=${dia}`
+  if (tipo === 'mensual_nesimo' && semanaMes) return `RRULE:FREQ=MONTHLY;BYDAY=${semanaMes}${dia}`
+  return null
+}
+
+function calendarLinks(
+  nombre: string, fecha: string, hora: string, lugar: string,
+  recurrencia?: { tipo?: 'semanal' | 'mensual_nesimo' | null; diaSemana?: number | null; semanaMes?: number | null } | null
+) {
   const inicio = new Date(`${fecha}T${hora || '12:00'}:00`)
   const fin = new Date(inicio.getTime() + 3 * 60 * 60 * 1000) // 3 horas por default
   const detalles = 'Organizado con Cheers'
 
   const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(nombre)}&dates=${formatICSDate(inicio)}/${formatICSDate(fin)}&details=${encodeURIComponent(detalles)}&location=${encodeURIComponent(lugar || '')}`
 
-  const icsContent = [
+  const rrule = recurrencia ? construirRRULE(recurrencia.tipo, recurrencia.diaSemana, recurrencia.semanaMes) : null
+  const lineasIcs = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'BEGIN:VEVENT',
@@ -140,9 +156,10 @@ function calendarLinks(nombre: string, fecha: string, hora: string, lugar: strin
     `SUMMARY:${nombre}`,
     `LOCATION:${lugar || ''}`,
     `DESCRIPTION:${detalles}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].join('\r\n')
+  ]
+  if (rrule) lineasIcs.push(rrule)
+  lineasIcs.push('END:VEVENT', 'END:VCALENDAR')
+  const icsContent = lineasIcs.join('\r\n')
   const icsUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
 
   return { googleUrl, icsUrl }
@@ -233,7 +250,7 @@ function VistaBrief({ celebracion, lang, locale, organizador }: any) {
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
           {lugarNombre && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', margin: 0 }}>{lugarNombre}</p>}
           {celebracion.fecha && (() => {
-            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, (celebracion.paradas || []).find((p: any) => p.id)?.hora, lugarNombre)
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, (celebracion.paradas || []).find((p: any) => p.id)?.hora, lugarNombre, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
                 <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
@@ -375,7 +392,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
           {paradas[0]?.lugar && <a href={`https://maps.google.com/?q=${encodeURIComponent(paradas[0].lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>{paradas[0].lugar} →</a>}
           {celebracion.fecha && (() => {
-            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, paradas[0]?.hora, paradas[0]?.lugar)
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, paradas[0]?.hora, paradas[0]?.lugar, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
                 <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>

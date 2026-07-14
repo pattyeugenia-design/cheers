@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { envolverEmail } from '../../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -22,12 +23,35 @@ export async function GET(req: Request) {
   const ayerFin = new Date(ayerInicio)
   ayerFin.setHours(23, 59, 59, 999)
 
-  const { data: pasadas } = await admin
+  const ayerStr = ayerInicio.toISOString().slice(0, 10)
+
+  const { data: normales } = await admin
     .from('celebraciones')
     .select('nombre, slug, organizador_id, fecha, festejado_nombre')
     .gte('fecha', ayerInicio.toISOString())
     .lte('fecha', ayerFin.toISOString())
     .eq('archivada', false)
+    .eq('recurrente', false)
+
+  const pasadas: { nombre: string; slug: string; organizador_id: string; festejado_nombre?: string | null }[] = [...(normales || [])]
+
+  // Series recurrentes: revisar si alguna de sus fechas fue ayer
+  const { data: series } = await admin
+    .from('celebraciones')
+    .select('nombre, slug, organizador_id, festejado_nombre')
+    .eq('recurrente', true)
+    .eq('archivada', false)
+
+  for (const serie of series || []) {
+    const { data: ocurrenciaAyer } = await admin
+      .from('ocurrencias')
+      .select('fecha')
+      .eq('celebracion_slug', serie.slug)
+      .eq('cancelada', false)
+      .eq('fecha', ayerStr)
+      .limit(1)
+    if (ocurrenciaAyer && ocurrenciaAyer.length > 0) pasadas.push(serie)
+  }
 
   let enviados = 0
 
@@ -49,45 +73,24 @@ export async function GET(req: Request) {
         : `<p style="font-size: 14px; color: #6b6585;">Y si ya estás pensando en la próxima celebración: con Extra Cheer guardas todo tu historial para siempre y ya no te preocupas por límites. Sin presión, ahí queda.</p>`
 
     const subject = lang === 'en' ? `How did ${cel.nombre} go?` : `¿Cómo estuvo ${cel.nombre}?`
-    const html = lang === 'en'
+    const cuerpo = lang === 'en'
       ? `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <a href="https://joincheers.app" style="display: inline-block; text-decoration: none; background: linear-gradient(135deg,#534AB7,#D4537E); padding: 10px 22px; border-radius: 12px;">
-              <span style="color: #fff; font-size: 16px; font-weight: 800;">Cheers</span>
-            </a>
-          </div>
           <p style="font-size: 16px; color: #1c1830;">Hope ${nombreEvento} turned out amazing.</p>
           <p style="font-size: 15px; color: #6b6585;">If you want to tell us how it went, just reply to this email — we'd love to hear it.</p>
           ${lineaLifetime}
           <p style="margin-top: 20px;">
             <a href="https://joincheers.app/perfil" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">See my profile →</a>
           </p>
-          <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #a39ec0; line-height: 1.6; text-align: center;">
-            <p style="margin: 0 0 6px;">Cheers · <a href="https://joincheers.app/terminos" style="color: #a39ec0;">Terms</a> · <a href="https://joincheers.app/privacidad" style="color: #a39ec0;">Privacy</a> · <a href="https://joincheers.app/faq" style="color: #a39ec0;">FAQ</a></p>
-            <p style="margin: 0;">Don't want your account anymore? You can delete it from <a href="https://joincheers.app/perfil" style="color: #a39ec0;">your profile</a>.</p>
-          </div>
-        </div>
       `
       : `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <a href="https://joincheers.app" style="display: inline-block; text-decoration: none; background: linear-gradient(135deg,#534AB7,#D4537E); padding: 10px 22px; border-radius: 12px;">
-              <span style="color: #fff; font-size: 16px; font-weight: 800;">Cheers</span>
-            </a>
-          </div>
           <p style="font-size: 16px; color: #1c1830;">Esperamos que ${nombreEvento} haya salido increíble.</p>
           <p style="font-size: 15px; color: #6b6585;">Si quieres contarnos cómo te fue, con gusto lo leemos — solo responde este correo.</p>
           ${lineaLifetime}
           <p style="margin-top: 20px;">
             <a href="https://joincheers.app/perfil" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver mi perfil →</a>
           </p>
-          <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #a39ec0; line-height: 1.6; text-align: center;">
-            <p style="margin: 0 0 6px;">Cheers · <a href="https://joincheers.app/terminos" style="color: #a39ec0;">Términos</a> · <a href="https://joincheers.app/privacidad" style="color: #a39ec0;">Privacidad</a> · <a href="https://joincheers.app/faq" style="color: #a39ec0;">FAQ</a></p>
-            <p style="margin: 0;">¿Ya no quieres tu cuenta? Puedes darla de baja desde <a href="https://joincheers.app/perfil" style="color: #a39ec0;">tu perfil</a>.</p>
-          </div>
-        </div>
       `
+    const html = envolverEmail(lang, cuerpo)
 
     try {
       await resend.emails.send({ from: 'Cheers <notificaciones@joincheers.app>', to: organizador.email, subject, html })
