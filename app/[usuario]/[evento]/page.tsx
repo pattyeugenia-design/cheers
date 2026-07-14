@@ -1,8 +1,11 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Script from 'next/script'
 import { supabase } from '../../supabase'
 import { getLang, t } from '../../i18n'
+
+declare global { interface Window { google: any } }
 
 const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const COLS = 12 // columnas del grid
@@ -667,6 +670,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [fecha, setFecha] = useState('')
   const [recordatorioDias, setRecordatorioDias] = useState<number[]>([7])
   const [lugar, setLugar] = useState('')
+  const [mapsListo, setMapsListo] = useState(false)
+  const lugarRef = useRef<HTMLInputElement>(null)
+  const nuevaParadaLugarRef = useRef<HTMLInputElement>(null)
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
   const [imgPosition, setImgPosition] = useState('center')
@@ -956,6 +962,30 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (ps.length > 0) ps[0].lugar = val; else ps.push({ lugar: val, hora: '', nota: '' })
     setParadas(ps); await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
   }
+
+  // Autocompletado de Google Places en el campo principal de lugar
+  useEffect(() => {
+    if (!mapsListo || !lugarRef.current || lugarRef.current.dataset.init) return
+    const ac = new window.google.maps.places.Autocomplete(lugarRef.current, { fields: ['name', 'formatted_address'] })
+    ac.addListener('place_changed', () => {
+      const p = ac.getPlace()
+      const nombre = p?.name || lugarRef.current?.value || ''
+      setLugar(nombre)
+      guardarLugar(nombre)
+    })
+    lugarRef.current.dataset.init = 'true'
+  }, [mapsListo, rol])
+
+  // Autocompletado de Google Places al agregar una parada nueva del itinerario
+  useEffect(() => {
+    if (!mapsListo || !showAddParada || !nuevaParadaLugarRef.current || nuevaParadaLugarRef.current.dataset.init) return
+    const ac = new window.google.maps.places.Autocomplete(nuevaParadaLugarRef.current, { fields: ['name', 'formatted_address'] })
+    ac.addListener('place_changed', () => {
+      const p = ac.getPlace()
+      setNuevaParada(prev => ({ ...prev, lugar: p?.name || nuevaParadaLugarRef.current?.value || '' }))
+    })
+    nuevaParadaLugarRef.current.dataset.init = 'true'
+  }, [mapsListo, showAddParada])
 
   async function subirPortada(file: File) {
     if (!file || !celebracion || !file.type.startsWith('image/')) return
@@ -1348,7 +1378,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         ))}
         {showAddParada ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <input value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
+            <input ref={nuevaParadaLugarRef} value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={nuevaParada.hora} onChange={e => setNuevaParada(p => ({ ...p, hora: e.target.value }))} placeholder={lang === 'en' ? 'Time' : 'Hora'} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
               <input value={nuevaParada.nota} onChange={e => setNuevaParada(p => ({ ...p, nota: e.target.value }))} placeholder={lang === 'en' ? 'Note' : 'Nota'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
@@ -1454,6 +1484,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: te.bg, fontFamily: FSYS }}>
+      <Script src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places`} strategy="afterInteractive" onLoad={() => setMapsListo(true)} />
       <style>{`@keyframes starPulse{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1)}} [contenteditable]:empty:before{content:attr(data-placeholder);color:#a39ec0} [contenteditable]:focus{outline:none}`}</style>
 
       {/* Estrellitas */}
@@ -1657,7 +1688,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.place}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ fontSize: 11, color: '#a39ec0' }}>{tx.location}</span>
-                    <input style={{ ...fieldInput, flex: 1, fontSize: 14 }} value={lugar} onChange={e => setLugar(e.target.value)} onBlur={e => guardarLugar(e.target.value)} placeholder="Google Maps" />
+                    <input ref={lugarRef} style={{ ...fieldInput, flex: 1, fontSize: 14 }} value={lugar} onChange={e => setLugar(e.target.value)} onBlur={e => guardarLugar(e.target.value)} placeholder="Google Maps" />
                     {lugar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const }}>{tx.see_map}</a>}
                   </div>
                 </div>
