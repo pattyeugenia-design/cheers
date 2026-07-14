@@ -9,7 +9,7 @@ type Props = {
 export async function generateMetadata({ params }: { params: Promise<{ usuario: string; evento: string }> }): Promise<Metadata> {
   const { usuario, evento } = await params
   const slug = `${usuario}/${evento}`
-  const { data: cel } = await supabase.from('celebraciones').select('nombre, portada_url').eq('slug', slug).single()
+  const { data: cel } = await supabase.rpc('get_celebracion_por_slug', { p_slug: slug })
 
   if (!cel) {
     return {

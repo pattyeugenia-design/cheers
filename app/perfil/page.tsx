@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../supabase'
-import { getLang, t, RESERVED_USERNAMES } from '../i18n'
+import { getLang, setLang as setLangGuardado, t, RESERVED_USERNAMES } from '../i18n'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'linear-gradient(160deg,#241c45,#302b63,#24243e)'
@@ -36,6 +36,8 @@ export default function Perfil() {
   const [guardado, setGuardado] = useState(false)
   const [cerrandoSesion, setCerrandoSesion] = useState(false)
   const [eliminandoCuenta, setEliminandoCuenta] = useState(false)
+  const [comprandoLifetime, setComprandoLifetime] = useState(false)
+  const [activandoPlan, setActivandoPlan] = useState(false)
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l])
@@ -49,10 +51,32 @@ export default function Perfil() {
         setNombreCompleto(data.nombre_completo || user.user_metadata?.name || '')
         setTelefono(data.telefono || '')
         setAvatarUrl(data.avatar_url || user.user_metadata?.avatar_url || '')
+        if (data.lang === 'es' || data.lang === 'en') {
+          setLang(data.lang); setTx(t[data.lang as 'es' | 'en']); setLangGuardado(data.lang)
+        }
       }
       setCargando(false)
     })
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+    const compra = new URLSearchParams(window.location.search).get('compra')
+    if (compra !== 'exitosa') return
+    setActivandoPlan(true)
+    let intentos = 0
+    const interval = setInterval(async () => {
+      intentos++
+      const { data } = await supabase.from('perfiles').select('*').eq('user_id', user.id).single()
+      if (data?.plan === 'lifetime' || intentos >= 6) {
+        if (data) setPerfil(data)
+        clearInterval(interval)
+        setActivandoPlan(false)
+        window.history.replaceState({}, '', '/perfil')
+      }
+    }, 1500)
+    return () => clearInterval(interval)
+  }, [user])
 
   useEffect(() => {
     if (!username || username === perfil?.username) { setUsernameDisponible(null); return }
@@ -106,6 +130,29 @@ export default function Perfil() {
     setTimeout(() => setGuardado(false), 3000)
   }
 
+  async function cambiarIdioma(nuevo: 'es' | 'en') {
+    if (nuevo === lang || !user) return
+    setLang(nuevo); setTx(t[nuevo]); setLangGuardado(nuevo)
+    await supabase.from('perfiles').update({ lang: nuevo }).eq('user_id', user.id)
+  }
+
+  async function comprarLifetime() {
+    setComprandoLifetime(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token, tipo: 'lifetime' }),
+    })
+    const data = await res.json()
+    if (res.ok && data.url) {
+      window.location.href = data.url
+    } else {
+      setComprandoLifetime(false)
+      alert(lang === 'en' ? 'Something went wrong, please try again.' : 'Algo salió mal, intenta de nuevo.')
+    }
+  }
+
   async function cerrarSesion() {
     setCerrandoSesion(true)
     await supabase.auth.signOut()
@@ -153,6 +200,12 @@ export default function Perfil() {
       <div style={{ maxWidth:480, margin:'0 auto' }}>
 
         <button onClick={() => router.back()} style={{ border:'none', background:'rgba(255,255,255,.08)', color:'rgba(255,255,255,.6)', fontSize:13, fontWeight:700, padding:'8px 16px', borderRadius:99, cursor:'pointer', fontFamily:F, marginBottom:28 }}>← {lang === 'en' ? 'Back' : 'Atrás'}</button>
+
+        {activandoPlan && (
+          <div style={{ background:'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius:14, padding:'12px 16px', marginBottom:16, color:'#fff', fontSize:13, fontWeight:700, textAlign:'center' }}>
+            {lang === 'en' ? '✓ Payment received — activating your plan...' : '✓ Pago recibido — activando tu plan...'}
+          </div>
+        )}
 
         {/* Header perfil */}
         <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:32 }}>
@@ -219,10 +272,20 @@ export default function Perfil() {
               </div>
             </div>
             {plan !== 'lifetime' && (
-              <button style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 18px', borderRadius:12, cursor:'pointer', fontFamily:F }}>
-                {lang === 'en' ? 'Upgrade →' : 'Mejorar plan →'}
+              <button onClick={comprarLifetime} disabled={comprandoLifetime} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 18px', borderRadius:12, cursor:'pointer', fontFamily:F }}>
+                {comprandoLifetime ? '...' : (lang === 'en' ? 'Get Lifetime →' : 'Comprar Lifetime →')}
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Idioma de comunicación */}
+        <div style={{ background:'rgba(255,255,255,.06)', borderRadius:20, padding:'24px 20px', marginBottom:16 }}>
+          <h2 style={{ fontSize:16, fontWeight:800, color:'#EEEDFE', margin:'0 0 4px' }}>{lang === 'en' ? 'Communication language' : 'Idioma de comunicación'}</h2>
+          <p style={{ fontSize:12, color:'#AFA9EC', margin:'0 0 14px' }}>{lang === 'en' ? 'Used for emails Cheers sends you.' : 'Se usa para los correos que Cheers te manda.'}</p>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => cambiarIdioma('es')} style={{ flex:1, border:lang==='es'?'2px solid #fff':'2px solid rgba(255,255,255,.15)', background:lang==='es'?'rgba(255,255,255,.12)':'transparent', color:'#EEEDFE', fontSize:14, fontWeight:700, padding:'10px', borderRadius:12, cursor:'pointer', fontFamily:F }}>Español</button>
+            <button onClick={() => cambiarIdioma('en')} style={{ flex:1, border:lang==='en'?'2px solid #fff':'2px solid rgba(255,255,255,.15)', background:lang==='en'?'rgba(255,255,255,.12)':'transparent', color:'#EEEDFE', fontSize:14, fontWeight:700, padding:'10px', borderRadius:12, cursor:'pointer', fontFamily:F }}>English</button>
           </div>
         </div>
 

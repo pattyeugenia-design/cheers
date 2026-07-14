@@ -78,9 +78,11 @@ export default function Onboarding() {
     setGuardando(true)
     setError('')
 
+    const langDetectado = getLang()
     const { error: err } = await supabase.from('perfiles').insert({
       user_id: user.id,
       username,
+      lang: langDetectado,
     })
 
     if (err) {
@@ -92,7 +94,7 @@ export default function Onboarding() {
     fetch('/api/bienvenida', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, nombre: user.user_metadata?.name?.split(' ')[0], username }),
+      body: JSON.stringify({ email: user.email, nombre: user.user_metadata?.name?.split(' ')[0], username, lang: langDetectado }),
     }).catch(() => {})
 
     const redirect = typeof window !== 'undefined' ? sessionStorage.getItem('redirect_after_login') : null

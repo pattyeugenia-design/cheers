@@ -57,6 +57,10 @@ export default function NuevaCelebracion() {
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
   const [lugar, setLugar] = useState('')
+  const [recurrente, setRecurrente] = useState(false)
+  const [recurrenciaTipo, setRecurrenciaTipo] = useState<'semanal' | 'mensual_nesimo'>('semanal')
+  const [recurrenciaDiaSemana, setRecurrenciaDiaSemana] = useState(5) // 5 = viernes
+  const [recurrenciaSemanaMes, setRecurrenciaSemanaMes] = useState(1)
   const [userSlug, setUserSlug] = useState('')
   const [eventSlug, setEventSlug] = useState('')
   const [linkConfirmed, setLinkConfirmed] = useState(false)
@@ -149,6 +153,11 @@ export default function NuevaCelebracion() {
       tipo, festejado_nombre: rol === 'yo' ? userNombre : festejado,
       organizador_id: user?.id,
       slug, es_sorpresa: rol === 'sorpresa',
+      fecha: fecha || null,
+      recurrente,
+      recurrencia_tipo: recurrente ? recurrenciaTipo : null,
+      recurrencia_dia_semana: recurrente ? recurrenciaDiaSemana : null,
+      recurrencia_semana_mes: recurrente && recurrenciaTipo === 'mensual_nesimo' ? recurrenciaSemanaMes : null,
       paradas: lugar ? [{ lugar, hora: '', nota: '' }] : [],
       gifts: [], created_at: new Date().toISOString(),
     })
@@ -372,7 +381,49 @@ export default function NuevaCelebracion() {
                   <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
 
                   <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_place_label}</label>
-                  <input ref={lugarRef} value={lugar} onChange={e => setLugar(e.target.value)} placeholder={tx.nueva_place_placeholder} style={{ ...inputStyle, marginBottom: 0 }} />
+                  <input ref={lugarRef} value={lugar} onChange={e => setLugar(e.target.value)} placeholder={tx.nueva_place_placeholder} style={{ ...inputStyle, marginBottom: recurrente ? 14 : 0 }} />
+
+                  <div onClick={() => setRecurrente(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 2px', marginBottom: recurrente ? 10 : 0 }}>
+                    <div style={{ width: 38, height: 22, borderRadius: 99, background: recurrente ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#EAE7F6', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: recurrente ? 18 : 2, transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#2a2440' }}>{lang === 'en' ? 'Repeats' : 'Se repite'}</span>
+                  </div>
+
+                  {recurrente && (
+                    <div style={{ background: '#F5F4FB', borderRadius: 14, padding: 14, marginBottom: 0 }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                        <button type="button" onClick={() => setRecurrenciaTipo('semanal')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recurrenciaTipo === 'semanal' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recurrenciaTipo === 'semanal' ? '#fff' : '#534AB7' }}>{lang === 'en' ? 'Every week' : 'Cada semana'}</button>
+                        <button type="button" onClick={() => setRecurrenciaTipo('mensual_nesimo')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recurrenciaTipo === 'mensual_nesimo' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recurrenciaTipo === 'mensual_nesimo' ? '#fff' : '#534AB7' }}>{lang === 'en' ? 'Monthly' : 'Cada mes'}</button>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {recurrenciaTipo === 'mensual_nesimo' && (
+                          <select value={recurrenciaSemanaMes} onChange={e => setRecurrenciaSemanaMes(Number(e.target.value))} style={{ ...inputStyle, marginBottom: 0, fontSize: 13, flex: '0 0 auto', width: 'auto', padding: '10px 8px' }}>
+                            <option value={1}>{lang === 'en' ? '1st' : '1er'}</option>
+                            <option value={2}>{lang === 'en' ? '2nd' : '2do'}</option>
+                            <option value={3}>{lang === 'en' ? '3rd' : '3er'}</option>
+                            <option value={4}>{lang === 'en' ? '4th' : '4to'}</option>
+                          </select>
+                        )}
+                        <select value={recurrenciaDiaSemana} onChange={e => setRecurrenciaDiaSemana(Number(e.target.value))} style={{ ...inputStyle, marginBottom: 0, fontSize: 13, flex: 1 }}>
+                          <option value={0}>{lang === 'en' ? 'Sunday' : 'domingo'}</option>
+                          <option value={1}>{lang === 'en' ? 'Monday' : 'lunes'}</option>
+                          <option value={2}>{lang === 'en' ? 'Tuesday' : 'martes'}</option>
+                          <option value={3}>{lang === 'en' ? 'Wednesday' : 'miércoles'}</option>
+                          <option value={4}>{lang === 'en' ? 'Thursday' : 'jueves'}</option>
+                          <option value={5}>{lang === 'en' ? 'Friday' : 'viernes'}</option>
+                          <option value={6}>{lang === 'en' ? 'Saturday' : 'sábado'}</option>
+                        </select>
+                      </div>
+
+                      <p style={{ fontSize: 11, color: '#a39ec0', margin: '10px 2px 0', lineHeight: 1.5 }}>
+                        {lang === 'en'
+                          ? 'You can pick this for free, but the future dates only generate once this celebration is Pro or your account is Lifetime.'
+                          : 'Puedes elegirlo gratis, pero las fechas futuras solo se generan cuando esta celebración sea Pro o tu cuenta sea Lifetime.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

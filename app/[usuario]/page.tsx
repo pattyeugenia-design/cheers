@@ -25,7 +25,8 @@ function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string) {
     if (!cel.fecha) { sinFecha.push(cel); return }
     const f = new Date(cel.fecha)
     if (f < ahora) {
-      if (plan === 'free' && f < tresMesesAtras) { pasadasBloqueadas.push(cel) } else { pasadas.push(cel) }
+      // Lifetime desbloquea todo el historial de la cuenta; Pro desbloquea solo esta celebración
+      if (plan === 'free' && cel.plan !== 'pro' && f < tresMesesAtras) { pasadasBloqueadas.push(cel) } else { pasadas.push(cel) }
       return
     }
     const year = f.getFullYear()
@@ -153,11 +154,13 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
               .map(c => ({ ...c, invitadoDesde: fechaInvPorSlug[c.slug] }))
             )
           }
+
+          // La lista de celebraciones organizadas solo se muestra al dueño del perfil, nunca a otros visitantes
+          const { data } = await supabase.from('celebraciones').select('*').eq('organizador_id', perfil.user_id).order('fecha', { ascending: true })
+          setCelebraciones(data || [])
         }
       }
 
-      const { data } = await supabase.from('celebraciones').select('*').eq('organizador_id', perfil.user_id).order('fecha', { ascending: true })
-      setCelebraciones(data || [])
       setCargando(false)
     })
   }, [])
@@ -218,7 +221,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         </div>
       </div>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
-        {cel.es_sorpresa && esPropio && <span style={{ fontSize:11, fontWeight:700, color:'#D4537E', background:'rgba(212,83,126,.15)', padding:'2px 8px', borderRadius:99 }}>{tx.surprise}</span>}
+        {cel.es_sorpresa && esPropio && (plan === 'lifetime' || plan === 'pro' || cel.plan === 'pro') && <span style={{ fontSize:11, fontWeight:700, color:'#D4537E', background:'rgba(212,83,126,.15)', padding:'2px 8px', borderRadius:99 }}>{tx.surprise}</span>}
         {esPropio && <button onClick={e => { e.stopPropagation(); archivar(cel.slug, cel.archivada) }} style={{ border:'none', background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.35)', fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
           {cel.archivada ? (lang==='en'?'Unarchive':'Desarchivar') : (lang==='en'?'Archive':'Archivar')}
         </button>}

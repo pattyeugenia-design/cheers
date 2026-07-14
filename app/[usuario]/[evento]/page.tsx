@@ -220,7 +220,7 @@ function VistaBrief({ celebracion, lang, locale, organizador }: any) {
           <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
             {lang === 'en' ? "You're invited" : 'Estás invitado'}
           </div>
-          {celebracion.es_sorpresa && (
+          {celebracion.es_sorpresa && (organizador?.plan === 'lifetime' || organizador?.plan === 'pro' || celebracion.plan === 'pro') && (
             <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, color: '#fff', background: 'rgba(255,255,255,.18)', padding: '4px 12px', borderRadius: 99, marginBottom: 10 }}>
               🤫 {lang === 'en' ? 'Surprise!' : '¡Es sorpresa!'}
             </span>
@@ -612,8 +612,15 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [locale, setLocale] = useState('es-MX')
   const [celebracion, setCelebracion] = useState<any>(null)
   const [organizadorPlan, setOrganizadorPlan] = useState<string>('free')
-  const [organizadorInfo, setOrganizadorInfo] = useState<{ nombre: string; avatar: string | null } | null>(null)
-  const limiteInvitados = organizadorPlan === 'lifetime' ? Infinity : organizadorPlan === 'pro' ? 10 : 3
+  const [comprandoPro, setComprandoPro] = useState(false)
+  const [activandoPro, setActivandoPro] = useState(false)
+  const [bloqueoPro, setBloqueoPro] = useState<string | null>(null)
+  const [organizadorInfo, setOrganizadorInfo] = useState<{ nombre: string; avatar: string | null; plan?: string } | null>(null)
+  const cuentaEsLifetime = organizadorPlan === 'lifetime'
+  const eventoEsPro = cuentaEsLifetime || celebracion?.plan === 'pro' || organizadorPlan === 'pro'
+  const limiteInvitados = cuentaEsLifetime ? Infinity : eventoEsPro ? 10 : 3
+  const limiteRegalos = eventoEsPro ? Infinity : 1
+  const limiteParadas = eventoEsPro ? Infinity : 1
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitadosList, setInvitadosList] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
@@ -623,7 +630,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [tagline, setTagline] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
-  const [recordatorioDias, setRecordatorioDias] = useState(7)
+  const [recordatorioDias, setRecordatorioDias] = useState<number[]>([7])
   const [lugar, setLugar] = useState('')
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
@@ -649,6 +656,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
   const [showWAPrompt, setShowWAPrompt] = useState(false)
   const [mostrarQR, setMostrarQR] = useState(false)
+  const [mostrarRecordatorios, setMostrarRecordatorios] = useState(false)
+  const [ocurrencias, setOcurrencias] = useState<{ id: string; fecha: string; hora: string | null; lugar: string | null }[]>([])
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
 
@@ -685,30 +694,23 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       let cel: any = null
       const fullSlug = `${usuario}/${evento}`
-      const { data: d1 } = await supabase.from('celebraciones').select('*').eq('slug', fullSlug).single()
+      const { data: d1 } = await supabase.rpc('get_celebracion_por_slug', { p_slug: fullSlug })
       if (d1) cel = d1
       if (!cel) {
-        const { data: d2 } = await supabase.from('celebraciones').select('*').eq('slug', evento).single()
+        const { data: d2 } = await supabase.rpc('get_celebracion_por_slug', { p_slug: evento })
         if (d2) cel = d2
       }
 
       if (!cel) { setRol('sin_acceso'); setCargando(false); return }
 
       if (!authUser) {
-        // Lifetime: link completamente abierto, sin necesidad de cuenta ni brief limitado
-        let planOrg = 'free'
+        // El brief (sin cuenta) siempre está disponible, sin excepción, sin importar el plan del organizador
         if (cel.organizador_id) {
           const { data: perfilOrg } = await supabase.from('perfiles').select('plan, nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
-          if (perfilOrg?.plan) planOrg = perfilOrg.plan
-          if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null })
+          if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null, plan: perfilOrg.plan })
         }
         setCelebracion(cel)
-        if (planOrg === 'lifetime') {
-          setRol('invitado')
-        } else {
-          // Brief público: nombre, fecha, lugar, sin necesidad de cuenta
-          setRol('brief')
-        }
+        setRol('brief')
         setCargando(false)
         return
       }
@@ -722,40 +724,65 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         const { data: invPorId } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('user_id', authUser.id).single()
         if (invPorId) {
           inv = invPorId
+          setRol('invitado')
         } else {
           const { data: invPorEmail } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('email', authUser.email || '').is('user_id', null).single()
           if (invPorEmail) {
+            // Ya estaba pre-agregado por nombre/email; al reclamarlo con su cuenta queda desbloqueado
             const nombreReal = authUser.user_metadata?.name
             const update: any = { user_id: authUser.id }
             if (nombreReal && invPorEmail.nombre === invPorEmail.email) update.nombre = nombreReal
             await supabase.from('invitados').update(update).eq('id', invPorEmail.id)
             inv = { ...invPorEmail, ...update }
+            setRol('invitado')
           } else {
-            // Cualquiera con el link puede desbloquear detalles con su cuenta,
-            // no solo la gente que el organizador pre-agregó
-            const { data: nuevoInv } = await supabase.from('invitados').insert({
-              celebracion_slug: cel.slug,
-              email: authUser.email || null,
-              nombre: authUser.user_metadata?.name || authUser.email || '',
-              user_id: authUser.id,
-              created_at: new Date().toISOString(),
-            }).select().single()
-            inv = nuevoInv
+            const { data: perfilOrgCheck } = await supabase.from('perfiles').select('plan').eq('user_id', cel.organizador_id).single()
+            const planOrganizador = perfilOrgCheck?.plan || 'free'
+
+            if (planOrganizador !== 'lifetime') {
+              // Free/Pro: cualquiera con cuenta puede desbloquear detalles, sin tope (como ya funcionaba)
+              const { data: nuevoInv } = await supabase.from('invitados').insert({
+                celebracion_slug: cel.slug,
+                email: authUser.email || null,
+                nombre: authUser.user_metadata?.name || authUser.email || '',
+                user_id: authUser.id,
+                created_at: new Date().toISOString(),
+              }).select().single()
+              inv = nuevoInv
+              setRol(inv ? 'invitado' : 'brief')
+            } else {
+              // Lifetime: los primeros 10 que inicien sesión en este evento se desbloquean solos ("regalo" del organizador)
+              const { data: yaDesbloqueados } = await supabase.rpc('contar_desbloqueados', { p_slug: cel.slug })
+              if ((yaDesbloqueados ?? 0) < 10) {
+                const { data: nuevoInv } = await supabase.from('invitados').insert({
+                  celebracion_slug: cel.slug,
+                  email: authUser.email || null,
+                  nombre: authUser.user_metadata?.name || authUser.email || '',
+                  user_id: authUser.id,
+                  created_at: new Date().toISOString(),
+                }).select().single()
+                inv = nuevoInv
+                setRol(inv ? 'invitado' : 'brief')
+              } else {
+                // Cupo lleno: solo se desbloquea si SU PROPIA cuenta ya es Lifetime (no consume cupo del organizador, no se registra como invitado)
+                const { data: perfilPropio } = await supabase.from('perfiles').select('plan').eq('user_id', authUser.id).single()
+                setRol(perfilPropio?.plan === 'lifetime' ? 'invitado' : 'brief')
+              }
+            }
           }
         }
-        setRol(inv ? 'invitado' : 'sin_acceso')
       }
 
       setCelebracion(cel)
       if (cel.organizador_id) {
         const { data: perfilOrg } = await supabase.from('perfiles').select('plan, nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
         if (perfilOrg?.plan) setOrganizadorPlan(perfilOrg.plan)
-        if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null })
+        if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null, plan: perfilOrg.plan })
       }
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
-      setRecordatorioDias(cel.recordatorio_dias ?? 7)
+      setRecordatorioDias(Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [7])
       setLugar(cel.paradas?.[0]?.lugar || '')
       setPortadaUrl(cel.portada_url || null)
       setParadas(cel.paradas || [])
@@ -785,6 +812,25 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setTimeout(() => { if (titleRef.current) titleRef.current.innerHTML = cel.nombre_html || cel.nombre || '' }, 100)
     })
   }, [])
+
+  useEffect(() => {
+    if (!celebracion || rol !== 'organizador') return
+    const compra = new URLSearchParams(window.location.search).get('compra')
+    if (compra !== 'exitosa') return
+    setActivandoPro(true)
+    let intentos = 0
+    const interval = setInterval(async () => {
+      intentos++
+      const { data } = await supabase.from('celebraciones').select('*').eq('slug', celebracion.slug).single()
+      if (data?.plan === 'pro' || intentos >= 6) {
+        if (data) setCelebracion(data)
+        clearInterval(interval)
+        setActivandoPro(false)
+        window.history.replaceState({}, '', `/${celebracion.slug}`)
+      }
+    }, 1500)
+    return () => clearInterval(interval)
+  }, [celebracion?.slug, rol])
 
   const saveTitleHtml = useCallback(() => {
     if (!celebracion || !titleRef.current) return
@@ -819,7 +865,54 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   async function guardarCampo(campo: string, valor: any) {
     if (!celebracion) return
-    await supabase.from('celebraciones').update({ [campo]: valor }).eq('slug', celebracion.slug)
+    const { error } = await supabase.from('celebraciones').update({ [campo]: valor }).eq('slug', celebracion.slug)
+    if (error && ['tema', 'fuente', 'titulo_align', 'titulo_size'].includes(campo)) {
+      setBloqueoPro(tx.customize_locked_title)
+      const { data } = await supabase.from('celebraciones').select('*').eq('slug', celebracion.slug).single()
+      if (data) {
+        setCelebracion(data)
+        if (data.tema) setTema(data.tema)
+        if (data.fuente) setFuente(data.fuente)
+        if (data.titulo_align) setTituloEstilo(data.titulo_align)
+        if (data.titulo_size) setTituloSize(data.titulo_size)
+      }
+    }
+    if (error && campo === 'recordatorio_dias') {
+      setBloqueoPro(tx.reminder_locked_title)
+      const { data } = await supabase.from('celebraciones').select('recordatorio_dias').eq('slug', celebracion.slug).single()
+      setRecordatorioDias(Array.isArray(data?.recordatorio_dias) ? data.recordatorio_dias : [7])
+    }
+  }
+
+  useEffect(() => {
+    if (!celebracion?.recurrente || !celebracion?.slug) { setOcurrencias([]); return }
+
+    async function cargarOcurrencias() {
+      if (rol === 'organizador') {
+        const { data } = await supabase
+          .from('ocurrencias')
+          .select('id, fecha, hora, lugar')
+          .eq('celebracion_slug', celebracion.slug)
+          .eq('cancelada', false)
+          .order('fecha', { ascending: true })
+        setOcurrencias(data || [])
+      } else if (rol === 'invitado' || rol === 'brief') {
+        const { data } = await supabase.rpc('get_ocurrencias_por_slug', { p_slug: celebracion.slug })
+        const lista = (data || []).map((o: any, i: number) => ({ id: String(i), fecha: o.fecha, hora: o.hora, lugar: o.lugar }))
+        setOcurrencias(rol === 'brief' ? lista.slice(0, 1) : lista)
+      }
+    }
+    cargarOcurrencias()
+  }, [celebracion?.slug, celebracion?.recurrente, rol])
+
+  async function actualizarOcurrencia(id: string, campo: 'lugar' | 'hora', valor: string) {
+    await supabase.from('ocurrencias').update({ [campo]: valor || null }).eq('id', id)
+    setOcurrencias(prev => prev.map(o => o.id === id ? { ...o, [campo]: valor || null } : o))
+  }
+
+  async function cancelarOcurrencia(id: string) {
+    await supabase.from('ocurrencias').update({ cancelada: true }).eq('id', id)
+    setOcurrencias(prev => prev.filter(o => o.id !== id))
   }
 
   async function guardarLugar(val: string) {
@@ -857,6 +950,24 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     setInvitadosList(prev => prev.filter(i => i.id !== id))
   }
 
+  async function comprarPro() {
+    if (!celebracion || comprandoPro) return
+    setComprandoPro(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token, tipo: 'pro', slug: celebracion.slug }),
+    })
+    const data = await res.json()
+    if (res.ok && data.url) {
+      window.location.href = data.url
+    } else {
+      setComprandoPro(false)
+      alert(lang === 'en' ? 'Something went wrong, please try again.' : 'Algo salió mal, intenta de nuevo.')
+    }
+  }
+
   function enviarWA(nombre?: string, phone?: string) {
     const shareUrl = `https://joincheers.app/${celebracion?.slug}`
     const greeting = nombre ? `¡Hola ${nombre}! ` : '¡Hola! '
@@ -867,9 +978,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   }
 
   async function agregarRegalo() {
-    if (!nuevoRegalo.nombre.trim() || !celebracion) return
+    if (!nuevoRegalo.nombre.trim() || !celebracion || regalos.length >= limiteRegalos) return
+    const anterior = regalos
     const nuevo = [...regalos, { id: Date.now().toString(), nombre: nuevoRegalo.nombre.trim(), precio: nuevoRegalo.precio, link: nuevoRegalo.link, reservado: false }]
-    setRegalos(nuevo); await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+    setRegalos(nuevo)
+    const { error } = await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+    if (error) { setRegalos(anterior); setBloqueoPro(tx.gift_limit_title); return }
     setNuevoRegalo({ nombre: '', precio: '', link: '' }); setShowAddRegalo(false)
   }
 
@@ -884,9 +998,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   }
 
   async function agregarParada() {
-    if (!nuevaParada.lugar.trim() || !celebracion) return
+    if (!nuevaParada.lugar.trim() || !celebracion || paradas.filter(p => p.id).length >= limiteParadas) return
+    const anterior = paradas
     const nuevo = [...paradas, { id: Date.now().toString(), ...nuevaParada }]
-    setParadas(nuevo); await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
+    setParadas(nuevo)
+    const { error } = await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
+    if (error) { setParadas(anterior); setBloqueoPro(tx.stop_limit_title); return }
     setNuevaParada({ lugar: '', hora: '', nota: '' }); setShowAddParada(false)
   }
 
@@ -994,7 +1111,16 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const cancelBtn: React.CSSProperties = { border: 'none', background: '#f0edf8', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }
   const deleteBtn: React.CSSProperties = { border: 'none', background: '#fee2e2', color: '#dc2626', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
 
-  const SidebarContent = () => (
+  const SidebarContent = () => !eventoEsPro ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ background: 'rgba(255,255,255,.08)', borderRadius: 14, padding: '18px 16px' }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 6 }}>{tx.customize_locked_title}</div>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', lineHeight: 1.5, marginBottom: 12 }}>{tx.customize_locked_desc}</div>
+        <button onClick={comprarPro} disabled={comprandoPro} style={{ width: '100%', border: 'none', background: '#fff', color: '#534AB7', fontSize: 13, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{comprandoPro ? '...' : tx.customize_upgrade_cta}</button>
+      </div>
+      <button onClick={() => setShowCustomize(false)} style={{ border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '10px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{tx.save_close}</button>
+    </div>
+  ) : (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase' as const, marginBottom: 10 }}>{tx.theme}</div>
@@ -1113,7 +1239,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
           <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
             <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.free_limit_title(limiteInvitados)}</div>
             <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.free_limit_desc}</div>
-            <button style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{tx.upgrade_cta}</button>
+            <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{comprandoPro ? '...' : tx.upgrade_cta}</button>
           </div>
         ) : showAddInvitado ? (
           <div>
@@ -1162,6 +1288,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
               <button onClick={() => { setShowAddRegalo(false); setNuevoRegalo({ nombre: '', precio: '', link: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
           </div>
+        ) : regalos.length >= limiteRegalos ? (
+          <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.gift_limit_title}</div>
+            <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.gift_limit_desc}</div>
+            <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{comprandoPro ? '...' : tx.gift_upgrade_cta}</button>
+          </div>
         ) : <button onClick={() => setShowAddRegalo(true)} style={dashedBtn}>{tx.add_gift}</button>}
       </div>
     )
@@ -1190,6 +1322,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
               <button onClick={agregarParada} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add stop' : 'Agregar'}</button>
               <button onClick={() => { setShowAddParada(false); setNuevaParada({ lugar: '', hora: '', nota: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
+          </div>
+        ) : paradas.filter(p => p.id).length >= limiteParadas ? (
+          <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.stop_limit_title}</div>
+            <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.stop_limit_desc}</div>
+            <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{comprandoPro ? '...' : tx.stop_upgrade_cta}</button>
           </div>
         ) : <button onClick={() => setShowAddParada(true)} style={dashedBtn}>{tx.add_stop}</button>}
       </div>
@@ -1287,6 +1425,25 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99 }}>
         {STARS.map((s, i) => <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: `${starColor}0.45)`, lineHeight: 1, userSelect: 'none', animation: `starPulse ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>)}
       </div>
+
+      {activandoPro && (
+        <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 400, background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 14, padding: '10px 18px', color: '#fff', fontSize: 13, fontWeight: 700, boxShadow: '0 8px 24px rgba(20,10,40,.3)' }}>
+          {lang === 'en' ? '✓ Payment received — activating Pro for this celebration...' : '✓ Pago recibido — activando Pro para esta celebración...'}
+        </div>
+      )}
+
+      {bloqueoPro && (
+        <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 400, background: '#fff', borderRadius: 14, padding: '12px 16px', boxShadow: '0 8px 24px rgba(20,10,40,.3)', display: 'flex', alignItems: 'center', gap: 12, maxWidth: '90vw' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#2a2440' }}>{bloqueoPro}</span>
+          <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS, whiteSpace: 'nowrap' }}>
+            {comprandoPro ? '...' : (lang === 'en' ? 'Go Pro →' : 'Hazte Pro →')}
+          </button>
+          <button onClick={() => router.push('/perfil')} style={{ border: 'none', background: 'none', color: '#7a7494', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+            {lang === 'en' ? 'or Lifetime' : 'o Lifetime'}
+          </button>
+          <button onClick={() => setBloqueoPro(null)} style={{ border: 'none', background: 'none', color: '#a39ec0', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+      )}
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }} style={{ display: 'none' }} />
 
@@ -1406,23 +1563,60 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.date}</div>
                   <input type="date" style={{ ...fieldInput, fontSize: 14 }} value={fecha} onChange={e => setFecha(e.target.value)} onBlur={e => guardarCampo('fecha', e.target.value)} />
                 </div>
-                <div>
+                <div style={{ position: 'relative' }}>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{lang === 'en' ? 'Remind me' : 'Recordarme'}</div>
-                  <select
-                    style={{ ...fieldInput, fontSize: 14, cursor: 'pointer' }}
-                    value={recordatorioDias}
-                    onChange={e => {
-                      const v = Number(e.target.value)
-                      setRecordatorioDias(v)
-                      guardarCampo('recordatorio_dias', v)
-                    }}
-                  >
-                    <option value={1}>{lang === 'en' ? '1 day before' : '1 día antes'}</option>
-                    <option value={3}>{lang === 'en' ? '3 days before' : '3 días antes'}</option>
-                    <option value={7}>{lang === 'en' ? '1 week before' : '1 semana antes'}</option>
-                    <option value={14}>{lang === 'en' ? '2 weeks before' : '2 semanas antes'}</option>
-                    <option value={30}>{lang === 'en' ? '1 month before' : '1 mes antes'}</option>
-                  </select>
+                  {(() => {
+                    const RECORDATORIO_OPCIONES: { v: number; label: string }[] = [
+                      { v: 1, label: lang === 'en' ? '1 day before' : '1 día antes' },
+                      { v: 3, label: lang === 'en' ? '3 days before' : '3 días antes' },
+                      { v: 7, label: lang === 'en' ? '1 week before' : '1 semana antes' },
+                      { v: 14, label: lang === 'en' ? '2 weeks before' : '2 semanas antes' },
+                      { v: 30, label: lang === 'en' ? '1 month before' : '1 mes antes' },
+                    ]
+                    const resumen = recordatorioDias.length === 1
+                      ? (RECORDATORIO_OPCIONES.find(o => o.v === recordatorioDias[0])?.label || '')
+                      : `${recordatorioDias.length} ${lang === 'en' ? 'reminders' : 'recordatorios'}`
+                    return (
+                      <>
+                        <button type="button" onClick={() => setMostrarRecordatorios(v => !v)} style={{ ...fieldInput, fontSize: 14, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' as const }}>
+                          <span>{resumen}</span>
+                          <span style={{ fontSize: 10, color: '#a39ec0' }}>▾</span>
+                        </button>
+                        {mostrarRecordatorios && (
+                          <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#fff', borderRadius: 12, boxShadow: '0 8px 24px rgba(20,10,40,.2)', padding: 10, zIndex: 50, minWidth: 190 }}>
+                            {RECORDATORIO_OPCIONES.map(op => {
+                              const activo = recordatorioDias.includes(op.v)
+                              return (
+                                <label key={op.v} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', cursor: 'pointer', fontSize: 13, color: '#2a2440' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={activo}
+                                    onChange={() => {
+                                      let nuevo: number[]
+                                      if (activo) {
+                                        nuevo = recordatorioDias.filter(d => d !== op.v)
+                                        if (nuevo.length === 0) nuevo = [op.v]
+                                      } else {
+                                        if (!eventoEsPro && recordatorioDias.length >= 1) { setBloqueoPro(tx.reminder_locked_title); return }
+                                        if (recordatorioDias.length >= 4) return
+                                        nuevo = [...recordatorioDias, op.v].sort((a, b) => a - b)
+                                      }
+                                      setRecordatorioDias(nuevo)
+                                      guardarCampo('recordatorio_dias', nuevo)
+                                    }}
+                                  />
+                                  {op.label}
+                                </label>
+                              )
+                            })}
+                            <button type="button" onClick={() => setMostrarRecordatorios(false)} style={{ marginTop: 6, width: '100%', border: 'none', background: '#F5F4FB', color: '#534AB7', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>
+                              {lang === 'en' ? 'Done' : 'Listo'}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.place}</div>
@@ -1463,6 +1657,54 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
               </div>
             </div>
           </div>
+
+          {/* Fechas de la serie recurrente */}
+          {celebracion?.recurrente && (
+            <div style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', boxShadow: '0 12px 32px rgba(25,12,50,.18)', marginBottom: 14, padding: '16px 18px' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, marginBottom: 10 }}>
+                {lang === 'en' ? 'Upcoming dates' : 'Próximas fechas'}
+              </div>
+
+              {ocurrencias.length === 0 && (
+                <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>
+                  {rol === 'organizador'
+                    ? (eventoEsPro
+                        ? (lang === 'en' ? 'Generating dates soon.' : 'Las fechas se generan pronto.')
+                        : (lang === 'en' ? 'Go Pro or Lifetime so future dates get generated.' : 'Hazte Pro o Lifetime para que se generen las fechas futuras.'))
+                    : (lang === 'en' ? 'No upcoming dates yet.' : 'Todavía no hay fechas próximas.')}
+                </p>
+              )}
+
+              {ocurrencias.map(o => (
+                <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,.05)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#2a2440', minWidth: 92, flexShrink: 0 }}>
+                    {new Date(o.fecha + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </div>
+                  {rol === 'organizador' ? (
+                    <>
+                      <input
+                        defaultValue={o.hora || ''}
+                        onBlur={e => actualizarOcurrencia(o.id, 'hora', e.target.value)}
+                        placeholder={lang === 'en' ? 'time' : 'hora'}
+                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 70, flexShrink: 0 }}
+                      />
+                      <input
+                        defaultValue={o.lugar || ''}
+                        onBlur={e => actualizarOcurrencia(o.id, 'lugar', e.target.value)}
+                        placeholder={lang === 'en' ? 'place (optional)' : 'lugar (opcional)'}
+                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', flex: 1 }}
+                      />
+                      <button onClick={() => cancelarOcurrencia(o.id)} style={{ border: 'none', background: 'none', color: '#D4537E', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>
+                        {lang === 'en' ? 'Cancel' : 'Cancelar'}
+                      </button>
+                    </>
+                  ) : (
+                    o.lugar && <div style={{ fontSize: 13, color: '#6b6585' }}>{o.lugar}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Lifetime colapsable */}
           {lifetimeExpanded ? (

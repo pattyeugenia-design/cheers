@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/recordatorios",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/post-evento",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/generar-ocurrencias",
+      "schedule": "0 14 * * *"
     }
   ]
 }
