@@ -175,6 +175,7 @@ export default function Home() {
             <a href="#como-funciona" className="nav-a" style={{ fontSize:14, color:'rgba(255,255,255,.5)', textDecoration:'none' }}>{tx.nav_how}</a>
             <a href="#precios" className="nav-a" style={{ fontSize:14, color:'rgba(255,255,255,.5)', textDecoration:'none' }}>{tx.nav_prices}</a>
           </>}
+          <a href="/faq" className="nav-a" style={{ fontSize:14, color:'rgba(255,255,255,.5)', textDecoration:'none' }}>FAQ</a>
           <button onClick={loginConGoogle} style={{ fontSize:13, fontWeight:700, background:'rgba(255,255,255,.08)', color:'#fff', padding:isMobile?'7px 14px':'8px 18px', borderRadius:99, border:'1px solid rgba(255,255,255,.12)', cursor:'pointer', fontFamily:F }}>{tx.nav_cta}</button>
         </div>
       </nav>
