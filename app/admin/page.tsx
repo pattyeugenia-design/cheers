@@ -83,6 +83,25 @@ export default function Admin() {
   const porTipo: Record<string, number> = {}
   celebraciones.forEach(c => { porTipo[c.tipo] = (porTipo[c.tipo] || 0) + 1 })
 
+  // Crecimiento diario (últimos 14 días)
+  const DIAS = 14
+  const dias = Array.from({ length: DIAS }, (_, i) => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    d.setDate(d.getDate() - (DIAS - 1 - i))
+    return d
+  })
+  const contarPorDia = (items: any[]) => dias.map(d => {
+    const siguiente = new Date(d); siguiente.setDate(d.getDate() + 1)
+    return items.filter(it => {
+      const f = new Date(it.created_at)
+      return f >= d && f < siguiente
+    }).length
+  })
+  const usuariosPorDia = contarPorDia(usuarios)
+  const celsPorDia = contarPorDia(celebraciones)
+  const maxDia = Math.max(...usuariosPorDia, ...celsPorDia, 1)
+
   const stat = (label: string, value: string | number, sub?: string, color = '#a89df0') => (
     <div style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:16, padding:'18px 20px' }}>
       <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', textTransform:'uppercase', letterSpacing:'.5px', marginBottom:6 }}>{label}</div>
@@ -174,6 +193,26 @@ export default function Admin() {
               {stat('Celebraciones', totalCels, `+${celsEstaSeamana} esta semana`, '#f08cb0')}
               {stat('Invitados', totalInvitados, 'en todas las cels', '#4ade80')}
               {stat('RSVPs', totalRsvps, `${Math.round(rsvpVan/Math.max(totalRsvps,1)*100)}% confirman ir`, '#60a5fa')}
+            </div>
+
+            {/* Crecimiento diario */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:4, textTransform:'uppercase', letterSpacing:'.5px' }}>Crecimiento (últimos 14 días)</div>
+              <div style={{ display:'flex', gap:12, marginBottom:16 }}>
+                <span style={{ fontSize:11, color:'#a89df0' }}>■ Usuarios nuevos</span>
+                <span style={{ fontSize:11, color:'#f08cb0' }}>■ Celebraciones nuevas</span>
+              </div>
+              <div style={{ display:'flex', alignItems:'flex-end', gap:4, height:100 }}>
+                {dias.map((d, i) => (
+                  <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2, height:'100%', justifyContent:'flex-end' }} title={d.toLocaleDateString('es-MX')}>
+                    <div style={{ display:'flex', alignItems:'flex-end', gap:1, height:'100%' }}>
+                      <div style={{ width:6, height:`${(usuariosPorDia[i]/maxDia)*100}%`, minHeight:usuariosPorDia[i]>0?2:0, background:'#a89df0', borderRadius:2 }} />
+                      <div style={{ width:6, height:`${(celsPorDia[i]/maxDia)*100}%`, minHeight:celsPorDia[i]>0?2:0, background:'#f08cb0', borderRadius:2 }} />
+                    </div>
+                    <span style={{ fontSize:9, color:'rgba(255,255,255,.3)' }}>{d.getDate()}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Por tipo */}
