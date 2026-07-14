@@ -310,6 +310,7 @@ export default function Home() {
       <footer style={{ padding:`20px ${px}`, borderTop:'1px solid rgba(255,255,255,.05)', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, position:'relative', zIndex:1 }}>
         <div style={{ fontSize:15, fontWeight:900, background:'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Cheers</div>
         <div style={{ display:'flex', gap:20, alignItems:'center' }}>
+          <a href="/faq" style={{ fontSize:12, color:'rgba(255,255,255,.3)', textDecoration:'none' }}>FAQ</a>
           <a href="/privacidad" style={{ fontSize:12, color:'rgba(255,255,255,.3)', textDecoration:'none' }}>{tx.footer_privacy}</a>
           <a href="/terminos" style={{ fontSize:12, color:'rgba(255,255,255,.3)', textDecoration:'none' }}>{tx.footer_terms}</a>
           <p style={{ fontSize:12, color:'rgba(255,255,255,.2)', margin:0 }}>joincheers.app · 2026</p>
