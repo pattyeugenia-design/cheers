@@ -21,7 +21,7 @@ export default function Terminos() {
 
         {[
           { title: '1. Aceptación', body: 'Al usar Cheers (joincheers.app), aceptas estos términos. Si no estás de acuerdo, no uses el servicio.' },
-          { title: '2. El servicio', body: 'Cheers es una plataforma para organizar celebraciones privadas. Permite crear páginas de eventos, invitar personas y gestionar confirmaciones de asistencia.' },
+          { title: '2. El servicio', body: 'Cheers es una plataforma para organizar celebraciones. Permite crear páginas de eventos, compartirlas mediante un link, e invitar personas a confirmar su asistencia. Según el plan del organizador, el nivel de detalle visible sin necesidad de cuenta puede variar.' },
           { title: '3. Tu cuenta', body: 'Eres responsable de mantener la seguridad de tu cuenta. No compartas tus credenciales. Debes tener al menos 13 años para usar el servicio.' },
           { title: '4. Uso aceptable', body: 'Puedes usar Cheers para organizar eventos personales y sociales. No puedes usar el servicio para actividades ilegales, spam, acoso, o para distribuir contenido dañino u ofensivo.' },
           { title: '5. Contenido', body: 'Eres responsable del contenido que publicas en Cheers (nombres de eventos, fotos, información de invitados). Nos otorgas una licencia limitada para mostrar ese contenido como parte del servicio.' },
