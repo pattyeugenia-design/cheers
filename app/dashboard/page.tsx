@@ -16,8 +16,11 @@ export default function DashboardRedirect() {
         .eq('user_id', user.id)
         .single()
 
+      const redirect = typeof window !== 'undefined' ? sessionStorage.getItem('redirect_after_login') : null
+
       if (perfil?.username) {
-        router.replace(`/${perfil.username}`)
+        if (redirect) { sessionStorage.removeItem('redirect_after_login'); router.replace(redirect) }
+        else router.replace(`/${perfil.username}`)
       } else {
         router.replace('/onboarding')
       }
