@@ -259,15 +259,18 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
   const [guardado, setGuardado] = useState(false)
   const [rsvpExistente, setRsvpExistente] = useState<any>(null)
   const [confirmados, setConfirmados] = useState<any[]>([])
+  const [nombreManual, setNombreManual] = useState('')
 
   useEffect(() => {
-    supabase.from('rsvps').select('*')
-      .eq('celebracion_slug', celebracion.slug)
-      .eq('nombre', user?.user_metadata?.name || user?.email || '')
-      .single()
-      .then(({ data }) => {
-        if (data) { setRsvpExistente(data); setAsistencia(data.asistencia); setMensaje(data.mensaje || '') }
-      })
+    if (user) {
+      supabase.from('rsvps').select('*')
+        .eq('celebracion_slug', celebracion.slug)
+        .eq('nombre', user?.user_metadata?.name || user?.email || '')
+        .single()
+        .then(({ data }) => {
+          if (data) { setRsvpExistente(data); setAsistencia(data.asistencia); setMensaje(data.mensaje || '') }
+        })
+    }
     supabase.from('rsvps').select('nombre')
       .eq('celebracion_slug', celebracion.slug)
       .eq('asistencia', 'si')
@@ -275,9 +278,10 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
   }, [])
 
   async function guardarRsvp() {
-    if (!asistencia) return
+    const nombre = user ? (user?.user_metadata?.name || user?.email || '') : nombreManual.trim()
+    if (!asistencia || !nombre) return
     setGuardando(true)
-    const payload = { celebracion_slug: celebracion.slug, nombre: user?.user_metadata?.name || user?.email || '', asistencia, mensaje: mensaje.trim() || null }
+    const payload = { celebracion_slug: celebracion.slug, nombre, asistencia, mensaje: mensaje.trim() || null }
     if (rsvpExistente) await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
     else await supabase.from('rsvps').insert(payload)
     const { data } = await supabase.from('rsvps').select('nombre').eq('celebracion_slug', celebracion.slug).eq('asistencia', 'si')
@@ -340,6 +344,14 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
           <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>
             {rsvpExistente ? (lang === 'en' ? 'Your RSVP' : 'Tu confirmación') : (lang === 'en' ? 'Will you be there?' : '¿Vas a ir?')}
           </div>
+          {!user && (
+            <input
+              value={nombreManual}
+              onChange={e => setNombreManual(e.target.value)}
+              placeholder={lang === 'en' ? 'Your name' : 'Tu nombre'}
+              style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 12 }}
+            />
+          )}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             {(['si', 'no', 'talvez'] as const).map(op => {
               const c = rsvpColors[op]
@@ -355,7 +367,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
               <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder={lang === 'en' ? 'Write something nice...' : 'Escribe algo bonito...'} rows={3} style={{ border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'none', lineHeight: 1.5 }} />
             </div>
           )}
-          <button onClick={guardarRsvp} disabled={!asistencia || guardando} style={{ width: '100%', padding: '14px', background: asistencia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: asistencia ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: asistencia ? 'pointer' : 'default', fontFamily: FSYS }}>
+          <button onClick={guardarRsvp} disabled={!asistencia || guardando || (!user && !nombreManual.trim())} style={{ width: '100%', padding: '14px', background: asistencia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: asistencia ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: asistencia ? 'pointer' : 'default', fontFamily: FSYS }}>
             {guardando ? '...' : guardado ? (lang === 'en' ? '✓ Confirmed!' : '✓ ¡Confirmado!') : rsvpExistente ? (lang === 'en' ? 'Update RSVP' : 'Actualizar') : (lang === 'en' ? 'Confirm attendance' : 'Confirmar asistencia')}
           </button>
         </div>
@@ -622,12 +634,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       if (!cel) { setRol('sin_acceso'); setCargando(false); return }
 
       if (!authUser) {
-        // Brief público: nombre, fecha, lugar, sin necesidad de cuenta
-        setCelebracion(cel)
-        setRol('brief')
+        // Lifetime: link completamente abierto, sin necesidad de cuenta ni brief limitado
+        let planOrg = 'free'
         if (cel.organizador_id) {
-          const { data: perfilOrg } = await supabase.from('perfiles').select('nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
+          const { data: perfilOrg } = await supabase.from('perfiles').select('plan, nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
+          if (perfilOrg?.plan) planOrg = perfilOrg.plan
           if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null })
+        }
+        setCelebracion(cel)
+        if (planOrg === 'lifetime') {
+          setRol('invitado')
+        } else {
+          // Brief público: nombre, fecha, lugar, sin necesidad de cuenta
+          setRol('brief')
         }
         setCargando(false)
         return
