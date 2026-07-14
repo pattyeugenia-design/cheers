@@ -181,6 +181,11 @@ function VistaBrief({ celebracion, lang, locale, organizador }: any) {
       asistencia,
       mensaje: null,
     })
+    fetch('/api/notificar-rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreInvitado: nombreInvitado.trim(), asistencia, mensaje: null }),
+    }).catch(() => {})
     setGuardando(false); setGuardado(true)
   }
 
@@ -321,6 +326,11 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
     const payload = { celebracion_slug: celebracion.slug, nombre, asistencia, mensaje: mensaje.trim() || null }
     if (rsvpExistente) await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
     else await supabase.from('rsvps').insert(payload)
+    fetch('/api/notificar-rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreInvitado: nombre, asistencia, mensaje: mensaje.trim() || null }),
+    }).catch(() => {})
     const { data } = await supabase.from('rsvps').select('nombre').eq('celebracion_slug', celebracion.slug).eq('asistencia', 'si')
     setConfirmados(data || [])
     setGuardando(false); setGuardado(true)
