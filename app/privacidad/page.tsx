@@ -14,10 +14,17 @@ export default function Privacidad() {
 
   return (
     <main style={{ minHeight:'100vh', background:'#0d0b1a', fontFamily:F, color:'rgba(255,255,255,.85)', padding:'80px 20px 60px' }}>
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 20px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(13,11,26,.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+        <a href="/" style={{ fontSize: 20, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-.5px', textDecoration: 'none' }}>Cheers</a>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          <a href="/#como-funciona" style={{ fontSize: 14, color: 'rgba(255,255,255,.5)', textDecoration: 'none' }}>{lang === 'en' ? 'How it works' : 'Cómo funciona'}</a>
+          <a href="/#precios" style={{ fontSize: 14, color: 'rgba(255,255,255,.5)', textDecoration: 'none' }}>{lang === 'en' ? 'Pricing' : 'Precios'}</a>
+          <a href="/login" style={{ fontSize: 13, fontWeight: 700, background: 'rgba(255,255,255,.08)', color: '#fff', padding: '8px 18px', borderRadius: 99, border: '1px solid rgba(255,255,255,.12)', textDecoration: 'none' }}>{lang === 'en' ? 'Sign in' : 'Entrar'}</a>
+        </div>
+      </nav>
       <div style={{ maxWidth:720, margin:'0 auto' }}>
         <button onClick={() => router.back()} style={{ border:'none', background:'rgba(255,255,255,.08)', color:'rgba(255,255,255,.6)', fontSize:13, fontWeight:700, padding:'8px 16px', borderRadius:99, cursor:'pointer', fontFamily:F, marginBottom:32 }}>← Atrás</button>
-        
-        <div style={{ fontSize:18, fontWeight:900, background:'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:8 }}>Cheers</div>
+
         <h1 style={{ fontSize:32, fontWeight:800, color:'#fff', margin:'0 0 8px', letterSpacing:'-.5px' }}>Política de Privacidad</h1>
         <p style={{ fontSize:14, color:'rgba(255,255,255,.35)', marginBottom:48 }}>Última actualización: {fecha}</p>
 

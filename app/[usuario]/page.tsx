@@ -11,6 +11,8 @@ const CHIPS: Record<string, string> = {
   cumple:'BDAY', cumpleanos:'BDAY', cena:'DINE', viaje:'TRIP', reunion:'MEET', evento:'EVENT', otro:'OTHER'
 }
 
+const NOMBRE_PLAN: Record<string, string> = { free: 'Cheer', pro: 'Super Cheer', lifetime: 'Extra Cheer' }
+
 function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string) {
   const ahora = new Date()
   const tresMesesAtras = new Date()
@@ -260,7 +262,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
                     <div style={{ padding:'8px 12px', marginBottom:4 }}>
                       <div style={{ fontSize:14, fontWeight:700, color:'#EEEDFE', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{nombre}</div>
                       <div style={{ fontSize:12, color:'#AFA9EC' }}>@{username}</div>
-                      <div style={{ fontSize:11, fontWeight:800, color:plan==='lifetime'?'#D4537E':plan==='pro'?'#534AB7':'#7a7494', marginTop:3, textTransform:'uppercase', letterSpacing:'.5px' }}>{plan}</div>
+                      <div style={{ fontSize:11, fontWeight:800, color:plan==='lifetime'?'#D4537E':plan==='pro'?'#534AB7':'#7a7494', marginTop:3, textTransform:'uppercase', letterSpacing:'.5px' }}>{NOMBRE_PLAN[plan] || plan}</div>
                     </div>
                     <div style={{ borderTop:'1px solid rgba(255,255,255,.08)', paddingTop:8 }}>
                       {[
