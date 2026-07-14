@@ -36,7 +36,9 @@ export default function Onboarding() {
         .single()
 
       if (perfil?.username) {
-        router.push(`/${perfil.username}`)
+        const redirect = typeof window !== 'undefined' ? sessionStorage.getItem('redirect_after_login') : null
+        if (redirect) { sessionStorage.removeItem('redirect_after_login'); router.push(redirect) }
+        else router.push(`/${perfil.username}`)
         return
       }
 
@@ -87,7 +89,9 @@ export default function Onboarding() {
       return
     }
 
-    router.push(`/${username}`)
+    const redirect = typeof window !== 'undefined' ? sessionStorage.getItem('redirect_after_login') : null
+    if (redirect) { sessionStorage.removeItem('redirect_after_login'); router.push(redirect) }
+    else router.push(`/${username}`)
   }
 
   const nombreSugerido = user?.user_metadata?.name?.split(' ')[0] || ''
