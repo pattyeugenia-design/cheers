@@ -30,14 +30,14 @@ export async function POST(req: Request) {
     // Pro es por celebración: confirmar que esta celebración es de quien está pagando
     const { data: cel } = await admin.from('celebraciones').select('slug, organizador_id, plan').eq('slug', slug).single()
     if (!cel || cel.organizador_id !== user.id) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-    if (cel.plan === 'pro') return NextResponse.json({ error: 'Esta celebración ya es Pro' }, { status: 400 })
+    if (cel.plan === 'pro') return NextResponse.json({ error: 'Esta celebración ya es Super Cheer' }, { status: 400 })
 
     priceId = process.env.STRIPE_PRICE_PRO!
     metadata.slug = slug
   } else {
     // Lifetime es de toda la cuenta
     const { data: perfil } = await admin.from('perfiles').select('plan').eq('user_id', user.id).single()
-    if (perfil?.plan === 'lifetime') return NextResponse.json({ error: 'Ya tienes Lifetime' }, { status: 400 })
+    if (perfil?.plan === 'lifetime') return NextResponse.json({ error: 'Ya tienes Extra Cheer' }, { status: 400 })
 
     priceId = process.env.STRIPE_PRICE_LIFETIME!
   }

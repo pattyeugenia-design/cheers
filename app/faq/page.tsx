@@ -16,8 +16,8 @@ const PREGUNTAS = [
   {
     q: { es: '¿Es gratis?', en: 'Is it free?' },
     a: {
-      es: 'Sí. El plan Free te deja crear 1 celebración activa a la vez con hasta 3 invitados, sin necesidad de tarjeta. Si necesitas más invitados o más de un evento a la vez, existen los planes Pro ($9 USD por celebración, hasta 10 invitados) y Lifetime ($49 USD pago único, todo ilimitado).',
-      en: 'Yes. The Free plan lets you create 1 active celebration at a time with up to 3 guests, no card required. If you need more guests or more than one event at a time, there are Pro plans ($9 USD per celebration, up to 10 guests) and Lifetime ($49 USD one-time payment, everything unlimited).',
+      es: 'Sí. El plan Cheer te deja crear 1 celebración activa a la vez con hasta 3 invitados, sin necesidad de tarjeta. Si necesitas más invitados o más de un evento a la vez, existen los planes Super Cheer ($9 USD por celebración, hasta 10 invitados) y Extra Cheer ($49 USD pago único, todo ilimitado).',
+      en: 'Yes. The Cheer plan lets you create 1 active celebration at a time with up to 3 guests, no card required. If you need more guests or more than one event at a time, there are Super Cheer plans ($9 USD per celebration, up to 10 guests) and Extra Cheer ($49 USD one-time payment, everything unlimited).',
     },
   },
   {

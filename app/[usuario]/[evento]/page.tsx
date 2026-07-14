@@ -1428,7 +1428,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       {activandoPro && (
         <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 400, background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 14, padding: '10px 18px', color: '#fff', fontSize: 13, fontWeight: 700, boxShadow: '0 8px 24px rgba(20,10,40,.3)' }}>
-          {lang === 'en' ? '✓ Payment received — activating Pro for this celebration...' : '✓ Pago recibido — activando Pro para esta celebración...'}
+          {lang === 'en' ? '✓ Payment received — activating Super Cheer for this celebration...' : '✓ Pago recibido — activando Super Cheer para esta celebración...'}
         </div>
       )}
 
@@ -1436,10 +1436,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 400, background: '#fff', borderRadius: 14, padding: '12px 16px', boxShadow: '0 8px 24px rgba(20,10,40,.3)', display: 'flex', alignItems: 'center', gap: 12, maxWidth: '90vw' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#2a2440' }}>{bloqueoPro}</span>
           <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS, whiteSpace: 'nowrap' }}>
-            {comprandoPro ? '...' : (lang === 'en' ? 'Go Pro →' : 'Hazte Pro →')}
+            {comprandoPro ? '...' : (lang === 'en' ? 'Go Super Cheer →' : 'Hazte Super Cheer →')}
           </button>
           <button onClick={() => router.push('/perfil')} style={{ border: 'none', background: 'none', color: '#7a7494', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
-            {lang === 'en' ? 'or Lifetime' : 'o Lifetime'}
+            {lang === 'en' ? 'or Extra Cheer' : 'o Extra Cheer'}
           </button>
           <button onClick={() => setBloqueoPro(null)} style={{ border: 'none', background: 'none', color: '#a39ec0', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
@@ -1670,7 +1670,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   {rol === 'organizador'
                     ? (eventoEsPro
                         ? (lang === 'en' ? 'Generating dates soon.' : 'Las fechas se generan pronto.')
-                        : (lang === 'en' ? 'Go Pro or Lifetime so future dates get generated.' : 'Hazte Pro o Lifetime para que se generen las fechas futuras.'))
+                        : (lang === 'en' ? 'Go Super Cheer or Extra Cheer so future dates get generated.' : 'Hazte Super Cheer o Extra Cheer para que se generen las fechas futuras.'))
                     : (lang === 'en' ? 'No upcoming dates yet.' : 'Todavía no hay fechas próximas.')}
                 </p>
               )}
@@ -1723,7 +1723,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             </div>
           ) : (
             <button onClick={() => setLifetimeExpanded(true)} style={{ width: '100%', marginBottom: 14, padding: '9px 18px', background: te.dark ? 'rgba(83,74,183,.12)' : 'rgba(83,74,183,.07)', border: `1px dashed ${te.dark ? 'rgba(83,74,183,.4)' : 'rgba(83,74,183,.3)'}`, borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <span style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>Cheers Lifetime</span>
+              <span style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>Cheers Extra Cheer</span>
               <span style={{ color: te.dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.4)', fontSize: 11 }}>— {lang === 'en' ? 'Unlock everything' : 'Desbloquea todo'} ↑</span>
             </button>
           )}

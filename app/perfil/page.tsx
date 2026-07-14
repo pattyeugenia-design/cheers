@@ -12,9 +12,9 @@ function slugifyUsername(str: string) {
 }
 
 const PLANES: Record<string, { label: string; color: string; bg: string }> = {
-  free:     { label: 'Free',     color: '#7a7494', bg: '#f0edf8' },
-  pro:      { label: 'Pro',      color: '#534AB7', bg: '#EEEDFE' },
-  lifetime: { label: 'Lifetime', color: '#D4537E', bg: '#FCE9F0' },
+  free:     { label: 'Cheer',       color: '#7a7494', bg: '#f0edf8' },
+  pro:      { label: 'Super Cheer', color: '#534AB7', bg: '#EEEDFE' },
+  lifetime: { label: 'Extra Cheer', color: '#D4537E', bg: '#FCE9F0' },
 }
 
 export default function Perfil() {
@@ -273,7 +273,7 @@ export default function Perfil() {
             </div>
             {plan !== 'lifetime' && (
               <button onClick={comprarLifetime} disabled={comprandoLifetime} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 18px', borderRadius:12, cursor:'pointer', fontFamily:F }}>
-                {comprandoLifetime ? '...' : (lang === 'en' ? 'Get Lifetime →' : 'Comprar Lifetime →')}
+                {comprandoLifetime ? '...' : (lang === 'en' ? 'Get Extra Cheer →' : 'Comprar Extra Cheer →')}
               </button>
             )}
           </div>

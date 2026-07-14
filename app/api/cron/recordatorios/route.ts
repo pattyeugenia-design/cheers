@@ -89,8 +89,8 @@ export async function GET(req: Request) {
 
       const lineaLimite = !eventoEsPro && totalConfirmados >= 3
         ? (lang === 'en'
-            ? `<p style="font-size: 13px; color: #7a7494;">Expecting more than 3 guests? Pro fits up to 10 for this celebration.</p>`
-            : `<p style="font-size: 13px; color: #7a7494;">Si esperas más de 3 invitados, con Pro caben hasta 10 en esta celebración.</p>`)
+            ? `<p style="font-size: 13px; color: #7a7494;">Expecting more than 3 guests? Super Cheer fits up to 10 for this celebration.</p>`
+            : `<p style="font-size: 13px; color: #7a7494;">Si esperas más de 3 invitados, con Super Cheer caben hasta 10 en esta celebración.</p>`)
         : ''
 
       const subject = lang === 'en'

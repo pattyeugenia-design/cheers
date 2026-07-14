@@ -258,9 +258,9 @@ export default function Admin() {
                   </div>
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                     <select value={u.plan || 'free'} onChange={e => cambiarPlan(u.user_id, e.target.value)} style={{ fontSize:11, fontWeight:700, color:u.plan==='lifetime'?'#f08cb0':u.plan==='pro'?'#a89df0':'rgba(255,255,255,.6)', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.12)', borderRadius:6, padding:'3px 6px', textTransform:'uppercase', cursor:'pointer', fontFamily:F }}>
-                      <option value="free">Free</option>
-                      <option value="pro">Pro</option>
-                      <option value="lifetime">Lifetime</option>
+                      <option value="free">Cheer</option>
+                      <option value="pro">Super Cheer</option>
+                      <option value="lifetime">Extra Cheer</option>
                     </select>
                     <span style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>{new Date(u.created_at).toLocaleDateString('es-MX')}</span>
                     <a href={`/${u.username}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:700, color:'#a89df0', background:'rgba(168,157,240,.1)', padding:'4px 8px', borderRadius:6, textDecoration:'none' }}>Ver</a>

@@ -419,8 +419,8 @@ export default function NuevaCelebracion() {
 
                       <p style={{ fontSize: 11, color: '#a39ec0', margin: '10px 2px 0', lineHeight: 1.5 }}>
                         {lang === 'en'
-                          ? 'You can pick this for free, but the future dates only generate once this celebration is Pro or your account is Lifetime.'
-                          : 'Puedes elegirlo gratis, pero las fechas futuras solo se generan cuando esta celebración sea Pro o tu cuenta sea Lifetime.'}
+                          ? 'You can pick this for free, but the future dates only generate once this celebration is Super Cheer or your account is Extra Cheer.'
+                          : 'Puedes elegirlo gratis, pero las fechas futuras solo se generan cuando esta celebración sea Super Cheer o tu cuenta sea Extra Cheer.'}
                       </p>
                     </div>
                   )}

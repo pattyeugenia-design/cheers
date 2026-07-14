@@ -45,8 +45,8 @@ export async function GET(req: Request) {
     const lineaLifetime = yaEsLifetime
       ? ''
       : lang === 'en'
-        ? `<p style="font-size: 14px; color: #6b6585;">And if you're already thinking about your next celebration: Lifetime keeps your full history forever and takes the limits off. No pressure, just leaving it here.</p>`
-        : `<p style="font-size: 14px; color: #6b6585;">Y si ya estás pensando en la próxima celebración: con Lifetime guardas todo tu historial para siempre y ya no te preocupas por límites. Sin presión, ahí queda.</p>`
+        ? `<p style="font-size: 14px; color: #6b6585;">And if you're already thinking about your next celebration: Extra Cheer keeps your full history forever and takes the limits off. No pressure, just leaving it here.</p>`
+        : `<p style="font-size: 14px; color: #6b6585;">Y si ya estás pensando en la próxima celebración: con Extra Cheer guardas todo tu historial para siempre y ya no te preocupas por límites. Sin presión, ahí queda.</p>`
 
     const subject = lang === 'en' ? `How did ${cel.nombre} go?` : `¿Cómo estuvo ${cel.nombre}?`
     const html = lang === 'en'

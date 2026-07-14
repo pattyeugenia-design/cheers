@@ -26,7 +26,7 @@ export async function POST(req: Request) {
           <p style="margin-top: 24px;">
             <a href="https://joincheers.app/nueva" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 22px; border-radius: 10px; text-decoration: none; font-weight: 700;">Create my first celebration →</a>
           </p>
-          <p style="font-size: 12px; color: #a39ec0; margin-top: 20px;">By the way, if a celebration ever grows bigger than usual, Pro and Lifetime are there when you need them — no rush.</p>
+          <p style="font-size: 12px; color: #a39ec0; margin-top: 20px;">By the way, if a celebration ever grows bigger than usual, Super Cheer and Extra Cheer are there when you need them — no rush.</p>
           <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #a39ec0; line-height: 1.6; text-align: center;">
             <p style="margin: 0 0 6px;">Cheers · <a href="https://joincheers.app/terminos" style="color: #a39ec0;">Terms</a> · <a href="https://joincheers.app/privacidad" style="color: #a39ec0;">Privacy</a> · <a href="https://joincheers.app/faq" style="color: #a39ec0;">FAQ</a></p>
             <p style="margin: 0;">Don't want your account anymore? You can delete it from <a href="https://joincheers.app/perfil" style="color: #a39ec0;">your profile</a>.</p>
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
           <p style="margin-top: 24px;">
             <a href="https://joincheers.app/nueva" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 22px; border-radius: 10px; text-decoration: none; font-weight: 700;">Crear mi primera celebración →</a>
           </p>
-          <p style="font-size: 12px; color: #a39ec0; margin-top: 20px;">Ah, y si en algún momento tu celebración crece más de lo normal, ahí tienes Pro y Lifetime — sin prisa, cuando lo necesites.</p>
+          <p style="font-size: 12px; color: #a39ec0; margin-top: 20px;">Ah, y si en algún momento tu celebración crece más de lo normal, ahí tienes Super Cheer y Extra Cheer — sin prisa, cuando lo necesites.</p>
           <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #a39ec0; line-height: 1.6; text-align: center;">
             <p style="margin: 0 0 6px;">Cheers · <a href="https://joincheers.app/terminos" style="color: #a39ec0;">Términos</a> · <a href="https://joincheers.app/privacidad" style="color: #a39ec0;">Privacidad</a> · <a href="https://joincheers.app/faq" style="color: #a39ec0;">FAQ</a></p>
             <p style="margin: 0;">¿Ya no quieres tu cuenta? Puedes darla de baja desde <a href="https://joincheers.app/perfil" style="color: #a39ec0;">tu perfil</a>.</p>
