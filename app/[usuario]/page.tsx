@@ -44,6 +44,72 @@ function quarterLabel(key: string, lang: string) {
   return `${labels[q] || q} ${year}`
 }
 
+function MiniCalendario({ eventos, lang, router }: { eventos: any[]; lang: string; router: any }) {
+  const [mesActual, setMesActual] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d })
+
+  const primerDiaSemana = mesActual.getDay()
+  const diasEnMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0).getDate()
+  const hoy = new Date()
+
+  const eventosPorDia: Record<number, any[]> = {}
+  eventos.forEach(e => {
+    if (!e.fecha) return
+    const f = new Date(e.fecha)
+    if (f.getFullYear() === mesActual.getFullYear() && f.getMonth() === mesActual.getMonth()) {
+      const dia = f.getDate()
+      if (!eventosPorDia[dia]) eventosPorDia[dia] = []
+      eventosPorDia[dia].push(e)
+    }
+  })
+
+  const nombreMes = mesActual.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long', year: 'numeric' })
+  const diasSemana = lang === 'en' ? ['S','M','T','W','T','F','S'] : ['D','L','M','M','J','V','S']
+
+  const celdas: (number | null)[] = []
+  for (let i = 0; i < primerDiaSemana; i++) celdas.push(null)
+  for (let d = 1; d <= diasEnMes; d++) celdas.push(d)
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: 16, marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() - 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>←</button>
+        <span style={{ color: '#EEEDFE', fontWeight: 800, fontSize: 15, textTransform: 'capitalize' }}>{nombreMes}</span>
+        <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() + 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>→</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 4 }}>
+        {diasSemana.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.35)' }}>{d}</div>)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3 }}>
+        {celdas.map((dia, i) => {
+          const esHoy = dia && dia === hoy.getDate() && mesActual.getMonth() === hoy.getMonth() && mesActual.getFullYear() === hoy.getFullYear()
+          return (
+            <div key={i} style={{ minHeight: 48, borderRadius: 8, background: dia ? (esHoy ? 'rgba(168,157,240,.18)' : 'rgba(255,255,255,.03)') : 'transparent', padding: 3, overflow: 'hidden' }}>
+              {dia && <div style={{ fontSize: 10, fontWeight: esHoy ? 800 : 600, color: esHoy ? '#a89df0' : 'rgba(255,255,255,.4)' }}>{dia}</div>}
+              {dia && eventosPorDia[dia]?.slice(0, 2).map((e, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => router.push(`/${e.slug}`)}
+                  title={e.nombre}
+                  style={{ fontSize: 8, fontWeight: 700, background: e.esPropia ? '#534AB7' : '#D4537E', color: '#fff', borderRadius: 4, padding: '1px 3px', marginTop: 2, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+                >
+                  {e.nombre}
+                </div>
+              ))}
+              {dia && (eventosPorDia[dia]?.length || 0) > 2 && (
+                <div style={{ fontSize: 8, color: 'rgba(255,255,255,.4)', marginTop: 1 }}>+{eventosPorDia[dia].length - 2}</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+        <span style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#534AB7', marginRight: 4 }} />{lang === 'en' ? 'You organize' : 'Organizas tú'}</span>
+        <span style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#D4537E', marginRight: 4 }} />{lang === 'en' ? "You're invited" : 'Te invitaron'}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function Celebraciones({ params }: { params: Promise<{ usuario: string }> }) {
   const router = useRouter()
   const [tx, setTx] = useState(t.es)
@@ -52,6 +118,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   const [perfilOwner, setPerfilOwner] = useState<any>(null)
   const [perfilAuth, setPerfilAuth] = useState<any>(null)
   const [celebraciones, setCelebraciones] = useState<any[]>([])
+  const [invitaciones, setInvitaciones] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
   const [esPropio, setEsPropio] = useState(false)
   const [username, setUsername] = useState('')
@@ -74,6 +141,18 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         if (es) {
           const { data: perfilAuth } = await supabase.from('perfiles').select('*').eq('user_id', authUser.id).single()
           setPerfilAuth(perfilAuth)
+
+          const { data: misInvitaciones } = await supabase.from('invitados').select('celebracion_slug, created_at').eq('user_id', authUser.id)
+          const slugsInvitado = (misInvitaciones || []).map(i => i.celebracion_slug)
+          if (slugsInvitado.length) {
+            const { data: celsInvitado } = await supabase.from('celebraciones').select('*').in('slug', slugsInvitado).order('fecha', { ascending: true })
+            const fechaInvPorSlug: Record<string, string> = {}
+            ;(misInvitaciones || []).forEach(i => { fechaInvPorSlug[i.celebracion_slug] = i.created_at })
+            setInvitaciones((celsInvitado || [])
+              .filter(c => c.organizador_id !== authUser.id)
+              .map(c => ({ ...c, invitadoDesde: fechaInvPorSlug[c.slug] }))
+            )
+          }
         }
       }
 
@@ -119,6 +198,11 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   const avatar = user?.user_metadata?.avatar_url
   const plan = perfilAuth?.plan || 'free'
   const { grupos, pasadas, pasadasBloqueadas, sinFecha } = agruparPorTrimestre(celebraciones, lang, plan)
+  const eventosCalendario = [
+    ...celebraciones.filter(c => !c.archivada).map(c => ({ ...c, esPropia: true })),
+    ...invitaciones.map(c => ({ ...c, esPropia: false })),
+  ]
+  const invitacionesNuevas = invitaciones.filter(c => c.invitadoDesde && (Date.now() - new Date(c.invitadoDesde).getTime()) < 7 * 24 * 60 * 60 * 1000)
 
   const CelCard = ({ cel }: { cel: any }) => (
     <div onClick={() => router.push(`/${cel.slug}`)} style={{ display:'flex', alignItems:'center', gap:14, padding:'1rem 1.25rem', background:'rgba(255,255,255,.06)', borderRadius:16, cursor:'pointer', border:'1px solid rgba(255,255,255,.08)', marginBottom:10, position:'relative' }}>
@@ -191,6 +275,23 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
             </div>
           )}
         </div>
+
+        {/* Invitaciones nuevas */}
+        {esPropio && invitacionesNuevas.length > 0 && (
+          <div style={{ background:'rgba(212,83,126,.15)', border:'1px solid rgba(212,83,126,.3)', borderRadius:14, padding:'12px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:18 }}>🎉</span>
+            <p style={{ fontSize:13, color:'#fff', margin:0, fontWeight:600 }}>
+              {lang==='en'
+                ? `You were invited to ${invitacionesNuevas.length} new celebration${invitacionesNuevas.length > 1 ? 's' : ''}: ${invitacionesNuevas.map(c => c.nombre).join(', ')}`
+                : `Te invitaron a ${invitacionesNuevas.length} celebracion${invitacionesNuevas.length > 1 ? 'es' : ''} nueva${invitacionesNuevas.length > 1 ? 's' : ''}: ${invitacionesNuevas.map(c => c.nombre).join(', ')}`}
+            </p>
+          </div>
+        )}
+
+        {/* Calendario */}
+        {esPropio && eventosCalendario.length > 0 && (
+          <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
+        )}
 
         {/* Botón nueva celebración */}
         {esPropio && (
