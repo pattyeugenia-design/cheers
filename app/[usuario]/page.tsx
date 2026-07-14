@@ -196,7 +196,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
 
   const nombre = perfilAuth?.nombre_completo || user?.user_metadata?.name?.split(' ')[0] || username
   const avatar = user?.user_metadata?.avatar_url
-  const plan = perfilAuth?.plan || 'free'
+  const plan = perfilOwner?.plan || 'free'
   const { grupos, pasadas, pasadasBloqueadas, sinFecha } = agruparPorTrimestre(celebraciones, lang, plan)
   const eventosCalendario = [
     ...celebraciones.filter(c => !c.archivada).map(c => ({ ...c, esPropia: true })),
