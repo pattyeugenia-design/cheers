@@ -84,8 +84,8 @@ export default function Perfil() {
     if (RESERVED_USERNAMES.includes(username)) { setUsernameDisponible(false); return }
     setVerificandoUsername(true)
     const timeout = setTimeout(async () => {
-      const { data } = await supabase.from('perfiles').select('username').eq('username', username).single()
-      setUsernameDisponible(!data)
+      const { data: disponible } = await supabase.rpc('username_disponible', { p_username: username })
+      setUsernameDisponible(!!disponible)
       setVerificandoUsername(false)
     }, 500)
     return () => clearTimeout(timeout)

@@ -132,7 +132,8 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     const l = getLang(); setLang(l); setTx(t[l])
     params.then(async ({ usuario }) => {
       setUsername(usuario)
-      const { data: perfil } = await supabase.from('perfiles').select('*').eq('username', usuario).single()
+      const { data: perfilRows } = await supabase.rpc('get_perfil_publico_por_username', { p_username: usuario })
+      const perfil = perfilRows?.[0]
       if (!perfil) { setCargando(false); return }
       setPerfilOwner(perfil)
 
