@@ -89,6 +89,12 @@ export default function Onboarding() {
       return
     }
 
+    fetch('/api/bienvenida', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, nombre: user.user_metadata?.name?.split(' ')[0], username }),
+    }).catch(() => {})
+
     const redirect = typeof window !== 'undefined' ? sessionStorage.getItem('redirect_after_login') : null
     if (redirect) { sessionStorage.removeItem('redirect_after_login'); router.push(redirect) }
     else router.push(`/${username}`)
