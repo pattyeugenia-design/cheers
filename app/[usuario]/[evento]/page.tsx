@@ -165,6 +165,16 @@ function calendarLinks(
   return { googleUrl, icsUrl }
 }
 
+// Para series recurrentes, la fecha/hora/lugar que hay que mostrar es la de la
+// próxima ocurrencia real (tabla "ocurrencias"), no la fecha fija con la que se
+// creó el evento — esa se queda congelada en el pasado apenas pasa la primera vez.
+function proximaOcurrencia(celebracion: any, ocurrencias: any[]): { fecha: string; hora?: string | null; lugar?: string | null } | null {
+  if (!celebracion?.recurrente || !ocurrencias?.length) return null
+  const hoyStr = new Date().toISOString().slice(0, 10)
+  const futuras = [...ocurrencias].filter(o => o.fecha >= hoyStr).sort((a, b) => a.fecha.localeCompare(b.fecha))
+  return futuras[0] || null
+}
+
 function getProgressLabel(pct: number, lang: string): string {
   if (pct === 100) return 'Cheers full!'
   if (pct >= 91) return lang === 'en' ? 'One last detail...' : 'Un último detalle...'
@@ -182,7 +192,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 // Brief público, sin necesidad de cuenta
-function VistaBrief({ celebracion, lang, locale, organizador }: any) {
+function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any) {
   const router = useRouter()
   const [nombreInvitado, setNombreInvitado] = useState('')
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
@@ -211,10 +221,14 @@ function VistaBrief({ celebracion, lang, locale, organizador }: any) {
     router.push('/login')
   }
 
-  const fecha = celebracion.fecha
-    ? new Date(celebracion.fecha).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const proxima = proximaOcurrencia(celebracion, ocurrencias)
+  const fechaEfectiva = proxima?.fecha || celebracion.fecha
+  const horaEfectiva = proxima?.hora || (celebracion.paradas || []).find((p: any) => p.id)?.hora
+  const lugarNombre = proxima?.lugar || (celebracion.paradas || []).find((p: any) => p.id)?.lugar
+
+  const fecha = fechaEfectiva
+    ? new Date(fechaEfectiva).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : null
-  const lugarNombre = (celebracion.paradas || []).find((p: any) => p.id)?.lugar
 
   const rsvpColors = {
     si:     { bg: '#ECF7F0', active: '#1f8a5b', border: '#1f8a5b', label: lang === 'en' ? 'Going' : 'Voy' },
@@ -249,8 +263,8 @@ function VistaBrief({ celebracion, lang, locale, organizador }: any) {
           </h1>
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
           {lugarNombre && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', margin: 0 }}>{lugarNombre}</p>}
-          {celebracion.fecha && (() => {
-            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, (celebracion.paradas || []).find((p: any) => p.id)?.hora, lugarNombre, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
+          {fechaEfectiva && (() => {
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarNombre, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
                 <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
@@ -310,7 +324,7 @@ function VistaBrief({ celebracion, lang, locale, organizador }: any) {
 }
 
 // Vista del invitado
-function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any) {
+function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurrencias }: any) {
   const router = useRouter()
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
   const [mensaje, setMensaje] = useState('')
@@ -357,8 +371,12 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
   const paradas = (celebracion.paradas || []).filter((p: any) => p.id)
   const regalos = celebracion.gifts || []
   const tiles = celebracion.tiles_visibles || {}
-  const fecha = celebracion.fecha
-    ? new Date(celebracion.fecha).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const proxima = proximaOcurrencia(celebracion, ocurrencias)
+  const fechaEfectiva = proxima?.fecha || celebracion.fecha
+  const horaEfectiva = proxima?.hora || paradas[0]?.hora
+  const lugarEfectivo = proxima?.lugar || paradas[0]?.lugar
+  const fecha = fechaEfectiva
+    ? new Date(fechaEfectiva).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : null
 
   const rsvpColors = {
@@ -390,9 +408,9 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
             dangerouslySetInnerHTML={{ __html: celebracion.nombre_html || celebracion.nombre }} />
           {celebracion.tagline && <p style={{ fontSize: 15, color: 'rgba(255,255,255,.8)', margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>}
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
-          {paradas[0]?.lugar && <a href={`https://maps.google.com/?q=${encodeURIComponent(paradas[0].lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>{paradas[0].lugar} →</a>}
-          {celebracion.fecha && (() => {
-            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, paradas[0]?.hora, paradas[0]?.lugar, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
+          {lugarEfectivo && <a href={`https://maps.google.com/?q=${encodeURIComponent(lugarEfectivo)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>{lugarEfectivo} →</a>}
+          {fechaEfectiva && (() => {
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarEfectivo, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
                 <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
@@ -1089,9 +1107,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     </div>
   )
 
-  if (rol === 'brief') return <VistaBrief celebracion={celebracion} lang={lang} locale={locale} organizador={organizadorInfo} />
+  if (rol === 'brief') return <VistaBrief celebracion={celebracion} lang={lang} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} />
 
-  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} organizador={organizadorInfo} />
+  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} />
 
   // DASHBOARD ORGANIZADOR
   const te = TEMAS[tema] || TEMAS.morado
