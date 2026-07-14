@@ -136,6 +136,110 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
+// Brief público, sin necesidad de cuenta
+function VistaBrief({ celebracion, lang, locale }: any) {
+  const router = useRouter()
+  const [nombreInvitado, setNombreInvitado] = useState('')
+  const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
+  const [guardando, setGuardando] = useState(false)
+  const [guardado, setGuardado] = useState(false)
+
+  async function confirmarSinCuenta() {
+    if (!asistencia || !nombreInvitado.trim()) return
+    setGuardando(true)
+    await supabase.from('rsvps').insert({
+      celebracion_slug: celebracion.slug,
+      nombre: nombreInvitado.trim(),
+      asistencia,
+      mensaje: null,
+    })
+    setGuardando(false); setGuardado(true)
+  }
+
+  function irADesbloquear() {
+    sessionStorage.setItem('redirect_after_login', window.location.pathname)
+    router.push('/login')
+  }
+
+  const fecha = celebracion.fecha
+    ? new Date(celebracion.fecha).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : null
+  const lugarNombre = (celebracion.paradas || []).find((p: any) => p.id)?.lugar
+
+  const rsvpColors = {
+    si:     { bg: '#ECF7F0', active: '#1f8a5b', border: '#1f8a5b', label: lang === 'en' ? 'Going' : 'Voy' },
+    no:     { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b', label: lang === 'en' ? "Can't make it" : 'No puedo' },
+    talvez: { bg: '#FFF4E6', active: '#c98a1e', border: '#c98a1e', label: lang === 'en' ? 'Maybe' : 'Tal vez' },
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: BG_INVITADO, fontFamily: FSYS }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: '32px 18px 60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
+        </div>
+        {celebracion.portada_url && (
+          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)' }}>
+            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+            {lang === 'en' ? "You're invited" : 'Estás invitado'}
+          </div>
+          {celebracion.es_sorpresa && (
+            <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, color: '#fff', background: 'rgba(255,255,255,.18)', padding: '4px 12px', borderRadius: 99, marginBottom: 10 }}>
+              🤫 {lang === 'en' ? 'Surprise!' : '¡Es sorpresa!'}
+            </span>
+          )}
+          <h1 style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 10px', letterSpacing: '-.5px', lineHeight: 1.1 }}>
+            {celebracion.festejado_nombre
+              ? (lang === 'en' ? `${celebracion.festejado_nombre}'s celebration` : `Celebración de ${celebracion.festejado_nombre}`)
+              : celebracion.nombre}
+          </h1>
+          {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
+          {lugarNombre && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', margin: 0 }}>{lugarNombre}</p>}
+        </div>
+
+        <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>
+            {guardado ? (lang === 'en' ? 'Thanks for letting us know!' : '¡Gracias por avisar!') : (lang === 'en' ? 'Will you be there?' : '¿Vas a ir?')}
+          </div>
+          {!guardado && (
+            <>
+              <input
+                value={nombreInvitado}
+                onChange={e => setNombreInvitado(e.target.value)}
+                placeholder={lang === 'en' ? 'Your name' : 'Tu nombre'}
+                style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 12 }}
+              />
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                {(['si', 'no', 'talvez'] as const).map(op => {
+                  const c = rsvpColors[op]
+                  const sel = asistencia === op
+                  return <button key={op} onClick={() => setAsistencia(op)} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>{c.label}</button>
+                })}
+              </div>
+              <button onClick={confirmarSinCuenta} disabled={!asistencia || !nombreInvitado.trim() || guardando} style={{ width: '100%', padding: '14px', background: (asistencia && nombreInvitado.trim()) ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: (asistencia && nombreInvitado.trim()) ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: (asistencia && nombreInvitado.trim()) ? 'pointer' : 'default', fontFamily: FSYS }}>
+                {guardando ? '...' : (lang === 'en' ? 'Confirm attendance' : 'Confirmar asistencia')}
+              </button>
+            </>
+          )}
+        </div>
+
+        <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 24, padding: '20px', textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: '#fff', margin: '0 0 12px', fontWeight: 600 }}>
+            {lang === 'en' ? 'Want the full details? Address, gift list, and who else is going.' : '¿Quieres ver todos los detalles? Dirección exacta, lista de regalos y quién más va.'}
+          </p>
+          <button onClick={irADesbloquear} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>
+            {lang === 'en' ? 'Sign in to see more →' : 'Inicia sesión para ver más →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Vista del invitado
 function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
   const router = useRouter()
@@ -420,7 +524,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitadosList, setInvitadosList] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
-  const [rol, setRol] = useState<'organizador' | 'invitado' | 'sin_acceso' | null>(null)
+  const [rol, setRol] = useState<'organizador' | 'invitado' | 'brief' | 'sin_acceso' | null>(null)
   const [user, setUser] = useState<any>(null)
 
   const [tagline, setTagline] = useState('')
@@ -484,8 +588,6 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   useEffect(() => {
     params.then(async ({ usuario, evento }) => {
       const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) { router.push('/login'); return }
-      setUser(authUser)
 
       let cel: any = null
       const fullSlug = `${usuario}/${evento}`
@@ -498,13 +600,24 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       if (!cel) { setRol('sin_acceso'); setCargando(false); return }
 
+      if (!authUser) {
+        // Brief público: nombre, fecha, lugar, sin necesidad de cuenta
+        setCelebracion(cel)
+        setRol('brief')
+        setCargando(false)
+        return
+      }
+
+      setUser(authUser)
+
       if (cel.organizador_id === authUser.id) {
         setRol('organizador')
       } else {
         let inv: any = null
         const { data: invPorId } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('user_id', authUser.id).single()
-        if (invPorId) { inv = invPorId }
-        else {
+        if (invPorId) {
+          inv = invPorId
+        } else {
           const { data: invPorEmail } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('email', authUser.email || '').is('user_id', null).single()
           if (invPorEmail) {
             const nombreReal = authUser.user_metadata?.name
@@ -512,6 +625,17 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             if (nombreReal && invPorEmail.nombre === invPorEmail.email) update.nombre = nombreReal
             await supabase.from('invitados').update(update).eq('id', invPorEmail.id)
             inv = { ...invPorEmail, ...update }
+          } else {
+            // Cualquiera con el link puede desbloquear detalles con su cuenta,
+            // no solo la gente que el organizador pre-agregó
+            const { data: nuevoInv } = await supabase.from('invitados').insert({
+              celebracion_slug: cel.slug,
+              email: authUser.email || null,
+              nombre: authUser.user_metadata?.name || authUser.email || '',
+              user_id: authUser.id,
+              created_at: new Date().toISOString(),
+            }).select().single()
+            inv = nuevoInv
           }
         }
         setRol(inv ? 'invitado' : 'sin_acceso')
@@ -723,6 +847,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       </div>
     </div>
   )
+
+  if (rol === 'brief') return <VistaBrief celebracion={celebracion} lang={lang} locale={locale} />
 
   if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} />
 
