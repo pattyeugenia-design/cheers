@@ -17,6 +17,7 @@ export default function Admin() {
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitados, setInvitados] = useState<any[]>([])
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date>(new Date())
+  const [busqueda, setBusqueda] = useState('')
 
   const cargarDatos = useCallback(async () => {
     const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }] = await Promise.all([
@@ -82,6 +83,9 @@ export default function Admin() {
   const rsvpVan = rsvps.filter(r => r.asistencia === 'si').length
   const porTipo: Record<string, number> = {}
   celebraciones.forEach(c => { porTipo[c.tipo] = (porTipo[c.tipo] || 0) + 1 })
+  const celebracionesFiltradas = busqueda.trim()
+    ? celebraciones.filter(c => (c.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) || (c.slug || '').toLowerCase().includes(busqueda.toLowerCase()))
+    : celebraciones
 
   // Crecimiento diario (últimos 14 días)
   const DIAS = 14
@@ -147,11 +151,18 @@ export default function Admin() {
             </div>
 
             <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:12, textTransform:'uppercase', letterSpacing:'.5px' }}>
-              Todas las celebraciones ({celebraciones.length})
+              Todas las celebraciones ({celebracionesFiltradas.length}{busqueda ? ` de ${celebraciones.length}` : ''})
             </div>
 
+            <input
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre o slug..."
+              style={{ width:'100%', boxSizing:'border-box', border:'1px solid rgba(255,255,255,.12)', background:'rgba(255,255,255,.04)', color:'#fff', fontFamily:F, fontSize:14, padding:'10px 14px', borderRadius:10, outline:'none', marginBottom:16 }}
+            />
+
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {celebraciones.map(cel => {
+              {celebracionesFiltradas.map(cel => {
                 const invCel = invitados.filter(i => i.celebracion_slug === cel.slug)
                 const rsvpCel = rsvps.filter(r => r.celebracion_slug === cel.slug)
                 const checks = [
