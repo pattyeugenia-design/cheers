@@ -50,6 +50,11 @@ export default function Admin() {
 
   async function borrarCelebracion(slug: string) {
     if (!confirm(`¿Borrar ${slug}? Esta acción no se puede deshacer.`)) return
+    const cel = celebraciones.find(c => c.slug === slug)
+    if (cel?.portada_url) {
+      const idx = cel.portada_url.indexOf('/portadas/')
+      if (idx !== -1) await supabase.storage.from('portadas').remove([cel.portada_url.slice(idx + '/portadas/'.length)])
+    }
     await supabase.from('celebraciones').delete().eq('slug', slug)
     await supabase.from('rsvps').delete().eq('celebracion_slug', slug)
     await supabase.from('invitados').delete().eq('celebracion_slug', slug)

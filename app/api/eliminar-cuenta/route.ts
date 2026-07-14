@@ -17,13 +17,24 @@ export async function POST(req: Request) {
   // Cliente con permisos de administrador, solo existe en el servidor, nunca se expone al navegador
   const admin = createClient(supabaseUrl, serviceKey)
 
-  // Borrar celebraciones propias y sus datos relacionados (invitados, rsvps)
-  const { data: celebs } = await admin.from('celebraciones').select('slug').eq('organizador_id', user.id)
+  // Borrar celebraciones propias y sus datos relacionados (invitados, rsvps, portadas)
+  const { data: celebs } = await admin.from('celebraciones').select('slug, portada_url').eq('organizador_id', user.id)
   for (const c of celebs || []) {
     await admin.from('invitados').delete().eq('celebracion_slug', c.slug)
     await admin.from('rsvps').delete().eq('celebracion_slug', c.slug)
+    if (c.portada_url) {
+      const idx = c.portada_url.indexOf('/portadas/')
+      if (idx !== -1) await admin.storage.from('portadas').remove([c.portada_url.slice(idx + '/portadas/'.length)])
+    }
   }
   await admin.from('celebraciones').delete().eq('organizador_id', user.id)
+
+  // Borrar la foto de avatar si existe
+  const { data: perfilData } = await admin.from('perfiles').select('avatar_url').eq('user_id', user.id).single()
+  if (perfilData?.avatar_url) {
+    const idx = perfilData.avatar_url.indexOf('/avatars/')
+    if (idx !== -1) await admin.storage.from('avatars').remove([perfilData.avatar_url.slice(idx + '/avatars/'.length)])
+  }
 
   // Desvincular (no borrar) registros donde este usuario fue invitado en eventos de otras personas
   await admin.from('invitados').update({ user_id: null }).eq('user_id', user.id)

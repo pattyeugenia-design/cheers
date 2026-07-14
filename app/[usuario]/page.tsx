@@ -93,6 +93,11 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
       ? 'Delete this celebration? This cannot be undone.'
       : '¿Eliminar esta celebración? No se puede deshacer.'
     if (!confirm(msg)) return
+    const cel = celebraciones.find(c => c.slug === slug)
+    if (cel?.portada_url) {
+      const idx = cel.portada_url.indexOf('/portadas/')
+      if (idx !== -1) await supabase.storage.from('portadas').remove([cel.portada_url.slice(idx + '/portadas/'.length)])
+    }
     await supabase.from('invitados').delete().eq('celebracion_slug', slug)
     await supabase.from('rsvps').delete().eq('celebracion_slug', slug)
     await supabase.from('celebraciones').delete().eq('slug', slug)
