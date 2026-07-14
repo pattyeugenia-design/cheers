@@ -137,7 +137,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 // Brief público, sin necesidad de cuenta
-function VistaBrief({ celebracion, lang, locale }: any) {
+function VistaBrief({ celebracion, lang, locale, organizador }: any) {
   const router = useRouter()
   const [nombreInvitado, setNombreInvitado] = useState('')
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
@@ -199,6 +199,16 @@ function VistaBrief({ celebracion, lang, locale }: any) {
           </h1>
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
           {lugarNombre && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', margin: 0 }}>{lugarNombre}</p>}
+          {organizador?.nombre && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {organizador.avatar
+                  ? <img src={organizador.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{organizador.nombre[0]?.toUpperCase()}</span>}
+              </div>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
@@ -241,7 +251,7 @@ function VistaBrief({ celebracion, lang, locale }: any) {
 }
 
 // Vista del invitado
-function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
+function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any) {
   const router = useRouter()
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
   const [mensaje, setMensaje] = useState('')
@@ -314,6 +324,16 @@ function VistaInvitado({ celebracion, user, lang, tx, locale }: any) {
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
           {paradas[0]?.lugar && <a href={`https://maps.google.com/?q=${encodeURIComponent(paradas[0].lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>{paradas[0].lugar} →</a>}
           {celebracion.festejado_nombre && <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', margin: '4px 0 0' }}>{lang === 'en' ? `For ${celebracion.festejado_nombre}` : `Para ${celebracion.festejado_nombre}`}</p>}
+          {organizador?.nombre && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {organizador.avatar
+                  ? <img src={organizador.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{organizador.nombre[0]?.toUpperCase()}</span>}
+              </div>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
@@ -520,6 +540,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [locale, setLocale] = useState('es-MX')
   const [celebracion, setCelebracion] = useState<any>(null)
   const [organizadorPlan, setOrganizadorPlan] = useState<string>('free')
+  const [organizadorInfo, setOrganizadorInfo] = useState<{ nombre: string; avatar: string | null } | null>(null)
   const limiteInvitados = organizadorPlan === 'lifetime' ? Infinity : organizadorPlan === 'pro' ? 10 : 3
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitadosList, setInvitadosList] = useState<any[]>([])
@@ -604,6 +625,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         // Brief público: nombre, fecha, lugar, sin necesidad de cuenta
         setCelebracion(cel)
         setRol('brief')
+        if (cel.organizador_id) {
+          const { data: perfilOrg } = await supabase.from('perfiles').select('nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
+          if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null })
+        }
         setCargando(false)
         return
       }
@@ -643,8 +668,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       setCelebracion(cel)
       if (cel.organizador_id) {
-        const { data: perfilOrg } = await supabase.from('perfiles').select('plan').eq('user_id', cel.organizador_id).single()
+        const { data: perfilOrg } = await supabase.from('perfiles').select('plan, nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
         if (perfilOrg?.plan) setOrganizadorPlan(perfilOrg.plan)
+        if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null })
       }
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
@@ -848,9 +874,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     </div>
   )
 
-  if (rol === 'brief') return <VistaBrief celebracion={celebracion} lang={lang} locale={locale} />
+  if (rol === 'brief') return <VistaBrief celebracion={celebracion} lang={lang} locale={locale} organizador={organizadorInfo} />
 
-  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} />
+  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} organizador={organizadorInfo} />
 
   // DASHBOARD ORGANIZADOR
   const te = TEMAS[tema] || TEMAS.morado
