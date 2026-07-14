@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../supabase'
 
@@ -8,6 +8,12 @@ const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-
 export default function Login() {
   const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [modo, setModo] = useState<'login' | 'signup'>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [cargandoEmail, setCargandoEmail] = useState(false)
+  const [errorEmail, setErrorEmail] = useState('')
+  const [avisoConfirmacion, setAvisoConfirmacion] = useState(false)
 
   useEffect(() => {
     // Verificar si ya está logueado
@@ -95,6 +101,27 @@ export default function Login() {
     })
   }
 
+  async function enviarEmail() {
+    if (!email.trim() || !password) return
+    setCargandoEmail(true)
+    setErrorEmail('')
+    setAvisoConfirmacion(false)
+
+    if (modo === 'login') {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (error) setErrorEmail('Email o contraseña incorrectos.')
+      setCargandoEmail(false)
+    } else {
+      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+      if (error) {
+        setErrorEmail(error.message.includes('already registered') ? 'Ese email ya tiene cuenta, inicia sesión.' : 'No se pudo crear la cuenta.')
+      } else if (!data.session) {
+        setAvisoConfirmacion(true)
+      }
+      setCargandoEmail(false)
+    }
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#534AB7,#7b46a8,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, position: 'relative', overflow: 'hidden' }}>
       <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />
@@ -109,7 +136,7 @@ export default function Login() {
 
         <div style={{ background: 'rgba(255,255,255,.97)', borderRadius: 26, padding: '32px 28px', boxShadow: '0 24px 64px rgba(83,74,183,.3)' }}>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1c1830', margin: '0 0 8px', letterSpacing: '-.4px' }}>Entrar a Cheers</h2>
-          <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 24px' }}>Usa tu cuenta de Google para continuar.</p>
+          <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 24px' }}>Con Google o con tu email.</p>
 
           <button
             onClick={loginConGoogle}
@@ -123,6 +150,46 @@ export default function Login() {
             </svg>
             Continuar con Google
           </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+            <div style={{ flex: 1, height: 1, background: '#e8e4f5' }} />
+            <span style={{ fontSize: 12, color: '#a39ec0', fontWeight: 700 }}>O</span>
+            <div style={{ flex: 1, height: 1, background: '#e8e4f5' }} />
+          </div>
+
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Email"
+            style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #e8e4f5', background: '#fff', fontFamily: FONT, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 10 }}
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && enviarEmail()}
+            placeholder="Contraseña"
+            style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #e8e4f5', background: '#fff', fontFamily: FONT, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 10 }}
+          />
+
+          {errorEmail && <p style={{ fontSize: 13, color: '#D4537E', margin: '0 0 10px', fontWeight: 600 }}>{errorEmail}</p>}
+          {avisoConfirmacion && <p style={{ fontSize: 13, color: '#1f8a5b', margin: '0 0 10px', fontWeight: 600 }}>Te enviamos un email para confirmar tu cuenta. Revísalo y luego inicia sesión aquí.</p>}
+
+          <button
+            onClick={enviarEmail}
+            disabled={cargandoEmail || !email.trim() || !password}
+            style={{ width: '100%', border: 'none', borderRadius: 14, padding: '13px', fontSize: 15, fontWeight: 800, cursor: (cargandoEmail || !email.trim() || !password) ? 'not-allowed' : 'pointer', color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', fontFamily: FONT, marginBottom: 12 }}
+          >
+            {cargandoEmail ? '...' : modo === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+          </button>
+
+          <p style={{ textAlign: 'center', fontSize: 13, color: '#6b6585', margin: 0 }}>
+            {modo === 'login' ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
+            <button onClick={() => { setModo(modo === 'login' ? 'signup' : 'login'); setErrorEmail(''); setAvisoConfirmacion(false) }} style={{ border: 'none', background: 'none', color: '#534AB7', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, fontSize: 13, padding: 0 }}>
+              {modo === 'login' ? 'Regístrate' : 'Inicia sesión'}
+            </button>
+          </p>
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,.55)', marginTop: 20, lineHeight: 1.5 }}>
