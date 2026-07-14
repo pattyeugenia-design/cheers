@@ -120,6 +120,34 @@ function packLayouts(order: TileLayout[]): TileLayout[] {
 
 const initial = (n: string) => (n || '?').trim()[0].toUpperCase()
 
+function formatICSDate(date: Date) {
+  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+}
+
+function calendarLinks(nombre: string, fecha: string, hora: string, lugar: string) {
+  const inicio = new Date(`${fecha}T${hora || '12:00'}:00`)
+  const fin = new Date(inicio.getTime() + 3 * 60 * 60 * 1000) // 3 horas por default
+  const detalles = 'Organizado con Cheers'
+
+  const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(nombre)}&dates=${formatICSDate(inicio)}/${formatICSDate(fin)}&details=${encodeURIComponent(detalles)}&location=${encodeURIComponent(lugar || '')}`
+
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `DTSTART:${formatICSDate(inicio)}`,
+    `DTEND:${formatICSDate(fin)}`,
+    `SUMMARY:${nombre}`,
+    `LOCATION:${lugar || ''}`,
+    `DESCRIPTION:${detalles}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+  const icsUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
+
+  return { googleUrl, icsUrl }
+}
+
 function getProgressLabel(pct: number, lang: string): string {
   if (pct === 100) return 'Cheers full!'
   if (pct >= 91) return lang === 'en' ? 'One last detail...' : 'Un último detalle...'
@@ -199,6 +227,15 @@ function VistaBrief({ celebracion, lang, locale, organizador }: any) {
           </h1>
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
           {lugarNombre && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', margin: 0 }}>{lugarNombre}</p>}
+          {celebracion.fecha && (() => {
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, (celebracion.paradas || []).find((p: any) => p.id)?.hora, lugarNombre)
+            return (
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+                <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
+                <a href={icsUrl} download={`${celebracion.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
+              </div>
+            )
+          })()}
           {organizador?.nombre && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
               <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -327,6 +364,19 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador }: any
           {celebracion.tagline && <p style={{ fontSize: 15, color: 'rgba(255,255,255,.8)', margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>}
           {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
           {paradas[0]?.lugar && <a href={`https://maps.google.com/?q=${encodeURIComponent(paradas[0].lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>{paradas[0].lugar} →</a>}
+          {celebracion.fecha && (() => {
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', celebracion.fecha, paradas[0]?.hora, paradas[0]?.lugar)
+            return (
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+                <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
+                  {lang === 'en' ? '+ Google Calendar' : '+ Google Calendar'}
+                </a>
+                <a href={icsUrl} download={`${celebracion.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
+                  {lang === 'en' ? '+ Apple/Outlook' : '+ Apple/Outlook'}
+                </a>
+              </div>
+            )
+          })()}
           {celebracion.festejado_nombre && <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', margin: '4px 0 0' }}>{lang === 'en' ? `For ${celebracion.festejado_nombre}` : `Para ${celebracion.festejado_nombre}`}</p>}
           {organizador?.nombre && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
