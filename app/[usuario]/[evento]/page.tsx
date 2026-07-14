@@ -623,6 +623,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [tagline, setTagline] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
+  const [recordatorioDias, setRecordatorioDias] = useState(7)
   const [lugar, setLugar] = useState('')
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
@@ -754,6 +755,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
+      setRecordatorioDias(cel.recordatorio_dias ?? 7)
       setLugar(cel.paradas?.[0]?.lugar || '')
       setPortadaUrl(cel.portada_url || null)
       setParadas(cel.paradas || [])
@@ -1403,6 +1405,24 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.date}</div>
                   <input type="date" style={{ ...fieldInput, fontSize: 14 }} value={fecha} onChange={e => setFecha(e.target.value)} onBlur={e => guardarCampo('fecha', e.target.value)} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{lang === 'en' ? 'Remind me' : 'Recordarme'}</div>
+                  <select
+                    style={{ ...fieldInput, fontSize: 14, cursor: 'pointer' }}
+                    value={recordatorioDias}
+                    onChange={e => {
+                      const v = Number(e.target.value)
+                      setRecordatorioDias(v)
+                      guardarCampo('recordatorio_dias', v)
+                    }}
+                  >
+                    <option value={1}>{lang === 'en' ? '1 day before' : '1 día antes'}</option>
+                    <option value={3}>{lang === 'en' ? '3 days before' : '3 días antes'}</option>
+                    <option value={7}>{lang === 'en' ? '1 week before' : '1 semana antes'}</option>
+                    <option value={14}>{lang === 'en' ? '2 weeks before' : '2 semanas antes'}</option>
+                    <option value={30}>{lang === 'en' ? '1 month before' : '1 mes antes'}</option>
+                  </select>
                 </div>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.place}</div>
