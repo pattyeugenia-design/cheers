@@ -425,6 +425,8 @@ export default function NuevaCelebracion() {
                     </div>
                   )}
                 </div>
+
+                {errorMsg && <div style={{ background: 'rgba(212,83,126,.08)', border: '1px solid rgba(212,83,126,.25)', borderRadius: 12, padding: '12px 14px', margin: '14px 0 0' }}><p style={{ fontSize: 13, color: '#D4537E', margin: 0 }}>{errorMsg}</p></div>}
               </div>
             )}
 

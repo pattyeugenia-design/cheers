@@ -14,11 +14,15 @@ export default function Login() {
   const [cargandoEmail, setCargandoEmail] = useState(false)
   const [errorEmail, setErrorEmail] = useState('')
   const [avisoConfirmacion, setAvisoConfirmacion] = useState(false)
+  // Mientras no sepamos si ya hay sesión activa, mostramos una pantalla festiva
+  // en vez del formulario de login (que se veía raro reapareciendo justo después
+  // de haber entrado con Google).
+  const [verificandoSesion, setVerificandoSesion] = useState(true)
 
   useEffect(() => {
     // Verificar si ya está logueado
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
+      if (!user) { setVerificandoSesion(false); return }
 
       // Verificar si tiene username
       const { data: perfil } = await supabase
@@ -44,6 +48,7 @@ export default function Login() {
     // Escuchar cambios de auth (después del OAuth redirect)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
+        setVerificandoSesion(true)
         const { data: perfil } = await supabase
           .from('perfiles')
           .select('username')
@@ -62,6 +67,7 @@ export default function Login() {
           router.push('/onboarding')
         }
       }
+      if (event === 'SIGNED_OUT') setVerificandoSesion(false)
     })
 
     return () => subscription.unsubscribe()
