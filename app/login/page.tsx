@@ -131,7 +131,13 @@ export default function Login() {
   return (
     <main style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#534AB7,#7b46a8,#D4537E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, position: 'relative', overflow: 'hidden' }}>
       <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />
+      <style>{`@keyframes cheersPulse{0%,100%{transform:scale(1) rotate(0deg)}50%{transform:scale(1.1) rotate(-3deg)}}`}</style>
 
+      {verificandoSesion ? (
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+          <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', letterSpacing: '-1.5px', display: 'inline-block', animation: 'cheersPulse 1.3s ease-in-out infinite' }}>Cheers</div>
+        </div>
+      ) : (
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 420, padding: '0 20px', boxSizing: 'border-box' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', letterSpacing: '-1px', marginBottom: 8 }}>Cheers</div>
@@ -202,6 +208,7 @@ export default function Login() {
           Al entrar aceptas los términos de uso de Cheers.
         </p>
       </div>
+      )}
     </main>
   )
 }

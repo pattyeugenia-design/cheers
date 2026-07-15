@@ -532,18 +532,53 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
 
 // Componente Tile con resize
 function ResizableTile({
-  layout, totalRows, containerWidth, isMobile, te, tx, lang, children, tileLabel, info,
-  onResizeEnd, onDragStart, onDragEnd, onDrop, isDragging, isDragOver, visible, onToggleVisible
+  layout, index, totalRows, containerWidth, isMobile, te, tx, lang, children, tileLabel, info,
+  onResizeEnd, onDragStart, onDragOverIndex, onDragComplete, isDragging, isDragOver, visible, onToggleVisible
 }: {
-  layout: TileLayout; totalRows: number; containerWidth: number; isMobile: boolean;
+  layout: TileLayout; index: number; totalRows: number; containerWidth: number; isMobile: boolean;
   te: any; tx: any; lang: string; children: React.ReactNode; tileLabel: string; info: any;
   onResizeEnd: (colSpan: number, rowSpan: number) => void;
-  onDragStart: () => void; onDragEnd: () => void; onDrop: () => void;
+  onDragStart: () => void; onDragOverIndex: (idx: number) => void; onDragComplete: (targetIdx: number | null) => void;
   isDragging: boolean; isDragOver: boolean; visible: boolean; onToggleVisible: () => void;
 }) {
   const resizingRef = useRef(false)
   const startRef = useRef({ x: 0, y: 0, colSpan: 0, rowSpan: 0 })
   const colW = (containerWidth + GAP) / COLS
+
+  // Reordenar tiles arrastrando: seguimos el mouse/touch manualmente (en vez del
+  // drag-and-drop nativo del navegador, que es poco confiable entre navegadores)
+  // y usamos elementFromPoint para saber sobre qué tile estamos soltando.
+  function startDrag(e: React.MouseEvent | React.TouchEvent) {
+    e.stopPropagation()
+    e.preventDefault()
+    if (resizingRef.current) return
+    onDragStart()
+    let hoverIdx: number | null = null
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      const cx = 'touches' in ev ? ev.touches[0].clientX : ev.clientX
+      const cy = 'touches' in ev ? ev.touches[0].clientY : ev.clientY
+      const el = (document.elementFromPoint(cx, cy) as HTMLElement | null)?.closest('[data-tile-index]') as HTMLElement | null
+      if (el) {
+        const idx = Number(el.dataset.tileIndex)
+        hoverIdx = idx
+        onDragOverIndex(idx)
+      }
+    }
+
+    const onUp = () => {
+      onDragComplete(hoverIdx)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+  }
 
   function startResize(e: React.MouseEvent | React.TouchEvent) {
     e.stopPropagation()
@@ -580,11 +615,7 @@ function ResizableTile({
 
   return (
     <div
-      draggable={!resizingRef.current}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onDragOver={e => e.preventDefault()}
-      onDrop={onDrop}
+      data-tile-index={index}
       style={{
         gridColumn: isMobile ? undefined : `${layout.col} / span ${layout.colSpan}`,
         gridRow: isMobile ? undefined : `${layout.row} / span ${layout.rowSpan}`,
@@ -604,7 +635,7 @@ function ResizableTile({
     >
       {/* Header del tile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 8px', flexShrink: 0 }}>
-        <span style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 14, userSelect: 'none' }}>⠿</span>
+        <span onMouseDown={startDrag} onTouchStart={startDrag} style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 14, userSelect: 'none', touchAction: 'none' }}>⠿</span>
         <div style={{ width: 26, height: 26, borderRadius: 7, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <span style={{ fontSize: 9, fontWeight: 800, color: te.accentText }}>{info.label}</span>
         </div>
@@ -1818,6 +1849,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 <ResizableTile
                   key={layout.key}
                   layout={layout}
+                  index={i}
                   totalRows={totalRows}
                   containerWidth={containerWidth}
                   isMobile={isMobile}
@@ -1830,8 +1862,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   onToggleVisible={() => toggleVisible(layout.key)}
                   onResizeEnd={(colSpan, rowSpan) => resizeLayout(i, colSpan, rowSpan)}
                   onDragStart={() => setDragIdx(i)}
-                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
-                  onDrop={() => { if (dragIdx !== null) { moveLayout(dragIdx, i); setDragIdx(null); setDragOverIdx(null) } }}
+                  onDragOverIndex={idx => setDragOverIdx(idx)}
+                  onDragComplete={targetIdx => {
+                    if (targetIdx !== null && targetIdx !== i) moveLayout(i, targetIdx)
+                    setDragIdx(null); setDragOverIdx(null)
+                  }}
                   isDragging={dragIdx === i}
                   isDragOver={dragOverIdx === i && dragIdx !== i}
                 >
