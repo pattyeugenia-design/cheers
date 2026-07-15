@@ -451,11 +451,11 @@ export default function NuevaCelebracion() {
                       <span style={{ color: '#c98a1e', fontWeight: 800, fontSize: 14 }}>!</span>
                       <span style={{ fontSize: 12, color: '#9a6a13', fontWeight: 600, lineHeight: 1.45 }}>{tx.nueva_link_warning}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#EEEDFE', borderRadius: 14, padding: '10px 12px', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#EEEDFE', borderRadius: 14, padding: '10px 12px', marginBottom: 14, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 13, color: 'rgba(83,74,183,.6)', fontWeight: 700, flexShrink: 0 }}>joincheers.app/</span>
                       <input value={userSlug} onChange={e => setUserSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', width: `calc(${Math.max(userSlug.length + 1, 6)}ch + 16px)`, flexShrink: 0 }} />
                       <span style={{ fontSize: 13, color: 'rgba(83,74,183,.4)', fontWeight: 700 }}>/</span>
-                      <input value={eventSlug} onChange={e => setEventSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', flex: 1, minWidth: 80 }} />
+                      <input value={eventSlug} onChange={e => setEventSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} style={{ border: 'none', background: '#fff', color: '#534AB7', fontFamily: FSYS, fontSize: 13, fontWeight: 800, padding: '4px 8px', borderRadius: 8, outline: 'none', flex: '1 1 100%', minWidth: 120 }} />
                     </div>
                     <button onClick={confirmarLink} disabled={saving} style={btnPrimary(saving)}>{saving ? tx.nueva_creating : tx.nueva_confirm_link}</button>
                   </>
