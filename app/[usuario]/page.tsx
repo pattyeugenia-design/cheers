@@ -301,7 +301,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
 
         {/* Botón nueva celebración */}
         {esPropio && (
-          <button onClick={() => router.push('/nueva')} style={{ width:'100%', padding:'1rem', background:'linear-gradient(135deg,#534AB7,#D4537E)', border:'none', borderRadius:16, color:'#fff', fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:'2rem', boxShadow:'0 8px 24px rgba(212,83,126,.3)', fontFamily:F }}>
+          <button onClick={() => router.push(`/${username}/nueva`)} style={{ width:'100%', padding:'1rem', background:'linear-gradient(135deg,#534AB7,#D4537E)', border:'none', borderRadius:16, color:'#fff', fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:'2rem', boxShadow:'0 8px 24px rgba(212,83,126,.3)', fontFamily:F }}>
             {tx.new_celebration}
           </button>
         )}

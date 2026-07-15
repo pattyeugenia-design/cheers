@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/perfil', '/admin', '/nueva', '/onboarding', '/login', '/dashboard'],
+      disallow: ['/perfil', '/admin', '/*/nueva', '/onboarding', '/login', '/dashboard'],
     },
     sitemap: 'https://joincheers.app/sitemap.xml',
   }

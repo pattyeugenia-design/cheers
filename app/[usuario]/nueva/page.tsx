@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
-import { supabase } from '../supabase'
-import { getLang, t } from '../i18n'
+import { supabase } from '../../supabase'
+import { getLang, t } from '../../i18n'
 
 declare global { interface Window { google: any } }
 
