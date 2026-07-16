@@ -74,6 +74,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Playfair+Display:wght@700;800&family=Fredoka+One&family=Pacifico&display=swap" rel="stylesheet" />
+        {/* Le dice a Google/IA qué es Cheers como marca (nombre, logo, sitio) — ayuda a que
+            aparezca bien en resultados y a que los motores de IA lo reconozcan como entidad. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Cheers',
+              url: 'https://joincheers.app',
+              description: 'Organiza cualquier celebración con un solo link — cumpleaños, posadas, quinceañeras, despedidas de soltera, cenas, viajes con amigos.',
+            }),
+          }}
+        />
       </head>
       <body style={{ margin: 0, padding: 0, cursor: 'none', background: '#fff', position: 'relative' }}>
         <style>{`

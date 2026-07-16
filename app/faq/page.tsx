@@ -105,12 +105,27 @@ export default function FAQ() {
                 {item.q[lang]}
                 <span style={{ color: 'rgba(255,255,255,.4)', fontSize: 18, flexShrink: 0, transform: abiertaAhora ? 'rotate(45deg)' : 'none', transition: 'transform .15s' }}>+</span>
               </button>
-              {abiertaAhora && (
-                <p style={{ fontSize: 15, color: 'rgba(255,255,255,.6)', lineHeight: 1.7, margin: '0 0 20px' }}>{item.a[lang]}</p>
-              )}
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,.6)', lineHeight: 1.7, margin: abiertaAhora ? '0 0 20px' : 0, display: abiertaAhora ? 'block' : 'none' }}>{item.a[lang]}</p>
             </div>
           )
         })}
+
+        {/* Datos estructurados para buscadores y motores de IA (Google, ChatGPT, etc.) —
+            así pueden citar las respuestas directo sin que alguien tenga que hacer click en el acordeón. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: PREGUNTAS.map(item => ({
+                '@type': 'Question',
+                name: item.q.es,
+                acceptedAnswer: { '@type': 'Answer', text: item.a.es },
+              })),
+            }),
+          }}
+        />
 
         <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,.3)', marginTop: 40 }}>
           {lang === 'en' ? 'Have another question? Write to us at' : '¿Tienes otra pregunta? Escríbenos a'} <a href="mailto:hola@joincheers.app" style={{ color: 'rgba(255,255,255,.5)' }}>hola@joincheers.app</a>
