@@ -110,8 +110,11 @@ export default function FAQ() {
           )
         })}
 
-        {/* Datos estructurados para buscadores y motores de IA (Google, ChatGPT, etc.) —
-            así pueden citar las respuestas directo sin que alguien tenga que hacer click en el acordeón. */}
+        {/* FAQPage schema: desde mayo 2026 Google ya NO da resultado enriquecido por esto (lo quitó
+            para todos los sitios), y los motores de IA tampoco lo privilegian — solo leen el texto
+            visible. Lo dejamos porque no hace daño y es gratis, pero el verdadero arreglo de SEO fue
+            el de arriba: que las 6 respuestas cerradas ahora sí están en el HTML (antes no existían
+            en la página hasta que alguien les daba clic, así que ni Google ni la IA las veían). */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

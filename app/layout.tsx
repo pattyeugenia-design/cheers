@@ -3,6 +3,7 @@ import './globals.css'
 import ClientEffects from './components/ClientEffects'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://joincheers.app'),
   title: 'Cheers — Organízate para cualquier celebración',
   description: 'Sin grupos de chat. Sin regalos duplicados. El festejado en control, los invitados siempre informados.',
 }
@@ -74,17 +75,47 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Playfair+Display:wght@700;800&family=Fredoka+One&family=Pacifico&display=swap" rel="stylesheet" />
-        {/* Le dice a Google/IA qué es Cheers como marca (nombre, logo, sitio) — ayuda a que
-            aparezca bien en resultados y a que los motores de IA lo reconozcan como entidad. */}
+        {/* Datos estructurados de marca y producto (Organization + WebSite + SoftwareApplication),
+            estándar 2026 recomendado para que Google y los motores de IA entiendan qué es Cheers,
+            no solo como empresa sino como producto (con sus 3 planes). No incluye "logo" en formato
+            ideal (Google prefiere PNG/JPG, no SVG) ni redes sociales (sameAs) porque Cheers todavía
+            no tiene ninguna cuenta pública — vale la pena crear al menos una y regresar a agregarla aquí. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               '@context': 'https://schema.org',
-              '@type': 'Organization',
-              name: 'Cheers',
-              url: 'https://joincheers.app',
-              description: 'Organiza cualquier celebración con un solo link — cumpleaños, posadas, quinceañeras, despedidas de soltera, cenas, viajes con amigos.',
+              '@graph': [
+                {
+                  '@type': 'Organization',
+                  '@id': 'https://joincheers.app/#organization',
+                  name: 'Cheers',
+                  url: 'https://joincheers.app',
+                  logo: 'https://joincheers.app/icon.svg',
+                  description: 'Organiza cualquier celebración con un solo link — cumpleaños, posadas, quinceañeras, despedidas de soltera, cenas, viajes con amigos.',
+                },
+                {
+                  '@type': 'WebSite',
+                  '@id': 'https://joincheers.app/#website',
+                  url: 'https://joincheers.app',
+                  name: 'Cheers',
+                  publisher: { '@id': 'https://joincheers.app/#organization' },
+                },
+                {
+                  '@type': 'SoftwareApplication',
+                  '@id': 'https://joincheers.app/#software',
+                  name: 'Cheers',
+                  url: 'https://joincheers.app',
+                  applicationCategory: 'LifestyleApplication',
+                  operatingSystem: 'Web',
+                  description: 'Organiza cualquier celebración con un solo link — cumpleaños, posadas, quinceañeras, despedidas de soltera, cenas, viajes con amigos.',
+                  offers: [
+                    { '@type': 'Offer', name: 'Cheer', price: '0', priceCurrency: 'USD' },
+                    { '@type': 'Offer', name: 'Super Cheer', price: '9', priceCurrency: 'USD' },
+                    { '@type': 'Offer', name: 'Extra Cheer', price: '49', priceCurrency: 'USD' },
+                  ],
+                },
+              ],
             }),
           }}
         />
