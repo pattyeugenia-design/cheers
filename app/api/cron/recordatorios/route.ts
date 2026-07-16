@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail } from '../../../emailTemplate'
+import { envolverEmail, trackedLink } from '../../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -181,7 +181,7 @@ export async function GET(req: Request) {
             <p style="font-size: 15px; color: #6b6585;">So far, <strong>${totalConfirmados}</strong> ${totalConfirmados === 1 ? 'person has' : 'people have'} confirmed they're going.</p>
             ${lineaLimite}
             <p style="margin-top: 20px;">
-              <a href="https://joincheers.app/${cel.slug}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
+              <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'recordatorio')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
             </p>
             <p style="font-size: 12px; color: #a39ec0; margin-top: 16px;">Attached: an .ics file to add it to your personal calendar.</p>
         `
@@ -190,7 +190,7 @@ export async function GET(req: Request) {
             <p style="font-size: 15px; color: #6b6585;">Hasta ahora, <strong>${totalConfirmados}</strong> persona${totalConfirmados === 1 ? '' : 's'} ha${totalConfirmados === 1 ? '' : 'n'} confirmado que va${totalConfirmados === 1 ? '' : 'n'}.</p>
             ${lineaLimite}
             <p style="margin-top: 20px;">
-              <a href="https://joincheers.app/${cel.slug}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>
+              <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'recordatorio')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>
             </p>
             <p style="font-size: 12px; color: #a39ec0; margin-top: 16px;">Adjunto va un archivo .ics para agregarlo a tu calendario personal.</p>
         `

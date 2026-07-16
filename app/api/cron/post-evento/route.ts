@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail } from '../../../emailTemplate'
+import { envolverEmail, trackedLink } from '../../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
           <p style="font-size: 15px; color: #6b6585;">If you want to tell us how it went, just reply to this email — we'd love to hear it.</p>
           ${lineaLifetime}
           <p style="margin-top: 20px;">
-            <a href="https://joincheers.app/perfil" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">See my profile →</a>
+            <a href="${trackedLink('https://joincheers.app/perfil', 'post_evento')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">See my profile →</a>
           </p>
       `
       : `
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
           <p style="font-size: 15px; color: #6b6585;">Si quieres contarnos cómo te fue, con gusto lo leemos — solo responde este correo.</p>
           ${lineaLifetime}
           <p style="margin-top: 20px;">
-            <a href="https://joincheers.app/perfil" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver mi perfil →</a>
+            <a href="${trackedLink('https://joincheers.app/perfil', 'post_evento')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver mi perfil →</a>
           </p>
       `
     const html = envolverEmail(lang, cuerpo)

@@ -194,6 +194,73 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
+const DIAS_RECORDATORIO_PERSONAL: { v: number; es: string; en: string }[] = [
+  { v: 1, es: '1 día antes', en: '1 day before' },
+  { v: 3, es: '3 días antes', en: '3 days before' },
+  { v: 7, es: '1 semana antes', en: '1 week before' },
+  { v: 14, es: '2 semanas antes', en: '2 weeks before' },
+  { v: 30, es: '1 mes antes', en: '1 month before' },
+]
+
+// Recordatorios extra, opcionales, que cada persona (organizador o invitado) activa para
+// sí misma en los días que quiera — a diferencia de recordatorio_dias (config única del
+// organizador para todo el evento), esto es por-persona y gateado a SU propia cuenta Lifetime.
+function RecordatoriosPersonales({ user, celebracionSlug, miPlan, lang, variant = 'hero' }: { user: any; celebracionSlug: string; miPlan: string | null; lang: string; variant?: 'hero' | 'panel' }) {
+  const [dias, setDias] = useState<number[]>([])
+  const [cargado, setCargado] = useState(false)
+  const [mostrar, setMostrar] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id || !celebracionSlug) return
+    supabase.from('recordatorios_personales').select('dias_antes').eq('user_id', user.id).eq('celebracion_slug', celebracionSlug)
+      .then(({ data }) => { setDias((data || []).map((d: any) => d.dias_antes)); setCargado(true) })
+  }, [user?.id, celebracionSlug])
+
+  if (!user?.id || !cargado) return null
+  const esLifetime = miPlan === 'lifetime'
+
+  async function toggle(d: number) {
+    if (!esLifetime) return
+    if (dias.includes(d)) {
+      await supabase.from('recordatorios_personales').delete().eq('user_id', user.id).eq('celebracion_slug', celebracionSlug).eq('dias_antes', d)
+      setDias(prev => prev.filter(x => x !== d))
+    } else {
+      await supabase.from('recordatorios_personales').insert({ user_id: user.id, celebracion_slug: celebracionSlug, dias_antes: d })
+      setDias(prev => [...prev, d].sort((a, b) => a - b))
+    }
+  }
+
+  const esPanel = variant === 'panel'
+  return (
+    <div style={{ marginTop: 10, textAlign: esPanel ? 'left' as const : 'center' as const }}>
+      <button type="button" onClick={() => setMostrar(v => !v)} style={esPanel
+        ? { fontSize: 12, fontWeight: 700, color: '#534AB7', background: '#EEEDFE', padding: '6px 12px', borderRadius: 99, border: 'none', cursor: 'pointer', fontFamily: FSYS }
+        : { fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, border: 'none', cursor: 'pointer', fontFamily: FSYS }}>
+        {lang === 'en' ? '+ My reminders' : '+ Mis recordatorios'}
+      </button>
+      {mostrar && (
+        <div style={{ marginTop: 8, background: '#fff', borderRadius: 14, padding: 14, textAlign: 'left' as const, boxShadow: '0 8px 24px rgba(20,10,40,.2)', display: 'inline-block', minWidth: 220 }}>
+          {!esLifetime && (
+            <p style={{ fontSize: 12, color: '#6b6585', margin: '0 0 10px', lineHeight: 1.4 }}>
+              {lang === 'en'
+                ? 'Personal reminders for any celebration are part of Extra Cheer.'
+                : 'Los recordatorios personales para cualquier celebración son parte de Extra Cheer.'}
+              {' '}
+              <a href="/perfil" style={{ color: '#534AB7', fontWeight: 700 }}>{lang === 'en' ? 'See Extra Cheer →' : 'Ver Extra Cheer →'}</a>
+            </p>
+          )}
+          {DIAS_RECORDATORIO_PERSONAL.map(op => (
+            <label key={op.v} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 13, color: esLifetime ? '#2a2440' : '#c3bfd6', cursor: esLifetime ? 'pointer' : 'default', fontFamily: FSYS }}>
+              <input type="checkbox" checked={dias.includes(op.v)} onChange={() => toggle(op.v)} disabled={!esLifetime} />
+              {lang === 'en' ? op.en : op.es}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Brief público, sin necesidad de cuenta
 function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any) {
   const router = useRouter()
@@ -327,7 +394,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
 }
 
 // Vista del invitado
-function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurrencias }: any) {
+function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurrencias, miPlan }: any) {
   const router = useRouter()
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
   const [mensaje, setMensaje] = useState('')
@@ -436,6 +503,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
               <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
             </div>
           )}
+          <RecordatoriosPersonales user={user} celebracionSlug={celebracion.slug} miPlan={miPlan} lang={lang} />
         </div>
 
         <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
@@ -700,6 +768,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
   const [recordatorioDias, setRecordatorioDias] = useState<number[]>([7])
+  const [miPlan, setMiPlan] = useState<string | null>(null)
   const [lugar, setLugar] = useState('')
   const [mapsListo, setMapsListo] = useState(false)
   const lugarRef = useRef<HTMLInputElement>(null)
@@ -792,6 +861,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       if (cel.organizador_id === authUser.id) {
         setRol('organizador')
       } else {
+        const { data: perfilMio } = await supabase.from('perfiles').select('plan').eq('user_id', authUser.id).single()
+        setMiPlan(perfilMio?.plan || 'free')
+
         let inv: any = null
         const { data: invPorId } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('user_id', authUser.id).single()
         if (invPorId) {
@@ -850,6 +922,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         const { data: perfilOrg } = await supabase.from('perfiles').select('plan, nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
         if (perfilOrg?.plan) setOrganizadorPlan(perfilOrg.plan)
         if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null, plan: perfilOrg.plan })
+        if (cel.organizador_id === authUser.id && perfilOrg?.plan) setMiPlan(perfilOrg.plan)
       }
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
@@ -1170,7 +1243,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   if (rol === 'brief') return <VistaBrief celebracion={celebracion} lang={lang} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} />
 
-  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} />
+  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} miPlan={miPlan} />
 
   // DASHBOARD ORGANIZADOR
   const te = TEMAS[tema] || TEMAS.morado
@@ -1714,6 +1787,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                       </>
                     )
                   })()}
+                  <RecordatoriosPersonales user={user} celebracionSlug={celebracion.slug} miPlan={miPlan} lang={lang} variant="panel" />
                 </div>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.place}</div>

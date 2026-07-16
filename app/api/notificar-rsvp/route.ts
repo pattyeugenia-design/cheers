@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail } from '../../emailTemplate'
+import { envolverEmail, trackedLink } from '../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -59,14 +59,14 @@ export async function POST(req: Request) {
         <p style="font-size: 16px; color: #1c1830;"><strong>${nombreInvitado}</strong> ${asistenciaLabel} to <strong>${cel.nombre}</strong>.</p>
         ${mensaje ? `<p style="font-size: 14px; color: #6b6585; font-style: italic;">"${mensaje}"</p>` : ''}
         <p style="margin-top: 20px;">
-          <a href="https://joincheers.app/${cel.slug}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
+          <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_rsvp')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
         </p>
     `
     : `
         <p style="font-size: 16px; color: #1c1830;"><strong>${nombreInvitado}</strong> ${asistenciaLabel} a <strong>${cel.nombre}</strong>.</p>
         ${mensaje ? `<p style="font-size: 14px; color: #6b6585; font-style: italic;">"${mensaje}"</p>` : ''}
         <p style="margin-top: 20px;">
-          <a href="https://joincheers.app/${cel.slug}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>
+          <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_rsvp')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>
         </p>
     `
   const html = envolverEmail(lang, cuerpo)

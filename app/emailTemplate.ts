@@ -6,6 +6,17 @@
 
 export type Idioma = 'es' | 'en'
 
+// Agrega parámetros UTM a cualquier link de un correo, para poder ver en Vercel
+// Analytics (o donde sea que midas tráfico) cuánta gente entra desde cada tipo
+// de correo específico, no solo "vino de algún lado".
+export function trackedLink(url: string, campaign: string): string {
+  const u = new URL(url)
+  u.searchParams.set('utm_source', 'email')
+  u.searchParams.set('utm_medium', 'email')
+  u.searchParams.set('utm_campaign', campaign)
+  return u.toString()
+}
+
 function bannerHtml(): string {
   return `
     <div style="text-align: center; margin-bottom: 24px;">

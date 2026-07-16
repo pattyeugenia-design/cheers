@@ -15,6 +15,14 @@
     {
       "path": "/api/cron/reporte-semanal",
       "schedule": "0 15 * * 1"
+    },
+    {
+      "path": "/api/cron/recordatorio-15h",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/recordatorio-personal",
+      "schedule": "0 15 * * *"
     }
   ]
 }
