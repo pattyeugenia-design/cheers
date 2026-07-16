@@ -1010,7 +1010,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   async function guardarCampo(campo: string, valor: any) {
     if (!celebracion) return
-    const { error } = await supabase.from('celebraciones').update({ [campo]: valor }).eq('slug', celebracion.slug)
+    // Si cambia la fecha, el recordatorio fijo de 15h debe poder volver a mandarse para la nueva fecha
+    const payload: any = campo === 'fecha' ? { [campo]: valor, recordatorio_15h_enviado: false } : { [campo]: valor }
+    const { error } = await supabase.from('celebraciones').update(payload).eq('slug', celebracion.slug)
     if (error && ['tema', 'fuente', 'titulo_align', 'titulo_size'].includes(campo)) {
       setBloqueoPro(tx.customize_locked_title)
       const { data } = await supabase.from('celebraciones').select('*').eq('slug', celebracion.slug).single()
