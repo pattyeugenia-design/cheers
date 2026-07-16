@@ -65,8 +65,8 @@ const PREGUNTAS = [
   {
     q: { es: '¿Cómo entro a mi cuenta?', en: 'How do I sign in?' },
     a: {
-      es: 'Puedes entrar con tu cuenta de Google o con email y contraseña. Próximamente también con Apple y Facebook.',
-      en: 'You can sign in with your Google account or with email and password. Apple and Facebook are coming soon.',
+      es: 'Puedes entrar con tu cuenta de Google o con email y contraseña.',
+      en: 'You can sign in with your Google account or with email and password.',
     },
   },
 ]
