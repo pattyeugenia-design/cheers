@@ -116,6 +116,32 @@ export default function Admin() {
   const celsPorDia = contarPorDia(celebraciones)
   const maxDia = Math.max(...usuariosPorDia, ...celsPorDia, 1)
 
+  // Semana vs. semana pasada (no solo "esta semana" suelto)
+  const hace7 = new Date(Date.now() - 7*24*60*60*1000)
+  const hace14 = new Date(Date.now() - 14*24*60*60*1000)
+  const usuariosSemanaAnterior = usuarios.filter(u => new Date(u.created_at) >= hace14 && new Date(u.created_at) < hace7).length
+  const celsSemanaAnterior = celebraciones.filter(c => new Date(c.created_at) >= hace14 && new Date(c.created_at) < hace7).length
+  const diffPct = (actual: number, anterior: number) => {
+    if (anterior === 0) return actual > 0 ? '+100%' : '0%'
+    const pct = Math.round(((actual - anterior) / anterior) * 100)
+    return `${pct >= 0 ? '+' : ''}${pct}%`
+  }
+
+  // Pro vs Lifetime, con ingreso estimado (conteo × precio — el número exacto en vivo de
+  // Stripe ya llega en el reporte semanal por correo, aquí es solo para ver la mezcla rápido)
+  const celsPro = celebraciones.filter(c => c.plan === 'pro').length
+  const usuariosLifetime = usuarios.filter(u => u.plan === 'lifetime').length
+  const ingresoEstimado = celsPro * 9 + usuariosLifetime * 49
+
+  // Cuentas que se registraron y nunca crearon una celebración
+  const usuariosSinCelebraciones = usuarios.filter(u => !celebraciones.some(c => c.organizador_id === u.user_id)).length
+
+  // Horas pico de actividad (registros + celebraciones creadas, agrupado por hora del día)
+  const porHora = Array(24).fill(0)
+  ;[...usuarios, ...celebraciones].forEach(it => { porHora[new Date(it.created_at).getHours()]++ })
+  const maxHora = Math.max(...porHora, 1)
+  const horaPico = porHora.indexOf(maxHora)
+
   const stat = (label: string, value: string | number, sub?: string, color = '#a89df0') => (
     <div style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:16, padding:'18px 20px' }}>
       <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', textTransform:'uppercase', letterSpacing:'.5px', marginBottom:6 }}>{label}</div>
@@ -209,11 +235,24 @@ export default function Admin() {
         {/* VISTA ADMIN MÉTRICAS */}
         {vista === 'admin' && (
           <div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:32 }}>
-              {stat('Usuarios totales', totalUsuarios, `+${usuariosEstaSemana} esta semana`)}
-              {stat('Celebraciones', totalCels, `+${celsEstaSeamana} esta semana`, '#f08cb0')}
-              {stat('Invitados', totalInvitados, 'en todas las cels', '#4ade80')}
-              {stat('RSVPs', totalRsvps, `${Math.round(rsvpVan/Math.max(totalRsvps,1)*100)}% confirman ir`, '#60a5fa')}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
+              {stat('Usuarios totales', totalUsuarios, `${usuariosEstaSemana} esta semana (${diffPct(usuariosEstaSemana, usuariosSemanaAnterior)} vs. anterior)`)}
+              {stat('Celebraciones totales', totalCels, `${celsEstaSeamana} esta semana (${diffPct(celsEstaSeamana, celsSemanaAnterior)} vs. anterior)`, '#f08cb0')}
+              {stat('Ingreso estimado', `$${ingresoEstimado}`, `${celsPro} Super Cheer · ${usuariosLifetime} Extra Cheer`, '#4ade80')}
+              {stat('Se registraron y no hicieron nada', usuariosSinCelebraciones, `de ${totalUsuarios} cuentas`, '#60a5fa')}
+            </div>
+
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Hora pico de actividad</div>
+              <div style={{ display:'flex', alignItems:'flex-end', gap:3, height:70 }}>
+                {porHora.map((v, h) => (
+                  <div key={h} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2, height:'100%', justifyContent:'flex-end' }} title={`${h}:00 — ${v}`}>
+                    <div style={{ width:'100%', height:`${(v/maxHora)*100}%`, minHeight:v>0?2:0, background: h===horaPico ? '#f08cb0' : '#a89df0', borderRadius:2 }} />
+                    {h % 3 === 0 && <span style={{ fontSize:8, color:'rgba(255,255,255,.3)' }}>{h}h</span>}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginTop:8 }}>Pico: {horaPico}:00–{horaPico+1}:00 hrs</div>
             </div>
 
             {/* Crecimiento diario */}
