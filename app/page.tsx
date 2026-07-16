@@ -12,6 +12,7 @@ const translations = {
     sub: 'Sin grupos de chat. Sin drama.\nTodo el plan, en un link que tus personas abren y entienden al instante.',
     cta_google: 'Continuar con Google',
     no_cc: 'Gratis para siempre · Sin tarjeta de crédito',
+    cta_email: '¿Prefieres con email? Entra aquí',
     beta: 'BETA ABIERTA',
     social_proof: 'Más de 200 celebraciones organizadas',
     demo_event: 'Cumpleaños de Mia',
@@ -40,7 +41,7 @@ const translations = {
       { name: 'Super Cheer', price: '$9', sub: 'por celebración', features: ['Hasta 10 invitados', 'Itinerario completo', 'Lista de regalos', 'Modo sorpresa', 'Personalización'], cta: 'Empezar con Super Cheer', featured: true, badge: 'MÁS POPULAR' },
       { name: 'Extra Cheer', price: '$49', sub: 'pago único · para siempre', features: ['Invitados ilimitados', 'Link público para eventos abiertos', 'Historial completo', 'Todo incluido'], cta: 'Comprar Extra Cheer', featured: false },
     ],
-    cta_title: '¿Lista para celebrar?',
+    cta_title: '¿Todo listo para celebrar?',
     cta_sub: 'Crea tu primera celebración en menos de 2 minutos.',
     cta_btn: 'Empezar gratis',
     no_cc2: 'Gratis para siempre · Sin tarjeta',
@@ -53,6 +54,7 @@ const translations = {
     sub: 'No group chats. No drama.\nEverything your people need, in one link they open and instantly get.',
     cta_google: 'Continue with Google',
     no_cc: 'Free forever · No credit card required',
+    cta_email: 'Prefer email? Sign in here',
     beta: 'OPEN BETA',
     social_proof: 'Over 200 celebrations organized',
     demo_event: "Mia's Birthday",
@@ -183,6 +185,13 @@ export default function Home() {
             <a href="#precios" className="nav-a" style={{ fontSize:14, color:'rgba(255,255,255,.5)', textDecoration:'none' }}>{tx.nav_prices}</a>
           </>}
           <a href="/faq" className="nav-a" style={{ fontSize:14, color:'rgba(255,255,255,.5)', textDecoration:'none' }}>FAQ</a>
+          <button
+            onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+            aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a español'}
+            style={{ fontSize:12, fontWeight:700, background:'none', color:'rgba(255,255,255,.4)', padding:'4px 8px', borderRadius:8, border:'1px solid rgba(255,255,255,.12)', cursor:'pointer', fontFamily:F }}
+          >
+            {lang === 'es' ? 'EN' : 'ES'}
+          </button>
           <button onClick={loginConGoogle} style={{ fontSize:13, fontWeight:700, background:'rgba(255,255,255,.08)', color:'#fff', padding:isMobile?'7px 14px':'8px 18px', borderRadius:99, border:'1px solid rgba(255,255,255,.12)', cursor:'pointer', fontFamily:F }}>{tx.nav_cta}</button>
         </div>
       </nav>
@@ -207,7 +216,8 @@ export default function Home() {
               <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
               {tx.cta_google}
             </button>
-            <p style={{ fontSize:12, color:'rgba(255,255,255,.25)', margin:'0 0 24px' }}>{tx.no_cc}</p>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.25)', margin:'0 0 10px' }}>{tx.no_cc}</p>
+            <a href="/login" style={{ display:'block', fontSize:13, color:'rgba(255,255,255,.4)', textDecoration:'underline', margin:'0 0 24px' }}>{tx.cta_email}</a>
             <div style={{ display:'flex', alignItems:'center', gap:10, justifyContent:isMobile?'center':'flex-start' }}>
               <div style={{ display:'flex' }}>
                 {['M','C','S','R'].map((l,i) => <div key={i} style={{ width:26, height:26, borderRadius:'50%', background:`linear-gradient(135deg,${i%2===0?'#534AB7,#7b6fd0':'#D4537E,#a14b9c'})`, border:'2px solid #0d0b1a', marginLeft:i>0?-7:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, color:'#fff' }}>{l}</div>)}
