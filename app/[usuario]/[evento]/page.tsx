@@ -341,7 +341,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
     if (user) {
       supabase.from('rsvps').select('*')
         .eq('celebracion_slug', celebracion.slug)
-        .eq('nombre', user?.user_metadata?.name || user?.email || '')
+        .eq('user_id', user.id)
         .single()
         .then(({ data }) => {
           if (data) { setRsvpExistente(data); setAsistencia(data.asistencia); setMensaje(data.mensaje || '') }
