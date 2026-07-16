@@ -26,6 +26,10 @@ function slugify(str: string) {
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40)
 }
 
+// Palabras que no pueden ser el slug de un evento porque chocan con rutas reales
+// de la app (ej. /usuario/nueva es la pantalla para crear una celebracion, no un evento).
+const SLUGS_RESERVADOS = ['nueva', 'admin_login']
+
 function saveDraft(data: any) {
   if (typeof window === 'undefined') return
   localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...data, savedAt: Date.now() }))
@@ -145,8 +149,10 @@ export default function NuevaCelebracion() {
 
   async function guardar() {
     setSaving(true); setErrorMsg('')
+    const finalSlugPart = eventSlug || slugify(titulo || tipo || 'celebracion')
+    if (SLUGS_RESERVADOS.includes(finalSlugPart)) { setSaving(false); setErrorMsg(tx.nueva_slug_error); return }
     const { data: { user } } = await supabase.auth.getUser()
-    const slug = `${userSlug}/${eventSlug || slugify(titulo || tipo || 'celebracion')}`
+    const slug = `${userSlug}/${finalSlugPart}`
     setSlugFinal(slug)
     const { error } = await supabase.from('celebraciones').insert({
       nombre: titulo || tipo,
@@ -169,7 +175,9 @@ export default function NuevaCelebracion() {
 
   async function confirmarLink() {
     setSaving(true); setErrorMsg('')
-    const nuevoSlug = `${userSlug}/${eventSlug || slugify(titulo || tipo || 'celebracion')}`
+    const finalSlugPart = eventSlug || slugify(titulo || tipo || 'celebracion')
+    if (SLUGS_RESERVADOS.includes(finalSlugPart)) { setSaving(false); setErrorMsg(tx.nueva_slug_error); return }
+    const nuevoSlug = `${userSlug}/${finalSlugPart}`
     if (nuevoSlug !== slugFinal) {
       const { error } = await supabase.from('celebraciones').update({ nombre: titulo || tipo, slug: nuevoSlug }).eq('slug', slugFinal)
       if (error) {
