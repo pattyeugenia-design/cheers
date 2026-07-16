@@ -1,11 +1,12 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 
 export default function AdminLogin() {
   const router = useRouter()
+  const params = useParams<{ usuario: string }>()
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -21,7 +22,7 @@ export default function AdminLogin() {
     })
     setCargando(false)
     if (res.ok) {
-      router.push('/admin')
+      router.push(`/${params.usuario}/admin_login/dashboard`)
       router.refresh()
     } else {
       setError('Password incorrecto')

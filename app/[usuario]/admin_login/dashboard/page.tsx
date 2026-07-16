@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../supabase'
+import { supabase } from '../../../supabase'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
