@@ -5,9 +5,11 @@ import { envolverEmail, trackedLink } from '../../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Recordatorio fijo ~15 horas antes del evento, para organizador + TODOS los
+// Recordatorio fijo el día antes del evento, para organizador + TODOS los
 // invitados con correo conocido, sin importar si ya confirmaron o no.
 // Distinto del cron "recordatorios" (que es configurable en días y solo va al organizador).
+// Nota: el plan Hobby de Vercel solo permite crons de una vez al día, así que esto
+// corre una vez (a las 15:00 UTC) y revisa por día, no por hora exacta.
 async function enviarRecordatorio15h(
   admin: any,
   slug: string,
@@ -33,7 +35,7 @@ async function enviarRecordatorio15h(
   if (destinatarios.size === 0) return 0
 
   const link = trackedLink(`https://joincheers.app/${slug}`, 'recordatorio_15h')
-  const subject = lang === 'en' ? `Reminder: "${nombreEvento}" is in less than 15 hours` : `Recordatorio: "${nombreEvento}" es en menos de 15 horas`
+  const subject = lang === 'en' ? `Reminder: "${nombreEvento}" is tomorrow` : `Recordatorio: "${nombreEvento}" es mañana`
   const cuerpo = lang === 'en'
     ? `
         <p style="font-size: 16px; color: #1c1830;">Friendly reminder — <strong>${nombreEvento}</strong> is coming up soon.</p>
@@ -73,13 +75,15 @@ export async function GET(req: Request) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
   const admin = createClient(supabaseUrl, serviceKey)
 
-  const ahora = new Date()
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const mananaStr = new Date(hoy.getTime() + 86400000).toISOString().slice(0, 10)
   let enviados = 0
 
   // 1. Celebraciones no recurrentes: su propia fecha es la ocurrencia real
   const { data: normales } = await admin
     .from('celebraciones')
-    .select('nombre, slug, organizador_id, fecha, paradas, recordatorio_15h_enviado')
+    .select('nombre, slug, organizador_id, fecha, recordatorio_15h_enviado')
     .eq('archivada', false)
     .eq('recurrente', false)
     .eq('recordatorio_15h_enviado', false)
@@ -87,13 +91,9 @@ export async function GET(req: Request) {
 
   for (const cel of (normales || []) as any[]) {
     if (!cel.organizador_id) continue
-    const primerParada = (cel.paradas || []).find((p: any) => p?.id)
-    const horaEvento = primerParada?.hora || '12:00'
     const fechaBase = String(cel.fecha).slice(0, 10)
-    const eventoDT = new Date(`${fechaBase}T${horaEvento}:00`)
-    const horasFaltan = (eventoDT.getTime() - ahora.getTime()) / (1000 * 60 * 60)
 
-    if (horasFaltan > 0 && horasFaltan <= 15) {
+    if (fechaBase === mananaStr) {
       enviados += await enviarRecordatorio15h(admin, cel.slug, cel.nombre, cel.organizador_id)
       await admin.from('celebraciones').update({ recordatorio_15h_enviado: true }).eq('slug', cel.slug)
     }
@@ -102,21 +102,16 @@ export async function GET(req: Request) {
   // 2. Series recurrentes: revisar cada ocurrencia futura pendiente de aviso
   const { data: ocurrenciasPendientes } = await admin
     .from('ocurrencias')
-    .select('id, celebracion_slug, fecha, hora')
+    .select('id, celebracion_slug, fecha')
     .eq('cancelada', false)
     .eq('recordatorio_15h_enviado', false)
+    .eq('fecha', mananaStr)
 
   for (const oc of (ocurrenciasPendientes || []) as any[]) {
-    const horaEvento = oc.hora || '12:00'
-    const eventoDT = new Date(`${oc.fecha}T${horaEvento}:00`)
-    const horasFaltan = (eventoDT.getTime() - ahora.getTime()) / (1000 * 60 * 60)
-
-    if (horasFaltan > 0 && horasFaltan <= 15) {
-      const { data: serie } = await admin.from('celebraciones').select('nombre, slug, organizador_id').eq('slug', oc.celebracion_slug).single()
-      if (serie?.organizador_id) {
-        enviados += await enviarRecordatorio15h(admin, serie.slug, serie.nombre, serie.organizador_id)
-        await admin.from('ocurrencias').update({ recordatorio_15h_enviado: true }).eq('id', oc.id)
-      }
+    const { data: serie } = await admin.from('celebraciones').select('nombre, slug, organizador_id').eq('slug', oc.celebracion_slug).single()
+    if (serie?.organizador_id) {
+      enviados += await enviarRecordatorio15h(admin, serie.slug, serie.nombre, serie.organizador_id)
+      await admin.from('ocurrencias').update({ recordatorio_15h_enviado: true }).eq('id', oc.id)
     }
   }
 
