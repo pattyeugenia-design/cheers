@@ -43,10 +43,20 @@ export default function Admin() {
     })
   }, [])
 
-  // Tiempo real — actualizar cada 30s
+  // Tiempo real — Supabase avisa por websocket en cuanto cambia algo en estas
+  // tablas (requiere que la tabla esté agregada a la publicación supabase_realtime).
+  // Se deja también un refresh cada 2 min como red de seguridad por si el socket se cae.
   useEffect(() => {
-    const interval = setInterval(cargarDatos, 30000)
-    return () => clearInterval(interval)
+    const canal = supabase
+      .channel('admin-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'celebraciones' }, cargarDatos)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'perfiles' }, cargarDatos)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps' }, cargarDatos)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invitados' }, cargarDatos)
+      .subscribe()
+
+    const respaldo = setInterval(cargarDatos, 120000)
+    return () => { supabase.removeChannel(canal); clearInterval(respaldo) }
   }, [cargarDatos])
 
   async function borrarCelebracion(slug: string) {

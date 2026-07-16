@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/generar-ocurrencias",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/reporte-semanal",
+      "schedule": "0 15 * * 1"
     }
   ]
 }
