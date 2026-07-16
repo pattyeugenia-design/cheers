@@ -93,7 +93,14 @@ const translations = {
 export default function Home() {
   const router = useRouter()
   const [lang, setLang] = useState<'es'|'en'>('es')
-  const [cargando, setCargando] = useState(true)
+  // Antes arrancaba en `true` y escondía TODO el contenido real detrás de un
+  // "Cargando..." hasta que el navegador confirmaba que no había sesión — eso
+  // significaba que buscadores/IA que no ejecutan JS solo veían la pantalla de
+  // carga, nunca el copy real. Ahora arranca en `false`: el contenido se ve de
+  // inmediato para cualquiera (humano, buscador, o IA); si alguien SÍ tiene
+  // sesión iniciada, ve la home una fracción de segundo antes de que el
+  // useEffect de abajo lo redirija a su perfil — trade-off correcto.
+  const [cargando, setCargando] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
