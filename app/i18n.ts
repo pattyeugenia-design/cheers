@@ -51,7 +51,7 @@ export const t = {
 
     // Auth
     continue_with_google: 'Continuar con Google',
-    no_cc: 'Gratis para siempre · Sin tarjeta de crédito',
+    no_cc: 'Gratis para empezar · Sin tarjeta de crédito',
     beta: 'BETA ABIERTA',
     signing_in: '...',
 
@@ -125,7 +125,7 @@ export const t = {
     // Extra Cheer upsell
     lifetime_label: 'CHEERS EXTRA CHEER',
     lifetime_title: 'Desbloquea todo, para siempre',
-    lifetime_desc: 'Invitados ilimitados, seguimiento de aperturas y temas premium. Un solo pago.',
+    lifetime_desc: 'Invitados ilimitados, todas tus celebraciones desbloqueadas y recordatorios personales. Un solo pago.',
     lifetime_cta: 'Hazme Extra Cheer →',
 
     // Tiles
@@ -283,7 +283,7 @@ export const t = {
 
     // Auth
     continue_with_google: 'Continue with Google',
-    no_cc: 'Free forever · No credit card required',
+    no_cc: 'Free to start · No credit card required',
     beta: 'OPEN BETA',
     signing_in: '...',
 
@@ -357,7 +357,7 @@ export const t = {
     // Extra Cheer upsell
     lifetime_label: 'CHEERS EXTRA CHEER',
     lifetime_title: 'Unlock everything, forever',
-    lifetime_desc: 'Unlimited guests, opening tracking, and premium themes. One payment.',
+    lifetime_desc: 'Unlimited guests, every celebration unlocked, and personal reminders. One payment.',
     lifetime_cta: 'Go Extra Cheer →',
 
     // Tiles

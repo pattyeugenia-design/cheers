@@ -1879,8 +1879,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             </div>
           )}
 
-          {/* Lifetime colapsable */}
-          {lifetimeExpanded ? (
+          {/* Lifetime colapsable — solo tiene sentido ofrecerlo a quien todavía no lo tiene */}
+          {!cuentaEsLifetime && (lifetimeExpanded ? (
             <div style={{ borderRadius: 18, padding: '18px 20px', marginBottom: 14, background: 'linear-gradient(120deg,#534AB7,#7b46a8 55%,#D4537E)', color: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' as const }}>
                 <div style={{ flex: 1, minWidth: 160 }}>
@@ -1889,7 +1889,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   <div style={{ fontSize: 12, opacity: 0.88, marginTop: 5, lineHeight: 1.5 }}>{tx.lifetime_desc}</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                  <button style={{ background: '#fff', color: '#534AB7', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS }}>{tx.lifetime_cta}</button>
+                  <button onClick={() => router.push('/perfil')} style={{ background: '#fff', color: '#534AB7', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: FSYS }}>{tx.lifetime_cta}</button>
                   <button onClick={() => setLifetimeExpanded(false)} style={{ background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 12, padding: '7px 16px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Remind me later' : 'Después'}</button>
                 </div>
               </div>
@@ -1899,7 +1899,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
               <span style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>Cheers Extra Cheer</span>
               <span style={{ color: te.dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.4)', fontSize: 11 }}>— {lang === 'en' ? 'Unlock everything' : 'Desbloquea todo'} ↑</span>
             </button>
-          )}
+          ))}
 
           <div style={{ fontSize: 12, fontWeight: 600, color: textColor, opacity: 0.6, marginBottom: 12 }}>
             {lang === 'en' ? 'Drag to move · Drag corner to resize' : 'Arrastra para mover · Arrastra la esquina para cambiar el tamaño'}
