@@ -61,6 +61,7 @@ export default function NuevaCelebracion() {
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
   const [lugar, setLugar] = useState('')
+  const [cenaSubTipo, setCenaSubTipo] = useState<'restaurante' | 'casa'>('casa')
   const [recurrente, setRecurrente] = useState(false)
   const [recurrenciaTipo, setRecurrenciaTipo] = useState<'semanal' | 'mensual_nesimo'>('semanal')
   const [recurrenciaDiaSemana, setRecurrenciaDiaSemana] = useState(5) // 5 = viernes
@@ -106,6 +107,7 @@ export default function NuevaCelebracion() {
         if (draft.fecha) setFecha(draft.fecha)
         if (draft.lugar) setLugar(draft.lugar)
         if (draft.eventSlug) setEventSlug(draft.eventSlug)
+        if (draft.cenaSubTipo) setCenaSubTipo(draft.cenaSubTipo)
         if (draft.step) setStep(draft.step)
       }
     })
@@ -114,8 +116,8 @@ export default function NuevaCelebracion() {
   // Auto-guardar draft al cambiar cualquier campo
   useEffect(() => {
     if (verificando) return
-    saveDraft({ tipo, rol, titulo, festejado, fecha, lugar, eventSlug, step })
-  }, [tipo, rol, titulo, festejado, fecha, lugar, eventSlug, step])
+    saveDraft({ tipo, rol, titulo, festejado, fecha, lugar, eventSlug, cenaSubTipo, step })
+  }, [tipo, rol, titulo, festejado, fecha, lugar, eventSlug, cenaSubTipo, step])
 
   useEffect(() => {
     if (!mapsListo || !lugarRef.current || lugarRef.current.dataset.init) return
@@ -156,7 +158,8 @@ export default function NuevaCelebracion() {
     setSlugFinal(slug)
     const { error } = await supabase.from('celebraciones').insert({
       nombre: titulo || tipo,
-      tipo, festejado_nombre: rol === 'yo' ? userNombre : festejado,
+      tipo, sub_tipo: tipo === 'cena' ? cenaSubTipo : null,
+      festejado_nombre: rol === 'yo' ? userNombre : festejado,
       organizador_id: user?.id,
       slug, es_sorpresa: rol === 'sorpresa',
       fecha: fecha || null,
@@ -377,6 +380,16 @@ export default function NuevaCelebracion() {
                 <div style={{ marginTop: 8 }}>
                   <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_event_title_label}</label>
                   <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={tipoSeleccionado?.label + '...'} style={inputStyle} />
+
+                  {tipo === 'cena' && (
+                    <>
+                      <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_cena_donde_label}</label>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                        <button type="button" onClick={() => setCenaSubTipo('restaurante')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '10px 6px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: cenaSubTipo === 'restaurante' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#F5F4FB', color: cenaSubTipo === 'restaurante' ? '#fff' : '#534AB7' }}>{tx.nueva_cena_restaurante}</button>
+                        <button type="button" onClick={() => setCenaSubTipo('casa')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '10px 6px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: cenaSubTipo === 'casa' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#F5F4FB', color: cenaSubTipo === 'casa' ? '#fff' : '#534AB7' }}>{tx.nueva_cena_casa}</button>
+                      </div>
+                    </>
+                  )}
 
                   {(rol === 'otro' || rol === 'sorpresa') && (
                     <>
