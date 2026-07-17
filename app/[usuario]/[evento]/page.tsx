@@ -403,6 +403,9 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
   const [rsvpExistente, setRsvpExistente] = useState<any>(null)
   const [confirmados, setConfirmados] = useState<any[]>([])
   const [nombreManual, setNombreManual] = useState('')
+  const [mensajesMuro, setMensajesMuro] = useState<any[]>([])
+  const [nuevoMensajeMuro, setNuevoMensajeMuro] = useState('')
+  const [publicandoMensaje, setPublicandoMensaje] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -414,11 +417,26 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
           if (data) { setRsvpExistente(data); setAsistencia(data.asistencia); setMensaje(data.mensaje || '') }
         })
     }
-    supabase.from('rsvps').select('nombre')
+    supabase.from('rsvps').select('nombre, mensaje')
       .eq('celebracion_slug', celebracion.slug)
       .eq('asistencia', 'si')
       .then(({ data }) => setConfirmados(data || []))
+    supabase.from('mensajes').select('*')
+      .eq('celebracion_slug', celebracion.slug)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setMensajesMuro(data || []))
   }, [])
+
+  async function publicarMensajeMuro() {
+    if (!user || !nuevoMensajeMuro.trim()) return
+    setPublicandoMensaje(true)
+    const nombre = user?.user_metadata?.name || user?.email || ''
+    const payload = { celebracion_slug: celebracion.slug, user_id: user.id, nombre, texto: nuevoMensajeMuro.trim() }
+    const { data, error } = await supabase.from('mensajes').insert(payload).select().single()
+    if (!error && data) setMensajesMuro(prev => [data, ...prev])
+    setNuevoMensajeMuro('')
+    setPublicandoMensaje(false)
+  }
 
   async function guardarRsvp() {
     const nombre = user ? (user?.user_metadata?.name || user?.email || '') : nombreManual.trim()
@@ -432,7 +450,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreInvitado: nombre, asistencia, mensaje: mensaje.trim() || null }),
     }).catch(() => {})
-    const { data } = await supabase.from('rsvps').select('nombre').eq('celebracion_slug', celebracion.slug).eq('asistencia', 'si')
+    const { data } = await supabase.from('rsvps').select('nombre, mensaje').eq('celebracion_slug', celebracion.slug).eq('asistencia', 'si')
     setConfirmados(data || [])
     setGuardando(false); setGuardado(true)
     setTimeout(() => setGuardado(false), 3000)
@@ -440,6 +458,9 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
 
   const paradas = (celebracion.paradas || []).filter((p: any) => p.id)
   const regalos = celebracion.gifts || []
+  const reservacion = celebracion.reservacion || {}
+  const tieneReservacion = reservacion.lugar || reservacion.hora || reservacion.personas || reservacion.notas || reservacion.link
+  const mensajesRsvpOtros = confirmados.filter((c: any) => c.mensaje)
   const tiles = celebracion.tiles_visibles || {}
   const proxima = proximaOcurrencia(celebracion, ocurrencias)
   const fechaEfectiva = proxima?.fecha || celebracion.fecha
@@ -583,6 +604,46 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
                   : r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '5px 12px', borderRadius: 99, textDecoration: 'none' }}>{lang === 'en' ? 'See →' : 'Ver →'}</a>}
               </div>
             ))}
+          </div>
+        )}
+
+        {tiles.reservacion !== false && tieneReservacion && (
+          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{tx.tile_reservacion}</div>
+            {reservacion.lugar && <div style={{ fontSize: 15, fontWeight: 700, color: '#2a2440' }}>{reservacion.lugar}</div>}
+            {(reservacion.hora || reservacion.personas) && (
+              <div style={{ fontSize: 13, color: '#534AB7', fontWeight: 600, marginTop: 2 }}>
+                {reservacion.hora}{reservacion.hora && reservacion.personas ? ' · ' : ''}{reservacion.personas && `${reservacion.personas} ${lang === 'en' ? 'people' : 'personas'}`}
+              </div>
+            )}
+            {reservacion.notas && <div style={{ fontSize: 13, color: '#a39ec0', marginTop: 4 }}>{reservacion.notas}</div>}
+            {reservacion.link && <a href={reservacion.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '6px 14px', borderRadius: 99, textDecoration: 'none', display: 'inline-block', marginTop: 10 }}>{tx.reservation_view_cta}</a>}
+          </div>
+        )}
+
+        {tiles.mensajes !== false && (mensajesRsvpOtros.length > 0 || mensajesMuro.length > 0 || user) && (
+          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{tx.tile_mensajes}</div>
+            {mensajesRsvpOtros.map((c: any, i: number) => (
+              <div key={`rsvp-${i}`} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, marginBottom: 8, border: '1.5px solid #f0edf8' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#534AB7' }}>{c.nombre}</div>
+                <div style={{ fontSize: 14, color: '#2a2440' }}>{c.mensaje}</div>
+              </div>
+            ))}
+            {mensajesMuro.map((m: any) => (
+              <div key={m.id} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, marginBottom: 8, border: '1.5px solid #f0edf8' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#534AB7' }}>{m.nombre}</div>
+                <div style={{ fontSize: 14, color: '#2a2440' }}>{m.texto}</div>
+              </div>
+            ))}
+            {user ? (
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <input value={nuevoMensajeMuro} onChange={e => setNuevoMensajeMuro(e.target.value)} onKeyDown={e => e.key === 'Enter' && publicarMensajeMuro()} placeholder={tx.mensajes_placeholder} style={{ flex: 1, border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 14, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none' }} />
+                <button onClick={publicarMensajeMuro} disabled={!nuevoMensajeMuro.trim() || publicandoMensaje} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '0 16px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{publicandoMensaje ? '...' : tx.mensajes_publicar}</button>
+              </div>
+            ) : (
+              <button onClick={() => router.push('/login')} style={{ border: 'none', background: '#EEEDFE', color: '#534AB7', fontSize: 13, fontWeight: 800, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS, width: '100%' }}>{tx.mensajes_login_cta}</button>
+            )}
           </div>
         )}
 
@@ -818,6 +879,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [showAddGasto, setShowAddGasto] = useState(false)
   const [nuevoGasto, setNuevoGasto] = useState({ nombre: '', monto: '', quien: '' })
 
+  const [reservacion, setReservacion] = useState<{ lugar: string; hora: string; personas: string; notas: string; link: string }>({ lugar: '', hora: '', personas: '', notas: '', link: '' })
+  const [showEditReservacion, setShowEditReservacion] = useState(false)
+  const [mensajesMuro, setMensajesMuro] = useState<any[]>([])
+
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l]); setLocale(l === 'en' ? 'en-US' : 'es-MX')
     const check = () => {
@@ -935,6 +1000,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setQuellevar(cel.quellevar || [])
       setMenuItems(cel.menu || [])
       setPresupuesto(cel.presupuesto || [])
+      setReservacion({ lugar: '', hora: '', personas: '', notas: '', link: '', ...(cel.reservacion || {}) })
 
       if (cel.tile_layouts) {
         try { setLayouts(JSON.parse(cel.tile_layouts)) } catch { setLayouts(defaultLayouts(cel.tipo, cel.sub_tipo)) }
@@ -950,6 +1016,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       const { data: rsvpData } = await supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setRsvps(rsvpData || [])
+      const { data: mensajesData } = await supabase.from('mensajes').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
+      setMensajesMuro(mensajesData || [])
       const { data: invData } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setInvitadosList(invData || [])
       setCargando(false)
@@ -1222,6 +1290,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   async function borrarGasto(id: string) {
     const nuevo = presupuesto.filter(g => g.id !== id)
     setPresupuesto(nuevo); await supabase.from('celebraciones').update({ presupuesto: nuevo }).eq('slug', celebracion.slug)
+  }
+
+  async function guardarReservacion() {
+    if (!celebracion) return
+    await supabase.from('celebraciones').update({ reservacion }).eq('slug', celebracion.slug)
+    setShowEditReservacion(false)
+  }
+
+  async function borrarMensajeMuro(id: string) {
+    const anterior = mensajesMuro
+    setMensajesMuro(prev => prev.filter(m => m.id !== id))
+    const { error } = await supabase.from('mensajes').delete().eq('id', id)
+    if (error) setMensajesMuro(anterior)
   }
 
   if (cargando) return (
@@ -1583,8 +1664,76 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       </div>
     )
 
-    if (tileKey === 'mensajes') return <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>{tx.messages_empty}</p>
-    if (tileKey === 'reservacion') return <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: 14, color: '#fff' }}><p style={{ fontSize: 13, margin: 0 }}>{tx.reservation_empty}</p></div>
+    if (tileKey === 'mensajes') {
+      const mensajesRsvp = rsvps.filter(r => r.mensaje)
+      return (
+        <div>
+          {mensajesRsvp.length === 0 && mensajesMuro.length === 0 && (
+            <p style={{ fontSize: 13, color: '#7a7494', margin: '0 0 10px' }}>{tx.messages_empty}</p>
+          )}
+          {mensajesRsvp.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>{tx.mensajes_rsvp_titulo}</div>
+              {mensajesRsvp.map((r: any) => (
+                <div key={r.id} style={{ padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#534AB7' }}>{r.nombre}</div>
+                  <div style={{ fontSize: 13, color: te.tileText }}>{r.mensaje}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {mensajesMuro.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>{tx.mensajes_muro_titulo}</div>
+              {mensajesMuro.map((m: any) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#534AB7' }}>{m.nombre}</div>
+                    <div style={{ fontSize: 13, color: te.tileText }}>{m.texto}</div>
+                  </div>
+                  <button onClick={() => borrarMensajeMuro(m.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11, flexShrink: 0 }}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (tileKey === 'reservacion') {
+      const tieneReservacion = reservacion.lugar || reservacion.hora || reservacion.personas || reservacion.notas || reservacion.link
+      if (showEditReservacion) return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <input value={reservacion.lugar} onChange={e => setReservacion(p => ({ ...p, lugar: e.target.value }))} placeholder={tx.reservation_lugar} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input value={reservacion.hora} onChange={e => setReservacion(p => ({ ...p, hora: e.target.value }))} placeholder={tx.reservation_hora} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+            <input value={reservacion.personas} onChange={e => setReservacion(p => ({ ...p, personas: e.target.value }))} placeholder={tx.reservation_personas} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+          </div>
+          <input value={reservacion.notas} onChange={e => setReservacion(p => ({ ...p, notas: e.target.value }))} placeholder={tx.reservation_notas} style={inputStyle} onFocus={e => e.stopPropagation()} />
+          <input value={reservacion.link} onChange={e => setReservacion(p => ({ ...p, link: e.target.value }))} placeholder={tx.reservation_link} style={inputStyle} onFocus={e => e.stopPropagation()} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={guardarReservacion} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+            <button onClick={() => { setShowEditReservacion(false); setReservacion({ lugar: '', hora: '', personas: '', notas: '', link: '', ...(celebracion.reservacion || {}) }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
+          </div>
+        </div>
+      )
+      if (!tieneReservacion) return <button onClick={() => setShowEditReservacion(true)} style={dashedBtn}>{tx.reservation_add}</button>
+      return (
+        <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: 14, color: '#fff' }}>
+          {reservacion.lugar && <div style={{ fontSize: 14, fontWeight: 800 }}>{reservacion.lugar}</div>}
+          {(reservacion.hora || reservacion.personas) && (
+            <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
+              {reservacion.hora}{reservacion.hora && reservacion.personas ? ' · ' : ''}{reservacion.personas && `${reservacion.personas} ${lang === 'en' ? 'people' : 'personas'}`}
+            </div>
+          )}
+          {reservacion.notas && <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{reservacion.notas}</div>}
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+            {reservacion.link && <a href={reservacion.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', background: '#fff', padding: '5px 10px', borderRadius: 8, textDecoration: 'none' }}>{tx.reservation_view_cta}</a>}
+            <button onClick={() => setShowEditReservacion(true)} style={{ border: 'none', background: 'rgba(255,255,255,.2)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{tx.reservation_edit}</button>
+          </div>
+        </div>
+      )
+    }
     return null
   }
 
