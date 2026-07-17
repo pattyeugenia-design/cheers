@@ -1046,11 +1046,15 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       if (cel.titulo_align) setTituloEstilo(cel.titulo_align as TituloEstilo)
       if (cel.titulo_size) setTituloSize(cel.titulo_size)
 
-      const { data: rsvpData } = await supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
+      // Las 3 son independientes entre sí — antes se pedían una tras otra (3 viajes de red
+      // seguidos), ahora salen al mismo tiempo para que la página cargue más rápido.
+      const [{ data: rsvpData }, { data: mensajesData }, { data: invData }] = await Promise.all([
+        supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false }),
+        supabase.from('mensajes').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false }),
+        supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false }),
+      ])
       setRsvps(rsvpData || [])
-      const { data: mensajesData } = await supabase.from('mensajes').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setMensajesMuro(mensajesData || [])
-      const { data: invData } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false })
       setInvitadosList(invData || [])
       setCargando(false)
 
@@ -1201,6 +1205,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   async function subirPortada(file: File) {
     if (!file || !celebracion || !file.type.startsWith('image/')) return
+    if (file.size > 8 * 1024 * 1024) {
+      alert(lang === 'en' ? 'Photo is too big (max 8MB). Try a smaller one.' : 'La foto pesa demasiado (máx. 8MB). Intenta con una más chica.')
+      return
+    }
     setSubiendoPortada(true)
     const ext = file.name.split('.').pop()
     const path = `${celebracion.slug.replace('/', '-')}-portada.${ext}`
