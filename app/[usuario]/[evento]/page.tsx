@@ -123,6 +123,11 @@ function packLayouts(order: TileLayout[]): TileLayout[] {
 
 const initial = (n: string) => (n || '?').trim()[0].toUpperCase()
 
+// Un invitado agregado por teléfono no tiene columna aparte para el número —
+// se guarda directo en "nombre" (ver agregarInvitado). Esto detecta ese caso
+// para no mandarle un WhatsApp saludándolo por su propio número de teléfono.
+const esTelefono = (v: string) => /^\+?[\d\s\-()]{7,}$/.test((v || '').trim()) && !v.includes('@')
+
 function formatICSDate(date: Date) {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 }
@@ -205,7 +210,7 @@ const DIAS_RECORDATORIO_PERSONAL: { v: number; es: string; en: string }[] = [
 // Recordatorios extra, opcionales, que cada persona (organizador o invitado) activa para
 // sí misma en los días que quiera — a diferencia de recordatorio_dias (config única del
 // organizador para todo el evento), esto es por-persona y gateado a SU propia cuenta Lifetime.
-function RecordatoriosPersonales({ user, celebracionSlug, miPlan, lang, variant = 'hero' }: { user: any; celebracionSlug: string; miPlan: string | null; lang: string; variant?: 'hero' | 'panel' }) {
+function RecordatoriosPersonales({ user, celebracionSlug, miPlan, lang, variant = 'hero', heroTextColor = '#fff', heroPillBg = 'rgba(255,255,255,.15)' }: { user: any; celebracionSlug: string; miPlan: string | null; lang: string; variant?: 'hero' | 'panel'; heroTextColor?: string; heroPillBg?: string }) {
   const [dias, setDias] = useState<number[]>([])
   const [cargado, setCargado] = useState(false)
   const [mostrar, setMostrar] = useState(false)
@@ -235,7 +240,7 @@ function RecordatoriosPersonales({ user, celebracionSlug, miPlan, lang, variant 
     <div style={{ marginTop: 10, textAlign: esPanel ? 'left' as const : 'center' as const }}>
       <button type="button" onClick={() => setMostrar(v => !v)} style={esPanel
         ? { fontSize: 12, fontWeight: 700, color: '#534AB7', background: '#EEEDFE', padding: '6px 12px', borderRadius: 99, border: 'none', cursor: 'pointer', fontFamily: FSYS }
-        : { fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, border: 'none', cursor: 'pointer', fontFamily: FSYS }}>
+        : { fontSize: 12, fontWeight: 700, color: heroTextColor, background: heroPillBg, padding: '6px 12px', borderRadius: 99, border: 'none', cursor: 'pointer', fontFamily: FSYS }}>
         {lang === 'en' ? '+ My reminders' : '+ Mis recordatorios'}
       </button>
       {mostrar && (
@@ -264,6 +269,18 @@ function RecordatoriosPersonales({ user, celebracionSlug, miPlan, lang, variant 
 // Brief público, sin necesidad de cuenta
 function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any) {
   const router = useRouter()
+  // Tema/fuente/tamaño/alineación son personalización de pago (Super Cheer/Extra Cheer) —
+  // tienen que reflejarse aquí, no solo en el panel del organizador, o el invitado nunca ve
+  // lo que el organizador personalizó.
+  const teInv = TEMAS[celebracion.tema] || TEMAS.morado
+  const fInv = FUENTES[celebracion.fuente]?.font || FSYS
+  const claro = teInv.dark
+  const txtPrimario = claro ? '#fff' : '#2a2440'
+  const txtSecundario = claro ? 'rgba(255,255,255,.85)' : 'rgba(42,36,64,.75)'
+  const txtTerciario = claro ? 'rgba(255,255,255,.7)' : 'rgba(42,36,64,.6)'
+  const pillBgInv = claro ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.08)'
+  const unlockBoxBg = claro ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.05)'
+  const alineacion = celebracion.titulo_align || 'normal-center'
   const [nombreInvitado, setNombreInvitado] = useState('')
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
   const [guardando, setGuardando] = useState(false)
@@ -307,49 +324,49 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: BG_INVITADO, fontFamily: FSYS }}>
+    <div style={{ minHeight: '100vh', background: teInv.bg, fontFamily: FSYS }}>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '32px 18px 60px' }}>
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
           <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
         </div>
         {celebracion.portada_url && (
           <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)' }}>
-            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }} />
+            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center', display: 'block' }} />
           </div>
         )}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: txtTerciario, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
             {lang === 'en' ? "You're invited" : 'Estás invitado'}
           </div>
           {celebracion.es_sorpresa && (organizador?.plan === 'lifetime' || organizador?.plan === 'pro' || celebracion.plan === 'pro') && (
-            <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, color: '#fff', background: 'rgba(255,255,255,.18)', padding: '4px 12px', borderRadius: 99, marginBottom: 10 }}>
+            <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, color: txtPrimario, background: pillBgInv, padding: '4px 12px', borderRadius: 99, marginBottom: 10 }}>
               🤫 {lang === 'en' ? 'Surprise!' : '¡Es sorpresa!'}
             </span>
           )}
-          <h1 style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 10px', letterSpacing: '-.5px', lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: celebracion.titulo_size || 32, fontWeight: 850, color: txtPrimario, margin: '0 0 10px', letterSpacing: alineacion === 'spaced' ? '3px' : '-.5px', lineHeight: 1.1, fontFamily: fInv, textAlign: alineacion === 'normal-left' ? 'left' : 'center' }}>
             {celebracion.festejado_nombre
               ? (lang === 'en' ? `${celebracion.festejado_nombre}'s celebration` : `Celebración de ${celebracion.festejado_nombre}`)
               : celebracion.nombre}
           </h1>
-          {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
-          {lugarNombre && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', margin: 0 }}>{lugarNombre}</p>}
+          {fecha && <p style={{ fontSize: 14, color: txtSecundario, margin: '0 0 4px' }}>{fecha}</p>}
+          {lugarNombre && <p style={{ fontSize: 14, color: txtTerciario, margin: 0 }}>{lugarNombre}</p>}
           {fechaEfectiva && (() => {
             const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarNombre, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
-                <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
-                <a href={icsUrl} download={`${celebracion.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
+                <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: txtPrimario, background: pillBgInv, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
+                <a href={icsUrl} download={`${celebracion.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 12, fontWeight: 700, color: txtPrimario, background: pillBgInv, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
               </div>
             )
           })()}
           {organizador?.nombre && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-              <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: pillBgInv, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {organizador.avatar
                   ? <img src={organizador.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{organizador.nombre[0]?.toUpperCase()}</span>}
+                  : <span style={{ fontSize: 10, fontWeight: 800, color: txtPrimario }}>{organizador.nombre[0]?.toUpperCase()}</span>}
               </div>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
+              <span style={{ fontSize: 13, color: txtSecundario }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
             </div>
           )}
         </div>
@@ -380,8 +397,8 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
           )}
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 24, padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: '#fff', margin: '0 0 12px', fontWeight: 600 }}>
+        <div style={{ background: unlockBoxBg, borderRadius: 24, padding: '20px', textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 12px', fontWeight: 600 }}>
             {lang === 'en' ? 'Want the full details? Address, gift list, and who else is going.' : '¿Quieres ver todos los detalles? Dirección exacta, lista de regalos y quién más va.'}
           </p>
           <button onClick={irADesbloquear} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>
@@ -396,6 +413,16 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
 // Vista del invitado
 function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurrencias, miPlan }: any) {
   const router = useRouter()
+  // Mismo criterio que VistaBrief: reflejar tema/fuente/tamaño/alineación elegidos
+  // por el organizador, no el morado fijo de siempre.
+  const teInv = TEMAS[celebracion.tema] || TEMAS.morado
+  const fInv = FUENTES[celebracion.fuente]?.font || FSYS
+  const claro = teInv.dark
+  const txtPrimario = claro ? '#fff' : '#2a2440'
+  const txtSecundario = claro ? 'rgba(255,255,255,.85)' : 'rgba(42,36,64,.75)'
+  const txtTerciario = claro ? 'rgba(255,255,255,.7)' : 'rgba(42,36,64,.6)'
+  const pillBgInv = claro ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.08)'
+  const alineacion = celebracion.titulo_align || 'normal-center'
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
   const [mensaje, setMensaje] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -477,10 +504,10 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: BG_INVITADO, fontFamily: FSYS }}>
+    <div style={{ minHeight: '100vh', background: teInv.bg, fontFamily: FSYS }}>
       <style>{`@keyframes sp2{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:.8;transform:scale(1)}}`}</style>
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-        {STARS.map((s, i) => <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: 'rgba(255,255,255,.4)', lineHeight: 1, animation: `sp2 ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>)}
+        {STARS.map((s, i) => <div key={i} style={{ position: 'absolute', top: s.top, left: s.left, fontSize: s.size, color: claro ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.15)', lineHeight: 1, animation: `sp2 ${s.dur} ease-in-out infinite ${s.delay}` }}>✦</div>)}
       </div>
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 600, margin: '0 auto', padding: '32px 18px 60px' }}>
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -488,43 +515,43 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
         </div>
         {celebracion.portada_url && (
           <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)' }}>
-            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }} />
+            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center', display: 'block' }} />
           </div>
         )}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.7)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: txtTerciario, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
             {lang === 'en' ? "You're invited" : 'Estás invitado'}
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 850, color: '#fff', margin: '0 0 10px', letterSpacing: '-.5px', lineHeight: 1.1 }}
+          <h1 style={{ fontSize: celebracion.titulo_size || 32, fontWeight: 850, color: txtPrimario, margin: '0 0 10px', letterSpacing: alineacion === 'spaced' ? '3px' : '-.5px', lineHeight: 1.1, fontFamily: fInv, textAlign: alineacion === 'normal-left' ? 'left' : 'center' }}
             dangerouslySetInnerHTML={{ __html: celebracion.nombre_html || celebracion.nombre }} />
-          {celebracion.tagline && <p style={{ fontSize: 15, color: 'rgba(255,255,255,.8)', margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>}
-          {fecha && <p style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', margin: '0 0 4px' }}>{fecha}</p>}
-          {lugarEfectivo && <a href={`https://maps.google.com/?q=${encodeURIComponent(lugarEfectivo)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,.3)' }}>{lugarEfectivo} →</a>}
+          {celebracion.tagline && <p style={{ fontSize: 15, color: txtSecundario, margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>}
+          {fecha && <p style={{ fontSize: 14, color: txtSecundario, margin: '0 0 4px' }}>{fecha}</p>}
+          {lugarEfectivo && <a href={`https://maps.google.com/?q=${encodeURIComponent(lugarEfectivo)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: txtTerciario, textDecoration: 'none', borderBottom: `1px solid ${claro ? 'rgba(255,255,255,.3)' : 'rgba(42,36,64,.25)'}` }}>{lugarEfectivo} →</a>}
           {fechaEfectiva && (() => {
             const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarEfectivo, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
-                <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
+                <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: txtPrimario, background: pillBgInv, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
                   {lang === 'en' ? '+ Google Calendar' : '+ Google Calendar'}
                 </a>
-                <a href={icsUrl} download={`${celebracion.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
+                <a href={icsUrl} download={`${celebracion.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 12, fontWeight: 700, color: txtPrimario, background: pillBgInv, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
                   {lang === 'en' ? '+ Apple/Outlook' : '+ Apple/Outlook'}
                 </a>
               </div>
             )
           })()}
-          {celebracion.festejado_nombre && <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', margin: '4px 0 0' }}>{lang === 'en' ? `For ${celebracion.festejado_nombre}` : `Para ${celebracion.festejado_nombre}`}</p>}
+          {celebracion.festejado_nombre && <p style={{ fontSize: 13, color: txtTerciario, margin: '4px 0 0' }}>{lang === 'en' ? `For ${celebracion.festejado_nombre}` : `Para ${celebracion.festejado_nombre}`}</p>}
           {organizador?.nombre && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-              <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: pillBgInv, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {organizador.avatar
                   ? <img src={organizador.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{organizador.nombre[0]?.toUpperCase()}</span>}
+                  : <span style={{ fontSize: 10, fontWeight: 800, color: txtPrimario }}>{organizador.nombre[0]?.toUpperCase()}</span>}
               </div>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
+              <span style={{ fontSize: 13, color: txtSecundario }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
             </div>
           )}
-          <RecordatoriosPersonales user={user} celebracionSlug={celebracion.slug} miPlan={miPlan} lang={lang} />
+          <RecordatoriosPersonales user={user} celebracionSlug={celebracion.slug} miPlan={miPlan} lang={lang} heroTextColor={txtPrimario} heroPillBg={pillBgInv} />
         </div>
 
         <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
@@ -648,9 +675,9 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
         )}
 
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginBottom: 4 }}>{lang === 'en' ? 'Organized with' : 'Organizado con'}</div>
+          <div style={{ fontSize: 13, color: claro ? 'rgba(255,255,255,.4)' : 'rgba(42,36,64,.4)', marginBottom: 4 }}>{lang === 'en' ? 'Organized with' : 'Organizado con'}</div>
           <div style={{ fontSize: 18, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
-          <button onClick={() => router.push('/')} style={{ marginTop: 8, border: 'none', background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.6)', fontSize: 12, fontWeight: 700, padding: '6px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>
+          <button onClick={() => router.push('/')} style={{ marginTop: 8, border: 'none', background: pillBgInv, color: txtSecundario, fontSize: 12, fontWeight: 700, padding: '6px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>
             {lang === 'en' ? 'Create your own →' : 'Crea el tuyo →'}
           </button>
         </div>
@@ -760,6 +787,7 @@ function ResizableTile({
         color: te.tileText,
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative',
       }}
     >
       {/* Header del tile */}
@@ -780,20 +808,22 @@ function ResizableTile({
         {children}
       </div>
 
-      {/* Handle de resize */}
-      <div
-        onMouseDown={startResize}
-        onTouchStart={startResize}
-        style={{
-          position: 'absolute', bottom: 0, right: 0, width: 20, height: 20,
-          cursor: 'nwse-resize', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
-          padding: '3px', userSelect: 'none', zIndex: 10,
-        }}
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path d="M9 1L1 9M9 5L5 9M9 9H5" stroke={te.accentText === '#fff' ? 'rgba(255,255,255,.4)' : 'rgba(83,74,183,.4)'} strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-      </div>
+      {/* Handle de resize — solo aplica en desktop, en móvil los tiles se apilan a ancho completo */}
+      {!isMobile && (
+        <div
+          onMouseDown={startResize}
+          onTouchStart={startResize}
+          style={{
+            position: 'absolute', bottom: 0, right: 0, width: 20, height: 20,
+            cursor: 'nwse-resize', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
+            padding: '3px', userSelect: 'none', zIndex: 10,
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M9 1L1 9M9 5L5 9M9 9H5" stroke={te.accentText === '#fff' ? 'rgba(255,255,255,.4)' : 'rgba(83,74,183,.4)'} strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </div>
+      )}
     </div>
   )
 }
@@ -803,6 +833,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const fileInputRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const saveTimeout = useRef<any>(null)
+  const layoutsSaveTimeout = useRef<any>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
   const [tx, setTx] = useState(t.es)
@@ -995,6 +1026,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setRecordatorioDias(Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [7])
       setLugar(cel.paradas?.[0]?.lugar || '')
       setPortadaUrl(cel.portada_url || null)
+      setImgPosition(cel.portada_posicion || 'center')
       setParadas(cel.paradas || [])
       setRegalos(cel.gifts || [])
       setQuellevar(cel.quellevar || [])
@@ -1054,7 +1086,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   function saveLayouts(newLayouts: TileLayout[]) {
     setLayouts(newLayouts)
-    if (celebracion) supabase.from('celebraciones').update({ tile_layouts: JSON.stringify(newLayouts) }).eq('slug', celebracion.slug)
+    if (!celebracion) return
+    // Al arrastrar para redimensionar, esto se llama en cada pixel de movimiento —
+    // debounced para no mandar un UPDATE a Supabase por cada mousemove.
+    clearTimeout(layoutsSaveTimeout.current)
+    layoutsSaveTimeout.current = setTimeout(() => {
+      supabase.from('celebraciones').update({ tile_layouts: JSON.stringify(newLayouts) }).eq('slug', celebracion.slug)
+    }, 400)
   }
 
   function moveLayout(fromIdx: number, toIdx: number) {
@@ -1176,7 +1214,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   async function agregarInvitado() {
     if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= limiteInvitados) return
     setGuardandoInvitado(true)
-    const isPhone = /^\+?[\d\s\-()]{7,}$/.test(nuevoInvitado.trim()) && !nuevoInvitado.includes('@')
+    const isPhone = esTelefono(nuevoInvitado)
     const row = { celebracion_slug: celebracion.slug, email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null, nombre: nuevoInvitado.trim(), user_id: null, created_at: new Date().toISOString() }
     const { data } = await supabase.from('invitados').insert(row).select().single()
     if (data) { setInvitadosList(prev => [...prev, data]); if (isPhone) { setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true) } }
@@ -1479,7 +1517,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                       {rsvp.asistencia === 'si' ? tx.going : rsvp.asistencia === 'no' ? tx.not_going : tx.maybe}
                     </div>}
                   </div>
-                  <button onClick={() => enviarWA(inv.nombre)} style={{ border: 'none', background: '#25D366', color: '#fff', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>W</button>
+                  <button onClick={() => enviarWA(esTelefono(inv.nombre) ? undefined : inv.nombre, esTelefono(inv.nombre) ? inv.nombre : undefined)} style={{ border: 'none', background: '#25D366', color: '#fff', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>W</button>
                   <button onClick={() => borrarInvitado(inv.id)} style={{ ...deleteBtn, width: 24, height: 24, fontSize: 12 }}>×</button>
                 </div>
               )
@@ -1771,10 +1809,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       {/* Lightbox */}
       {showLightbox && portadaUrl && (
         <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <img src={portadaUrl} alt="portada" style={{ width: '90vw', maxWidth: 600, height: '70vw', maxHeight: 500, borderRadius: 20, objectFit: 'cover' }} onClick={e => e.stopPropagation()} />
+          <img src={portadaUrl} alt="portada" style={{ width: '90vw', maxWidth: 600, height: '70vw', maxHeight: 500, borderRadius: 20, objectFit: 'cover', objectPosition: imgPosition }} onClick={e => e.stopPropagation()} />
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }} onClick={e => e.stopPropagation()}>
             {[{ val: 'top', label: lang === 'en' ? 'Top' : 'Arriba' }, { val: 'center', label: lang === 'en' ? 'Center' : 'Centro' }, { val: 'bottom', label: lang === 'en' ? 'Bottom' : 'Abajo' }].map(p => (
-              <button key={p.val} onClick={() => setImgPosition(p.val)} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{p.label}</button>
+              <button key={p.val} onClick={() => { setImgPosition(p.val); guardarCampo('portada_posicion', p.val) }} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{p.label}</button>
             ))}
             <button onClick={() => { setShowLightbox(false); fileInputRef.current?.click() }} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{tx.change_image}</button>
           </div>
