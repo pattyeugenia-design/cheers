@@ -1205,7 +1205,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const ext = file.name.split('.').pop()
     const path = `${celebracion.slug.replace('/', '-')}-portada.${ext}`
     const { error } = await supabase.storage.from('portadas').upload(path, file, { upsert: true })
-    if (error) { setSubiendoPortada(false); return }
+    if (error) {
+      setSubiendoPortada(false)
+      alert(lang === 'en' ? "Couldn't upload the photo. Try a smaller file." : 'No se pudo subir la foto. Intenta con un archivo más chico.')
+      return
+    }
     const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
     await supabase.from('celebraciones').update({ portada_url: publicUrl }).eq('slug', celebracion.slug)
     setPortadaUrl(publicUrl); setSubiendoPortada(false)
