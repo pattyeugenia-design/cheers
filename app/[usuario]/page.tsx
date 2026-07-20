@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { supabase } from '../supabase'
 import { getLang, t } from '../i18n'
 
@@ -214,7 +215,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     <div onClick={() => router.push(`/${cel.slug}`)} style={{ display:'flex', alignItems:'center', gap:14, padding:'1rem 1.25rem', background:'rgba(255,255,255,.06)', borderRadius:16, cursor:'pointer', border:'1px solid rgba(255,255,255,.08)', marginBottom:10, position:'relative' }}>
       <div style={{ width:40, height:40, borderRadius:12, background:'linear-gradient(135deg,#534AB7,#D4537E)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
         {cel.portada_url
-          ? <img src={cel.portada_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+          ? <Image src={cel.portada_url} alt="" width={40} height={40} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
           : <span style={{ fontSize:11, fontWeight:800, color:'#fff', textTransform:'uppercase', letterSpacing:'.5px' }}>{CHIPS[cel.tipo] || 'EVT'}</span>}
       </div>
       <div style={{ flex:1, minWidth:0 }}>
@@ -253,7 +254,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
             <div style={{ position:'relative' }}>
               <button onClick={() => setShowMenu(v => !v)} style={{ width:44, height:44, borderRadius:'50%', border:'2px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', overflow:'hidden', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 {avatar
-                  ? <img src={avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  ? <Image src={avatar} alt="" width={44} height={44} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                   : <span style={{ fontSize:16, fontWeight:800, color:'#fff' }}>{nombre[0]?.toUpperCase()}</span>}
               </button>
               {showMenu && (

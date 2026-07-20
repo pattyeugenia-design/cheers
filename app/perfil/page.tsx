@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { supabase } from '../supabase'
 import { getLang, setLang as setLangGuardado, t, RESERVED_USERNAMES } from '../i18n'
 
@@ -214,7 +215,7 @@ export default function Perfil() {
             {subiendoAvatar
               ? <span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>...</span>
               : avatar
-                ? <img src={avatar} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                ? <Image src={avatar} alt="avatar" width={64} height={64} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 : <span style={{ fontSize:24, fontWeight:800, color:'#fff' }}>{(nombreCompleto || user?.email || '?')[0].toUpperCase()}</span>}
           </label>
           <div>

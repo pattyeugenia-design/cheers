@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
+import Image from 'next/image'
 import { supabase } from '../../supabase'
 import { getLang, t } from '../../i18n'
 
@@ -330,8 +331,8 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
           <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
         </div>
         {celebracion.portada_url && (
-          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)' }}>
-            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center', display: 'block' }} />
+          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)', position: 'relative', height: 220 }}>
+            <Image src={celebracion.portada_url} alt="portada" fill sizes="600px" style={{ objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center' }} />
           </div>
         )}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -363,7 +364,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
               <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: pillBgInv, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {organizador.avatar
-                  ? <img src={organizador.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <Image src={organizador.avatar} alt="" width={22} height={22} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span style={{ fontSize: 10, fontWeight: 800, color: txtPrimario }}>{organizador.nombre[0]?.toUpperCase()}</span>}
               </div>
               <span style={{ fontSize: 13, color: txtSecundario }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
@@ -514,8 +515,8 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
           <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
         </div>
         {celebracion.portada_url && (
-          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)' }}>
-            <img src={celebracion.portada_url} alt="portada" style={{ width: '100%', height: 220, objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center', display: 'block' }} />
+          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)', position: 'relative', height: 220 }}>
+            <Image src={celebracion.portada_url} alt="portada" fill sizes="600px" style={{ objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center' }} />
           </div>
         )}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -545,7 +546,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
               <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: pillBgInv, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {organizador.avatar
-                  ? <img src={organizador.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <Image src={organizador.avatar} alt="" width={22} height={22} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span style={{ fontSize: 10, fontWeight: 800, color: txtPrimario }}>{organizador.nombre[0]?.toUpperCase()}</span>}
               </div>
               <span style={{ fontSize: 13, color: txtSecundario }}>{lang === 'en' ? `Organized by ${organizador.nombre}` : `Organiza ${organizador.nombre}`}</span>
@@ -1821,7 +1822,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       {/* Lightbox */}
       {showLightbox && portadaUrl && (
         <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <img src={portadaUrl} alt="portada" style={{ width: '90vw', maxWidth: 600, height: '70vw', maxHeight: 500, borderRadius: 20, objectFit: 'cover', objectPosition: imgPosition }} onClick={e => e.stopPropagation()} />
+          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', width: '90vw', maxWidth: 600, height: '70vw', maxHeight: 500, borderRadius: 20, overflow: 'hidden' }}>
+            <Image src={portadaUrl} alt="portada" fill sizes="600px" style={{ objectFit: 'cover', objectPosition: imgPosition }} />
+          </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }} onClick={e => e.stopPropagation()}>
             {[{ val: 'top', label: lang === 'en' ? 'Top' : 'Arriba' }, { val: 'center', label: lang === 'en' ? 'Center' : 'Centro' }, { val: 'bottom', label: lang === 'en' ? 'Bottom' : 'Abajo' }].map(p => (
               <button key={p.val} onClick={() => { setImgPosition(p.val); guardarCampo('portada_posicion', p.val) }} style={{ border: imgPosition === p.val ? '2px solid #fff' : '2px solid rgba(255,255,255,.3)', background: imgPosition === p.val ? '#fff' : 'transparent', color: imgPosition === p.val ? '#534AB7' : '#fff', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer' }}>{p.label}</button>
