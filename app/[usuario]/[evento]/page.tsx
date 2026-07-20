@@ -955,8 +955,20 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       setUser(authUser)
 
+      // Perfil del organizador — se usa en varios puntos de aquí para abajo (su nombre/avatar,
+      // y su plan para el tope de invitados Lifetime), así que se pide una sola vez en vez de
+      // repetirlo más abajo.
+      let perfilOrgData: any = null
+      if (cel.organizador_id) {
+        const { data } = await supabase.from('perfiles').select('plan, nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
+        perfilOrgData = data
+        if (data?.plan) setOrganizadorPlan(data.plan)
+        if (data) setOrganizadorInfo({ nombre: data.nombre_completo || '', avatar: data.avatar_url || null, plan: data.plan })
+      }
+
       if (cel.organizador_id === authUser.id) {
         setRol('organizador')
+        if (perfilOrgData?.plan) setMiPlan(perfilOrgData.plan)
       } else {
         const { data: perfilMio } = await supabase.from('perfiles').select('plan').eq('user_id', authUser.id).single()
         setMiPlan(perfilMio?.plan || 'free')
@@ -977,8 +989,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             inv = { ...invPorEmail, ...update }
             setRol('invitado')
           } else {
-            const { data: perfilOrgCheck } = await supabase.from('perfiles').select('plan').eq('user_id', cel.organizador_id).single()
-            const planOrganizador = perfilOrgCheck?.plan || 'free'
+            const planOrganizador = perfilOrgData?.plan || 'free'
 
             if (planOrganizador !== 'lifetime') {
               // Free/Pro: cualquiera con cuenta puede desbloquear detalles, sin tope (como ya funcionaba)
@@ -1006,8 +1017,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 setRol(inv ? 'invitado' : 'brief')
               } else {
                 // Cupo lleno: solo se desbloquea si SU PROPIA cuenta ya es Lifetime (no consume cupo del organizador, no se registra como invitado)
-                const { data: perfilPropio } = await supabase.from('perfiles').select('plan').eq('user_id', authUser.id).single()
-                setRol(perfilPropio?.plan === 'lifetime' ? 'invitado' : 'brief')
+                setRol(perfilMio?.plan === 'lifetime' ? 'invitado' : 'brief')
               }
             }
           }
@@ -1015,12 +1025,6 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       }
 
       setCelebracion(cel)
-      if (cel.organizador_id) {
-        const { data: perfilOrg } = await supabase.from('perfiles').select('plan, nombre_completo, avatar_url').eq('user_id', cel.organizador_id).single()
-        if (perfilOrg?.plan) setOrganizadorPlan(perfilOrg.plan)
-        if (perfilOrg) setOrganizadorInfo({ nombre: perfilOrg.nombre_completo || '', avatar: perfilOrg.avatar_url || null, plan: perfilOrg.plan })
-        if (cel.organizador_id === authUser.id && perfilOrg?.plan) setMiPlan(perfilOrg.plan)
-      }
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
