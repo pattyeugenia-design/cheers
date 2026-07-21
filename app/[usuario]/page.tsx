@@ -131,7 +131,13 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l])
-    params.then(async ({ usuario }) => {
+
+    // Separado en función aparte para poder llamarlo de nuevo cuando la pestaña
+    // o el acceso directo instalado (home screen / shortcut de escritorio) vuelve
+    // a primer plano. Sin esto, si alguien deja la app "abierta en segundo plano"
+    // y crea un evento en otra pestaña/dispositivo, al volver ve la lista vieja
+    // porque este efecto solo corría una vez, al montar el componente.
+    async function cargarDatos(usuario: string) {
       setUsername(usuario)
       const { data: perfilRows } = await supabase.rpc('get_perfil_publico_por_username', { p_username: usuario })
       const perfil = perfilRows?.[0]
@@ -166,7 +172,21 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
       }
 
       setCargando(false)
-    })
+    }
+
+    params.then(({ usuario }) => { cargarDatos(usuario) })
+
+    function alVolverAPrimerPlano() {
+      if (document.visibilityState === 'visible') {
+        params.then(({ usuario }) => { cargarDatos(usuario) })
+      }
+    }
+    document.addEventListener('visibilitychange', alVolverAPrimerPlano)
+    window.addEventListener('focus', alVolverAPrimerPlano)
+    return () => {
+      document.removeEventListener('visibilitychange', alVolverAPrimerPlano)
+      window.removeEventListener('focus', alVolverAPrimerPlano)
+    }
   }, [])
 
   async function archivar(slug: string, archivada: boolean) {

@@ -191,7 +191,7 @@ export default function Login() {
           <button
             onClick={enviarEmail}
             disabled={cargandoEmail || !email.trim() || !password}
-            style={{ width: '100%', border: 'none', borderRadius: 14, padding: '13px', fontSize: 15, fontWeight: 800, cursor: (cargandoEmail || !email.trim() || !password) ? 'not-allowed' : 'pointer', color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', fontFamily: FONT, marginBottom: 12 }}
+            style={{ width: '100%', border: 'none', borderRadius: 14, padding: '13px', fontSize: 15, fontWeight: 800, cursor: (cargandoEmail || !email.trim() || !password) ? 'not-allowed' : 'pointer', color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', opacity: (!cargandoEmail && (!email.trim() || !password)) ? 0.45 : 1, transition: 'opacity .15s', fontFamily: FONT, marginBottom: 12 }}
           >
             {cargandoEmail ? '...' : modo === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
           </button>
@@ -205,7 +205,7 @@ export default function Login() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,.55)', marginTop: 20, lineHeight: 1.5 }}>
-          Al entrar aceptas los términos de uso de Cheers.
+          Al entrar aceptas los <a href="/terminos" style={{ color: 'rgba(255,255,255,.75)', textDecoration: 'underline' }}>términos de uso</a> de Cheers.
         </p>
       </div>
       )}
