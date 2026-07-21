@@ -939,7 +939,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [nuevoPlato, setNuevoPlato] = useState({ nombre: '', quien: '' })
   const [gastos, setGastos] = useState<any[]>([])
   const [showAddGasto, setShowAddGasto] = useState(false)
-  const [nuevoGasto, setNuevoGasto] = useState({ nombre: '', monto: '', quien: '', participantesIds: [] as string[], responsableId: '' })
+  const [nuevoGasto, setNuevoGasto] = useState({ nombre: '', monto: '', pagadorTipo: 'organizador' as 'organizador' | 'invitado', pagadorInvitadoId: '', participantesIds: [] as string[], responsableId: '' })
+  const nuevoGastoVacio = { nombre: '', monto: '', pagadorTipo: 'organizador' as 'organizador' | 'invitado', pagadorInvitadoId: '', participantesIds: [] as string[], responsableId: '' }
 
   const [reservacion, setReservacion] = useState<{ lugar: string; hora: string; personas: string; notas: string; link: string }>({ lugar: '', hora: '', personas: '', notas: '', link: '' })
   const [showEditReservacion, setShowEditReservacion] = useState(false)
@@ -1371,29 +1372,38 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   async function agregarGasto() {
     const monto = parseFloat(nuevoGasto.monto)
     if (!nuevoGasto.nombre.trim() || !nuevoGasto.monto || isNaN(monto) || !celebracion || !user) return
+    const nombreOrganizador = user?.user_metadata?.name || user?.email || (lang === 'en' ? 'You' : 'Tú')
+    const pagadorEsOrganizador = nuevoGasto.pagadorTipo === 'organizador'
+    const pagadorInvitado = !pagadorEsOrganizador ? invitadosList.find((i: any) => i.id === nuevoGasto.pagadorInvitadoId) : null
     const participantesIds = eventoEsPro ? nuevoGasto.participantesIds : []
     const { data: gastoRow, error } = await supabase.from('gastos').insert({
       celebracion_slug: celebracion.slug,
       descripcion: nuevoGasto.nombre.trim(),
       monto,
-      pagado_por_nombre: nuevoGasto.quien.trim() || null,
+      pagado_por_invitado_id: pagadorEsOrganizador ? null : (pagadorInvitado?.id || null),
+      pagado_por_nombre: pagadorEsOrganizador ? nombreOrganizador : (pagadorInvitado?.nombre || pagadorInvitado?.email || null),
       responsable_invitado_id: (eventoEsPro && nuevoGasto.responsableId) ? nuevoGasto.responsableId : null,
       creado_por: user.id,
     }).select().single()
     if (error || !gastoRow) return
 
+    // El pagador no se debe a sí mismo, aunque haya elegido participar en el split —
+    // su parte ya la cubrió al pagar, así que se excluye de las filas de deuda.
+    const idPagador = pagadorEsOrganizador ? 'organizador' : nuevoGasto.pagadorInvitadoId
+    const participantesAdeudan = participantesIds.filter(id => id !== idPagador)
     let filasParticipantes: any[] = []
-    if (participantesIds.length > 0) {
+    if (participantesIds.length > 0 && participantesAdeudan.length > 0) {
       const montoParte = Math.round((monto / participantesIds.length) * 100) / 100
-      const filas = participantesIds.map(id => {
-        const inv = invitadosList.find(i => i.id === id)
-        return { gasto_id: gastoRow.id, invitado_id: id, nombre: inv?.nombre || '', monto_parte: montoParte, pagado: false }
+      const filas = participantesAdeudan.map(id => {
+        if (id === 'organizador') return { gasto_id: gastoRow.id, invitado_id: null, es_organizador: true, nombre: nombreOrganizador, monto_parte: montoParte, pagado: false }
+        const inv = invitadosList.find((i: any) => i.id === id)
+        return { gasto_id: gastoRow.id, invitado_id: id, es_organizador: false, nombre: inv?.nombre || '', monto_parte: montoParte, pagado: false }
       })
       const { data: pdata } = await supabase.from('gasto_participantes').insert(filas).select()
       filasParticipantes = pdata || []
     }
     setGastos(prev => [{ ...gastoRow, gasto_participantes: filasParticipantes }, ...prev])
-    setNuevoGasto({ nombre: '', monto: '', quien: '', participantesIds: [], responsableId: '' })
+    setNuevoGasto(nuevoGastoVacio)
     setShowAddGasto(false)
   }
 
@@ -1461,6 +1471,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const limiteAlcanzado = invitadosList.length >= limiteInvitados
   const MIN_SIZE = 16, MAX_SIZE = isMobile ? 36 : 52
   const totalPresupuesto = gastos.reduce((s: number, g: any) => s + (g.monto || 0), 0)
+  const balancesGastos = (() => {
+    const mapa: Record<string, { nombre: string; monto: number }> = {}
+    gastos.forEach((g: any) => {
+      ;(g.gasto_participantes || []).forEach((p: any) => {
+        if (p.pagado) return
+        const clave = p.es_organizador ? 'organizador' : p.invitado_id
+        if (!clave) return
+        if (!mapa[clave]) mapa[clave] = { nombre: p.es_organizador ? tx.gasto_pagador_tu : (p.nombre || '—'), monto: 0 }
+        mapa[clave].monto += Number(p.monto_parte) || 0
+      })
+    })
+    return Object.values(mapa).filter(b => b.monto > 0)
+  })()
   const totalRows = layouts.reduce((max, l) => Math.max(max, l.row + l.rowSpan - 1), 1)
 
   const progressItems = [
@@ -1760,6 +1783,17 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             <span style={{ fontSize: 16, fontWeight: 900, color: '#534AB7' }}>${totalPresupuesto.toLocaleString()}</span>
           </div>
         )}
+        {balancesGastos.length > 0 && (
+          <div style={{ marginBottom: 10, padding: '8px 10px', background: '#fafafa', borderRadius: 10, border: '1.5px solid #f0edf8' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#a39ec0', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.3px' }}>{tx.gasto_balances_titulo}</div>
+            {balancesGastos.map((b, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}>
+                <span style={{ color: te.tileText, fontWeight: 600 }}>{b.nombre}</span>
+                <span style={{ color: '#c0392b', fontWeight: 800 }}>${b.monto.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {gastos.map((g: any) => {
           const participantes = g.gasto_participantes || []
           return (
@@ -1794,27 +1828,33 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             <input value={nuevoGasto.nombre} onChange={e => setNuevoGasto(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Expense' : 'Gasto'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={nuevoGasto.monto} onChange={e => setNuevoGasto(p => ({ ...p, monto: e.target.value }))} placeholder={lang === 'en' ? 'Amount' : 'Monto'} type="number" style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
-              <input value={nuevoGasto.quien} onChange={e => setNuevoGasto(p => ({ ...p, quien: e.target.value }))} placeholder={lang === 'en' ? 'Who paid?' : '¿Quién pagó?'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
+              <select
+                value={nuevoGasto.pagadorTipo === 'organizador' ? 'organizador' : nuevoGasto.pagadorInvitadoId}
+                onChange={e => setNuevoGasto(p => ({ ...p, pagadorTipo: e.target.value === 'organizador' ? 'organizador' : 'invitado', pagadorInvitadoId: e.target.value === 'organizador' ? '' : e.target.value }))}
+                style={{ ...inputStyle, flex: 2 }}>
+                <option value="organizador">{tx.gasto_pagador_tu}</option>
+                {invitadosList.map((inv: any) => (
+                  <option key={inv.id} value={inv.id}>{inv.nombre || inv.email}</option>
+                ))}
+              </select>
             </div>
             {eventoEsPro ? (
               <>
-                {invitadosList.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7a7494', marginBottom: 4 }}>{tx.gasto_participantes_label}</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-                      {invitadosList.map((inv: any) => {
-                        const sel = nuevoGasto.participantesIds.includes(inv.id)
-                        return (
-                          <button key={inv.id} onClick={() => setNuevoGasto(p => ({ ...p, participantesIds: sel ? p.participantesIds.filter(id => id !== inv.id) : [...p.participantesIds, inv.id] }))}
-                            style={{ border: sel ? '1.5px solid #534AB7' : '1.5px solid #e2dff5', background: sel ? '#EEEDFE' : '#fff', color: sel ? '#534AB7' : '#7a7494', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>
-                            {inv.nombre || inv.email}
-                          </button>
-                        )
-                      })}
-                    </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#7a7494', marginBottom: 4 }}>{tx.gasto_participantes_label}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+                    {[{ id: 'organizador', nombre: tx.gasto_pagador_tu }, ...invitadosList].map((inv: any) => {
+                      const sel = nuevoGasto.participantesIds.includes(inv.id)
+                      return (
+                        <button key={inv.id} onClick={() => setNuevoGasto(p => ({ ...p, participantesIds: sel ? p.participantesIds.filter(id => id !== inv.id) : [...p.participantesIds, inv.id] }))}
+                          style={{ border: sel ? '1.5px solid #534AB7' : '1.5px solid #e2dff5', background: sel ? '#EEEDFE' : '#fff', color: sel ? '#534AB7' : '#7a7494', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>
+                          {inv.nombre || inv.email}
+                        </button>
+                      )
+                    })}
                   </div>
-                )}
-                {nuevoGasto.participantesIds.length > 0 && (
+                </div>
+                {nuevoGasto.participantesIds.filter(id => id !== 'organizador').length > 0 && (
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#7a7494', marginBottom: 4 }}>{tx.gasto_responsable_label}</div>
                     <select value={nuevoGasto.responsableId} onChange={e => setNuevoGasto(p => ({ ...p, responsableId: e.target.value }))} style={inputStyle}>
@@ -1835,7 +1875,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             )}
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={agregarGasto} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
-              <button onClick={() => { setShowAddGasto(false); setNuevoGasto({ nombre: '', monto: '', quien: '', participantesIds: [], responsableId: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
+              <button onClick={() => { setShowAddGasto(false); setNuevoGasto(nuevoGastoVacio) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
             </div>
           </div>
         ) : <button onClick={() => setShowAddGasto(true)} style={dashedBtn}>{lang === 'en' ? '+ Add expense' : '+ Agregar gasto'}</button>}

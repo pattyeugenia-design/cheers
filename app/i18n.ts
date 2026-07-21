@@ -196,6 +196,8 @@ export const t = {
     gasto_debes_total: (n: number) => `Debes en total: $${n.toLocaleString()}`,
     gasto_pagado: 'Pagado',
     gasto_pendiente: 'Pendiente',
+    gasto_pagador_tu: 'Tú',
+    gasto_balances_titulo: 'Balances',
 
     // RSVP status
     going: 'Va',
@@ -456,6 +458,8 @@ export const t = {
     gasto_debes_total: (n: number) => `Total owed: $${n.toLocaleString()}`,
     gasto_pagado: 'Paid',
     gasto_pendiente: 'Pending',
+    gasto_pagador_tu: 'You',
+    gasto_balances_titulo: 'Balances',
 
     // RSVP status
     going: 'Going',
