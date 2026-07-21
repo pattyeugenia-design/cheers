@@ -1806,10 +1806,16 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 <span style={{ fontSize: 14, fontWeight: 800, color: '#534AB7', flexShrink: 0 }}>${Number(g.monto).toLocaleString()}</span>
                 <button onClick={() => borrarGasto(g.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
               </div>
-              {participantes.length > 0 && (
+              {participantes.length > 0 && (() => {
+                const montoParte = Number(participantes[0]?.monto_parte || 0)
+                // Contamos a TODOS los que participaron en el gasto (incluido quien pagó,
+                // si se auto-incluyó), no solo a quienes quedaron debiendo — si no, un gasto
+                // dividido entre 2 donde uno ya pagó su parte se leía como "dividido entre 1".
+                const totalParticipantes = montoParte > 0 ? Math.round(Number(g.monto) / montoParte) : participantes.length
+                return (
                 <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #eee' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#a39ec0', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.3px' }}>
-                    {lang === 'en' ? `Split ${participantes.length} ways` : `Dividido entre ${participantes.length}`} · ${Number(participantes[0]?.monto_parte || 0).toLocaleString()} {lang === 'en' ? 'each' : 'c/u'}
+                    {lang === 'en' ? `Split ${totalParticipantes} ways` : `Dividido entre ${totalParticipantes}`} · ${montoParte.toLocaleString()} {lang === 'en' ? 'each' : 'c/u'}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
                     {participantes.map((p: any) => (
@@ -1819,7 +1825,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                     ))}
                   </div>
                 </div>
-              )}
+                )
+              })()}
             </div>
           )
         })}
