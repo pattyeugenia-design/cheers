@@ -1,4 +1,4 @@
-# Correos de cortesía Lifetime — personalizados (12)
+# Correos de cortesía Lifetime — personalizados (13)
 
 Mismo texto base de `correo_cortesia_lifetime.md`, solo cambia el nombre. Cópialo y pégalo tal cual en cada correo, o dime si conecto tu Gmail y te dejo los 12 como borradores listos.
 
@@ -230,6 +230,29 @@ Patty
 **Asunto:** Te regalo Cheers para siempre
 
 Hola Daniela,
+
+¿Te acuerdas que te conté de Cheers, la app que hice para organizar celebraciones? Quiero regalarte el plan Extra Cheer — el más completo, sin límite de invitados, para siempre, en todas tus celebraciones. No te cuesta nada, es un regalo mío.
+
+Así lo activas:
+
+1. Entra a **joincheers.app**
+2. Crea tu cuenta (lo más rápido es con Google)
+3. Cuando ya tengas tu cuenta, mándame tu username (te lo pide al entrar) o simplemente avísame que ya entraste
+4. Yo te activo el plan de mi lado — no tienes que pagar nada ni meter ninguna tarjeta
+
+Y ya, disfrútalo. Espero que te sirva para tu próxima celebración.
+
+Un abrazo,
+Patty
+
+---
+
+### 13. Marcela R. Treviño — Marcerivera.2122@hotmail.com
+**Enviado 2026-07-20.**
+
+**Asunto:** Te regalo Cheers para siempre
+
+Hola Marcela,
 
 ¿Te acuerdas que te conté de Cheers, la app que hice para organizar celebraciones? Quiero regalarte el plan Extra Cheer — el más completo, sin límite de invitados, para siempre, en todas tus celebraciones. No te cuesta nada, es un regalo mío.
 

@@ -17,6 +17,7 @@ Para no perder esta lista otra vez: aquí queda quién va a recibir Lifetime gra
 | Carolina Nazar | caronazarv@gmail.com | Sin verificar | No | Agregado 2026-07-20 |
 | Vika Salinas | Vikasalinas@gmail.com | Sí (@victoria_salinas) | Sí | Activada 2026-07-20 vía SQL |
 | Daniela Peña | dany.pena.g@gmail.com | Sin verificar | No | Agregado 2026-07-20 |
+| Marcela R. Treviño | Marcerivera.2122@hotmail.com | No | No | Correo enviado 2026-07-20 vía Resend |
 
 **2026-07-20: se mandaron los 11 correos** (todos menos Valente, que ya tenía todo) vía Resend, desde `Patty (Cheers) <notificaciones@joincheers.app>`, con reply-to a patty.eugenia@gmail.com. Fátima recibió la versión "ya activado" porque se le activó el plan justo antes de mandarle el correo. Los otros 10 quedan pendientes de que creen su cuenta y avisen su username.
 
