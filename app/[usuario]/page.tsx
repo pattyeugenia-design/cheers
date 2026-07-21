@@ -272,11 +272,11 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         )}
       </div>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
-        {cel.es_sorpresa && esPropio && (plan === 'lifetime' || plan === 'pro' || cel.plan === 'pro') && <span style={{ fontSize:11, fontWeight:700, color:'#D4537E', background:'rgba(212,83,126,.15)', padding:'2px 8px', borderRadius:99 }}>{tx.surprise}</span>}
-        {esPropio && <button onClick={e => { e.stopPropagation(); archivar(cel.slug, cel.archivada) }} style={{ border:'none', background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.35)', fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
+        {cel.es_sorpresa && esPropio && cel.esPropia !== false && (plan === 'lifetime' || plan === 'pro' || cel.plan === 'pro') && <span style={{ fontSize:11, fontWeight:700, color:'#D4537E', background:'rgba(212,83,126,.15)', padding:'2px 8px', borderRadius:99 }}>{tx.surprise}</span>}
+        {esPropio && cel.esPropia !== false && <button onClick={e => { e.stopPropagation(); archivar(cel.slug, cel.archivada) }} style={{ border:'none', background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.35)', fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
           {cel.archivada ? (lang==='en'?'Unarchive':'Desarchivar') : (lang==='en'?'Archive':'Archivar')}
         </button>}
-        {esPropio && <button onClick={e => { e.stopPropagation(); eliminar(cel.slug) }} style={{ border:'none', background:'rgba(212,83,126,.1)', color:'rgba(212,83,126,.6)', fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
+        {esPropio && cel.esPropia !== false && <button onClick={e => { e.stopPropagation(); eliminar(cel.slug) }} style={{ border:'none', background:'rgba(212,83,126,.1)', color:'rgba(212,83,126,.6)', fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
           {lang==='en'?'Delete':'Eliminar'}
         </button>}
         <span style={{ fontSize:18, color:'#AFA9EC' }}>→</span>
@@ -354,8 +354,20 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           </button>
         )}
 
+        {/* Tus invitaciones (celebraciones donde eres invitada, no organizadora) */}
+        {esPropio && invitaciones.length > 0 && (
+          <div style={{ marginBottom:24 }}>
+            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>
+              {lang==='en' ? 'Your invitations' : 'Tus invitaciones'}
+            </p>
+            {[...invitaciones].sort((a,b) => new Date(a.fecha||0).getTime() - new Date(b.fecha||0).getTime()).map(cel => (
+              <CelCard key={cel.slug} cel={{ ...cel, esPropia:false }} />
+            ))}
+          </div>
+        )}
+
         {/* Sin celebraciones */}
-        {celebraciones.filter(c => !c.archivada).length === 0 && (
+        {celebraciones.filter(c => !c.archivada).length === 0 && invitaciones.length === 0 && (
           <div style={{ textAlign:'center', padding:'2rem', background:'rgba(255,255,255,.06)', borderRadius:16, marginBottom:16 }}>
             <p style={{ color:'#AFA9EC', fontSize:15, margin:0 }}>{esPropio ? tx.no_celebrations : tx.no_public}</p>
           </div>
