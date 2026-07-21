@@ -113,11 +113,14 @@ export default function NuevaCelebracion() {
     })
   }, [])
 
-  // Auto-guardar draft al cambiar cualquier campo
+  // Auto-guardar draft al cambiar cualquier campo — pero ya no una vez que la
+  // celebración se creó en la BD (slugFinal), porque si no, este mismo efecto
+  // vuelve a escribir el draft justo después de que guardar() llama a clearDraft(),
+  // dejando el borrador "zombie" hasta 7 días y saltándose el formulario la próxima vez.
   useEffect(() => {
-    if (verificando) return
+    if (verificando || slugFinal) return
     saveDraft({ tipo, rol, titulo, festejado, fecha, lugar, eventSlug, cenaSubTipo, step })
-  }, [tipo, rol, titulo, festejado, fecha, lugar, eventSlug, cenaSubTipo, step])
+  }, [tipo, rol, titulo, festejado, fecha, lugar, eventSlug, cenaSubTipo, step, slugFinal])
 
   useEffect(() => {
     if (!mapsListo || !lugarRef.current || lugarRef.current.dataset.init) return
