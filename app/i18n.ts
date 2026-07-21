@@ -473,7 +473,7 @@ export const t = {
     message_for: (name: string) => `Message for ${name}`,
     message_placeholder: 'Write something nice...',
     rsvp_going: 'Going',
-    rsvp_no: "Can't make it",
+    rsvp_no: "Can't go",
     rsvp_maybe: 'Maybe',
     rsvp_save: 'Confirm attendance',
     rsvp_update: 'Update RSVP',

@@ -320,7 +320,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
 
   const rsvpColors = {
     si:     { bg: '#ECF7F0', active: '#1f8a5b', border: '#1f8a5b', label: lang === 'en' ? 'Going' : 'Voy' },
-    no:     { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b', label: lang === 'en' ? "Can't make it" : 'No puedo' },
+    no:     { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b', label: lang === 'en' ? "Can't go" : 'No puedo' },
     talvez: { bg: '#FFF4E6', active: '#c98a1e', border: '#c98a1e', label: lang === 'en' ? 'Maybe' : 'Tal vez' },
   }
 
@@ -512,7 +512,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
 
   const rsvpColors = {
     si:     { bg: '#ECF7F0', active: '#1f8a5b', border: '#1f8a5b', label: lang === 'en' ? 'Going' : 'Voy' },
-    no:     { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b', label: lang === 'en' ? "Can't make it" : 'No puedo' },
+    no:     { bg: '#FFF0F0', active: '#c0392b', border: '#c0392b', label: lang === 'en' ? "Can't go" : 'No puedo' },
     talvez: { bg: '#FFF4E6', active: '#c98a1e', border: '#c98a1e', label: lang === 'en' ? 'Maybe' : 'Tal vez' },
   }
 
