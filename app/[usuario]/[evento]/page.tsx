@@ -1903,7 +1903,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
           {/* Top bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 8, flexWrap: 'wrap' as const }}>
-            <button onClick={() => router.back()} style={pillBtn}>{tx.my_celebrations}</button>
+            <button onClick={() => { window.location.href = '/' + (celebracion?.slug?.split('/')[0] || '') }} style={pillBtn}>{tx.my_celebrations}</button>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
               <div style={{ fontSize: 15, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-.3px' }}>Cheers</div>
               <div ref={titleRef} contentEditable suppressContentEditableWarning data-placeholder={tx.title_placeholder}
