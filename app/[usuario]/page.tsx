@@ -156,12 +156,25 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           const { data: misInvitaciones } = await supabase.from('invitados').select('celebracion_slug, created_at').eq('user_id', authUser.id)
           const slugsInvitado = (misInvitaciones || []).map(i => i.celebracion_slug)
           if (slugsInvitado.length) {
-            const { data: celsInvitado } = await supabase.from('celebraciones').select('*').in('slug', slugsInvitado).order('fecha', { ascending: true })
+            const [{ data: celsInvitado }, { data: misRsvps }, { data: misReservas }] = await Promise.all([
+              supabase.from('celebraciones').select('*').in('slug', slugsInvitado).order('fecha', { ascending: true }),
+              supabase.from('rsvps').select('celebracion_slug, asistencia').eq('user_id', authUser.id).in('celebracion_slug', slugsInvitado),
+              supabase.from('regalo_reservas').select('celebracion_slug, regalo_id').eq('user_id', authUser.id).in('celebracion_slug', slugsInvitado),
+            ])
             const fechaInvPorSlug: Record<string, string> = {}
             ;(misInvitaciones || []).forEach(i => { fechaInvPorSlug[i.celebracion_slug] = i.created_at })
+            const asistenciaPorSlug: Record<string, string> = {}
+            ;(misRsvps || []).forEach(r => { asistenciaPorSlug[r.celebracion_slug] = r.asistencia })
+            const regaloIdPorSlug: Record<string, string> = {}
+            ;(misReservas || []).forEach(r => { regaloIdPorSlug[r.celebracion_slug] = r.regalo_id })
             setInvitaciones((celsInvitado || [])
               .filter(c => c.organizador_id !== authUser.id)
-              .map(c => ({ ...c, invitadoDesde: fechaInvPorSlug[c.slug] }))
+              .map(c => ({
+                ...c,
+                invitadoDesde: fechaInvPorSlug[c.slug],
+                miAsistencia: asistenciaPorSlug[c.slug] || null,
+                miRegalo: (c.gifts || []).find((g: any) => g.id === regaloIdPorSlug[c.slug])?.nombre || null,
+              }))
             )
           }
 
@@ -243,6 +256,20 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         <div style={{ fontSize:12, color:'#AFA9EC', marginTop:1 }}>
           {cel.fecha ? new Date(cel.fecha).toLocaleDateString(lang==='en'?'en-US':'es-MX', { month:'short', day:'numeric', year:'numeric' }) : 'Sin fecha'}
         </div>
+        {!cel.esPropia && (cel.miAsistencia || cel.miRegalo) && (
+          <div style={{ display:'flex', gap:6, marginTop:4, flexWrap:'wrap' }}>
+            {cel.miAsistencia && (
+              <span style={{ fontSize:10, fontWeight:800, padding:'2px 8px', borderRadius:99, color: cel.miAsistencia==='si' ? '#1f8a5b' : cel.miAsistencia==='no' ? '#dc2626' : '#c98a1e', background: cel.miAsistencia==='si' ? 'rgba(31,138,91,.15)' : cel.miAsistencia==='no' ? 'rgba(220,38,38,.15)' : 'rgba(201,138,30,.15)' }}>
+                {cel.miAsistencia==='si' ? (lang==='en'?'Going':'Voy') : cel.miAsistencia==='no' ? (lang==='en'?"Not going":'No voy') : (lang==='en'?'Maybe':'Tal vez')}
+              </span>
+            )}
+            {cel.miRegalo && (
+              <span style={{ fontSize:10, fontWeight:800, padding:'2px 8px', borderRadius:99, color:'#534AB7', background:'rgba(83,74,183,.15)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:160 }}>
+                🎁 {cel.miRegalo}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
         {cel.es_sorpresa && esPropio && (plan === 'lifetime' || plan === 'pro' || cel.plan === 'pro') && <span style={{ fontSize:11, fontWeight:700, color:'#D4537E', background:'rgba(212,83,126,.15)', padding:'2px 8px', borderRadius:99 }}>{tx.surprise}</span>}

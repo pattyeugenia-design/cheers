@@ -412,7 +412,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
 }
 
 // Vista del invitado
-function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurrencias, miPlan }: any) {
+function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurrencias, miPlan, reservasRegalo, reservarRegalo }: any) {
   const router = useRouter()
   // Mismo criterio que VistaBrief: reflejar tema/fuente/tamaño/alineación elegidos
   // por el organizador, no el morado fijo de siempre.
@@ -634,16 +634,27 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
         {regalos.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'Gift ideas' : 'Ideas de regalo'}</div>
-            {regalos.map((r: any) => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: r.reservado ? '#f0faf4' : '#fafafa', borderRadius: 12, marginBottom: 8, border: r.reservado ? '1.5px solid #d8f3dc' : '1.5px solid #f0edf8' }}>
+            {regalos.map((r: any) => {
+              const reserva = (reservasRegalo || []).find((x: any) => x.regalo_id === r.id)
+              const tomado = r.reservado || !!reserva
+              const yoLoReserve = reserva && user && reserva.user_id === user.id
+              return (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: tomado ? '#f0faf4' : '#fafafa', borderRadius: 12, marginBottom: 8, border: tomado ? '1.5px solid #d8f3dc' : '1.5px solid #f0edf8' }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: r.reservado ? '#1f8a5b' : '#2a2440', textDecoration: r.reservado ? 'line-through' : 'none' }}>{r.nombre}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: tomado ? '#1f8a5b' : '#2a2440', textDecoration: tomado ? 'line-through' : 'none' }}>{r.nombre}</div>
                   {r.precio && <div style={{ fontSize: 11, color: '#a39ec0' }}>${r.precio}</div>}
                 </div>
-                {r.reservado ? <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a5b', background: '#d8f3dc', padding: '3px 10px', borderRadius: 99 }}>{lang === 'en' ? 'Reserved' : 'Reservado'}</span>
-                  : r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '5px 12px', borderRadius: 99, textDecoration: 'none' }}>{lang === 'en' ? 'See →' : 'Ver →'}</a>}
+                {tomado
+                  ? <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a5b', background: '#d8f3dc', padding: '3px 10px', borderRadius: 99 }}>{yoLoReserve ? (lang === 'en' ? 'Reserved by you' : 'Lo reservaste tú') : (lang === 'en' ? 'Reserved' : 'Reservado')}</span>
+                  : (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                      {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '5px 12px', borderRadius: 99, textDecoration: 'none' }}>{lang === 'en' ? 'See →' : 'Ver →'}</a>}
+                      <button onClick={() => reservarRegalo(r.id)} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '5px 12px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Reserve' : 'Reservar'}</button>
+                    </div>
+                  )}
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -881,6 +892,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const limiteInvitados = cuentaEsLifetime ? Infinity : eventoEsPro ? 10 : 3
   const limiteRegalos = eventoEsPro ? Infinity : 1
   const limiteParadas = eventoEsPro ? Infinity : 1
+  const limiteQuellevar = eventoEsPro ? Infinity : 1
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitadosList, setInvitadosList] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
@@ -928,6 +940,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [regalos, setRegalos] = useState<any[]>([])
   const [showAddRegalo, setShowAddRegalo] = useState(false)
   const [nuevoRegalo, setNuevoRegalo] = useState({ nombre: '', precio: '', link: '' })
+  const [reservasRegalo, setReservasRegalo] = useState<any[]>([])
   const [paradas, setParadas] = useState<any[]>([])
   const [showAddParada, setShowAddParada] = useState(false)
   const [nuevaParada, setNuevaParada] = useState({ lugar: '', hora: '', nota: '' })
@@ -1085,16 +1098,18 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
       // Las 3 son independientes entre sí — antes se pedían una tras otra (3 viajes de red
       // seguidos), ahora salen al mismo tiempo para que la página cargue más rápido.
-      const [{ data: rsvpData }, { data: mensajesData }, { data: invData }, { data: gastosData }] = await Promise.all([
+      const [{ data: rsvpData }, { data: mensajesData }, { data: invData }, { data: gastosData }, { data: reservasData }] = await Promise.all([
         supabase.from('rsvps').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false }),
         supabase.from('mensajes').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false }),
         supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false }),
         supabase.from('gastos').select('*, gasto_participantes(*)').eq('celebracion_slug', cel.slug).order('created_at', { ascending: false }),
+        supabase.from('regalo_reservas').select('*').eq('celebracion_slug', cel.slug),
       ])
       setRsvps(rsvpData || [])
       setMensajesMuro(mensajesData || [])
       setInvitadosList(invData || [])
       setGastos(gastosData || [])
+      setReservasRegalo(reservasData || [])
       setCargando(false)
 
       setTimeout(() => { if (titleRef.current) titleRef.current.innerHTML = cel.nombre_html || cel.nombre || '' }, 100)
@@ -1323,6 +1338,24 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   async function borrarRegalo(id: string) {
     const nuevo = regalos.filter(r => r.id !== id)
     setRegalos(nuevo); await supabase.from('celebraciones').update({ gifts: nuevo }).eq('slug', celebracion.slug)
+    await supabase.from('regalo_reservas').delete().eq('celebracion_slug', celebracion.slug).eq('regalo_id', id)
+    setReservasRegalo(prev => prev.filter(r => r.regalo_id !== id))
+  }
+
+  // Un invitado logueado e invitado a esta celebración reserva un regalo para sí mismo.
+  async function reservarRegalo(regaloId: string) {
+    if (!user || !celebracion) return
+    const { data, error } = await supabase.from('regalo_reservas')
+      .insert({ celebracion_slug: celebracion.slug, regalo_id: regaloId, user_id: user.id })
+      .select().single()
+    if (!error && data) setReservasRegalo(prev => [...prev, data])
+  }
+
+  // Solo la organizadora puede liberar la reserva de un invitado (ej. si se equivocó o canceló).
+  async function liberarReservaRegalo(regaloId: string) {
+    if (!celebracion) return
+    const { error } = await supabase.from('regalo_reservas').delete().eq('celebracion_slug', celebracion.slug).eq('regalo_id', regaloId)
+    if (!error) setReservasRegalo(prev => prev.filter(r => r.regalo_id !== regaloId))
   }
 
   async function agregarParada() {
@@ -1341,7 +1374,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   }
 
   async function agregarItem() {
-    if (!nuevoItem.trim() || !celebracion) return
+    if (!nuevoItem.trim() || !celebracion || quellevar.length >= limiteQuellevar) return
     const nuevo = [...quellevar, { id: Date.now().toString(), nombre: nuevoItem.trim(), listo: false }]
     setQuellevar(nuevo); await supabase.from('celebraciones').update({ quellevar: nuevo }).eq('slug', celebracion.slug)
     setNuevoItem(''); setShowAddItem(false)
@@ -1458,7 +1491,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   if (rol === 'brief') return <VistaBrief celebracion={celebracion} lang={lang} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} />
 
-  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} miPlan={miPlan} />
+  if (rol === 'invitado') return <VistaInvitado celebracion={celebracion} user={user} lang={lang} tx={tx} locale={locale} organizador={organizadorInfo} ocurrencias={ocurrencias} miPlan={miPlan} reservasRegalo={reservasRegalo} reservarRegalo={reservarRegalo} />
 
   // DASHBOARD ORGANIZADOR
   const te = TEMAS[tema] || TEMAS.morado
@@ -1660,19 +1693,27 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
     if (tileKey === 'regalos') return (
       <div>
-        {regalos.map(r => (
-          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 10px', background: r.reservado ? '#f0faf4' : '#fafafa', borderRadius: 10, marginBottom: 6, border: `1.5px solid ${r.reservado ? '#d8f3dc' : '#f0edf8'}` }}>
-            <button onClick={() => toggleRegalo(r.id)} style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${r.reservado ? '#1f8a5b' : '#cfc8ec'}`, background: r.reservado ? '#1f8a5b' : 'transparent', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {r.reservado && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
+        {regalos.map(r => {
+          const reserva = reservasRegalo.find(x => x.regalo_id === r.id)
+          const tomado = r.reservado || !!reserva
+          const nombreReserva = reserva ? (invitadosList.find(i => i.user_id === reserva.user_id)?.nombre || (lang === 'en' ? 'A guest' : 'Un invitado')) : null
+          const puedeVerNombre = celebracion?.organizador_rol !== 'yo'
+          return (
+          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 10px', background: tomado ? '#f0faf4' : '#fafafa', borderRadius: 10, marginBottom: 6, border: `1.5px solid ${tomado ? '#d8f3dc' : '#f0edf8'}` }}>
+            <button onClick={() => !reserva && toggleRegalo(r.id)} disabled={!!reserva} style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${tomado ? '#1f8a5b' : '#cfc8ec'}`, background: tomado ? '#1f8a5b' : 'transparent', cursor: reserva ? 'default' : 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {tomado && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: r.reservado ? '#1f8a5b' : te.tileText, textDecoration: r.reservado ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.nombre}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: tomado ? '#1f8a5b' : te.tileText, textDecoration: tomado ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.nombre}</div>
               {r.precio && <div style={{ fontSize: 10, color: '#a39ec0' }}>${r.precio}</div>}
+              {reserva && <div style={{ fontSize: 10, color: '#1f8a5b', fontWeight: 700 }}>{puedeVerNombre ? nombreReserva : (lang === 'en' ? 'Reserved' : 'Reservado')}</div>}
             </div>
             {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '3px 8px', borderRadius: 99, textDecoration: 'none', flexShrink: 0 }}>Ver</a>}
+            {reserva && <button onClick={() => liberarReservaRegalo(r.id)} style={{ border: 'none', background: '#FCE9F0', color: '#D4537E', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', flexShrink: 0 }}>{lang === 'en' ? 'Release' : 'Liberar'}</button>}
             <button onClick={() => borrarRegalo(r.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
           </div>
-        ))}
+          )
+        })}
         {showAddRegalo ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <input value={nuevoRegalo.nombre} onChange={e => setNuevoRegalo(p => ({ ...p, nombre: e.target.value }))} placeholder={lang === 'en' ? 'Gift name' : 'Nombre del regalo'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
@@ -1746,6 +1787,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarItem()} placeholder={lang === 'en' ? 'Item to bring' : 'Artículo a llevar'} style={{ ...inputStyle, flex: 1 }} autoFocus onFocus={e => e.stopPropagation()} />
             <button onClick={agregarItem} style={{ ...addBtn, fontSize: 12 }}>{lang === 'en' ? 'Add' : 'Agregar'}</button>
             <button onClick={() => { setShowAddItem(false); setNuevoItem('') }} style={{ ...cancelBtn, fontSize: 12 }}>×</button>
+          </div>
+        ) : quellevar.length >= limiteQuellevar ? (
+          <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.item_limit_title}</div>
+            <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.item_limit_desc}</div>
+            <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{comprandoPro ? '...' : tx.item_upgrade_cta}</button>
           </div>
         ) : <button onClick={() => setShowAddItem(true)} style={dashedBtn}>{tx.add_item}</button>}
       </div>

@@ -72,6 +72,7 @@ export default function NuevaCelebracion() {
   const [copied, setCopied] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [limiteCelebracionActiva, setLimiteCelebracionActiva] = useState(false)
   const [inviteQuery, setInviteQuery] = useState('')
   const [invitados, setInvitados] = useState<{ id: string; name: string; email: string }[]>([])
   const [invited, setInvited] = useState<Record<string, boolean>>({})
@@ -153,7 +154,7 @@ export default function NuevaCelebracion() {
   }, [])
 
   async function guardar() {
-    setSaving(true); setErrorMsg('')
+    setSaving(true); setErrorMsg(''); setLimiteCelebracionActiva(false)
     const finalSlugPart = eventSlug || slugify(titulo || tipo || 'celebracion')
     if (SLUGS_RESERVADOS.includes(finalSlugPart)) { setSaving(false); setErrorMsg(tx.nueva_slug_error); return }
     const { data: { user } } = await supabase.auth.getUser()
@@ -165,6 +166,7 @@ export default function NuevaCelebracion() {
       festejado_nombre: rol === 'yo' ? userNombre : festejado,
       organizador_id: user?.id,
       slug, es_sorpresa: rol === 'sorpresa',
+      organizador_rol: rol || 'otro',
       fecha: fecha || null,
       recurrente,
       recurrencia_tipo: recurrente ? recurrenciaTipo : null,
@@ -176,6 +178,7 @@ export default function NuevaCelebracion() {
     setSaving(false)
     if (!error) { clearDraft(); setStep('link') }
     else if (error.code === '23505') setErrorMsg(tx.nueva_slug_error)
+    else if (error.message?.includes('Limite de 1 celebracion activa')) setLimiteCelebracionActiva(true)
     else setErrorMsg(tx.nueva_error)
   }
 
@@ -450,7 +453,13 @@ export default function NuevaCelebracion() {
                   )}
                 </div>
 
-                {errorMsg && <div style={{ background: 'rgba(212,83,126,.08)', border: '1px solid rgba(212,83,126,.25)', borderRadius: 12, padding: '12px 14px', margin: '14px 0 0' }}><p style={{ fontSize: 13, color: '#D4537E', margin: 0 }}>{errorMsg}</p></div>}
+                {limiteCelebracionActiva ? (
+                  <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '12px 14px', margin: '14px 0 0', color: '#fff' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 3 }}>{tx.nueva_limite_celebracion_title}</div>
+                    <div style={{ fontSize: 12, opacity: 0.9, lineHeight: 1.4, marginBottom: 8 }}>{tx.nueva_limite_celebracion_desc}</div>
+                    <button onClick={() => router.push('/perfil')} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 12, fontWeight: 800, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{tx.nueva_limite_celebracion_cta}</button>
+                  </div>
+                ) : errorMsg && <div style={{ background: 'rgba(212,83,126,.08)', border: '1px solid rgba(212,83,126,.25)', borderRadius: 12, padding: '12px 14px', margin: '14px 0 0' }}><p style={{ fontSize: 13, color: '#D4537E', margin: 0 }}>{errorMsg}</p></div>}
               </div>
             )}
 
