@@ -43,6 +43,12 @@ export default function Login() {
       } else {
         router.push('/onboarding')
       }
+    }).catch(async () => {
+      // Sesión guardada inválida/corrupta (ej. token de un usuario ya eliminado):
+      // sin este catch, la promesa nunca resuelve y la pantalla se queda
+      // colgada en el splash para siempre. La limpiamos y mostramos el login.
+      await supabase.auth.signOut().catch(() => {})
+      setVerificandoSesion(false)
     })
 
     // Escuchar cambios de auth (después del OAuth redirect)

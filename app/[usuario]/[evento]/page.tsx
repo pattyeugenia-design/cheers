@@ -1113,6 +1113,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setCargando(false)
 
       setTimeout(() => { if (titleRef.current) titleRef.current.innerHTML = cel.nombre_html || cel.nombre || '' }, 100)
+    }).catch(async () => {
+      // Sesión guardada inválida/corrupta (ej. cuenta borrada): sin esto la
+      // página se queda cargando para siempre en vez de mostrar el contenido
+      // público o mandar a limpiar la sesión.
+      await supabase.auth.signOut().catch(() => {})
+      setCargando(false)
+      setRol('sin_acceso')
     })
   }, [])
 

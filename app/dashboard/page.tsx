@@ -24,6 +24,11 @@ export default function DashboardRedirect() {
       } else {
         router.replace('/onboarding')
       }
+    }).catch(async () => {
+      // Sesión guardada inválida/corrupta: sin esto la página se queda
+      // colgada esperando para siempre en vez de mandar a login.
+      await supabase.auth.signOut().catch(() => {})
+      router.push('/login')
     })
   }, [])
 

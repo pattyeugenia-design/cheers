@@ -111,6 +111,11 @@ export default function NuevaCelebracion() {
         if (draft.cenaSubTipo) setCenaSubTipo(draft.cenaSubTipo)
         if (draft.step) setStep(draft.step)
       }
+    }).catch(async () => {
+      // Sesión guardada inválida/corrupta: sin esto la página se queda
+      // colgada esperando para siempre en vez de mandar a login.
+      await supabase.auth.signOut().catch(() => {})
+      router.push('/login')
     })
   }, [])
 

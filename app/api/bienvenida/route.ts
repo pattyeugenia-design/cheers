@@ -4,7 +4,26 @@ import { envolverEmail, trackedLink } from '../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// Rate limit simple en memoria: max 3 solicitudes por IP cada 60 segundos.
+// Frena que alguien use este endpoint (sin login) como relay de spam masivo
+// mandando "bienvenidas" falsas a cualquier correo desde nuestro dominio.
+const solicitudesPorIP = new Map<string, number[]>()
+const LIMITE_SOLICITUDES = 3
+const VENTANA_MS = 60_000
+
+function excedeLimite(ip: string): boolean {
+  const ahora = Date.now()
+  const previas = solicitudesPorIP.get(ip) || []
+  const recientes = previas.filter(t => ahora - t < VENTANA_MS)
+  recientes.push(ahora)
+  solicitudesPorIP.set(ip, recientes)
+  return recientes.length > LIMITE_SOLICITUDES
+}
+
 export async function POST(req: Request) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
+  if (excedeLimite(ip)) return NextResponse.json({ success: true })
+
   const { email, nombre, username, lang } = await req.json()
   if (!email || !username) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
 

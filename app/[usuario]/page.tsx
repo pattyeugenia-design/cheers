@@ -187,11 +187,20 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
       setCargando(false)
     }
 
-    params.then(({ usuario }) => { cargarDatos(usuario) })
+    // Sesión guardada inválida/corrupta (ej. cuenta borrada): sin este catch la
+    // promesa nunca resuelve y la página se queda cargando para siempre.
+    function cargarDatosSeguro(usuario: string) {
+      cargarDatos(usuario).catch(async () => {
+        await supabase.auth.signOut().catch(() => {})
+        setCargando(false)
+      })
+    }
+
+    params.then(({ usuario }) => cargarDatosSeguro(usuario))
 
     function alVolverAPrimerPlano() {
       if (document.visibilityState === 'visible') {
-        params.then(({ usuario }) => { cargarDatos(usuario) })
+        params.then(({ usuario }) => cargarDatosSeguro(usuario))
       }
     }
     document.addEventListener('visibilitychange', alVolverAPrimerPlano)

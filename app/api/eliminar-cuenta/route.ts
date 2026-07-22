@@ -36,12 +36,8 @@ export async function POST(req: Request) {
     if (idx !== -1) await admin.storage.from('avatars').remove([perfilData.avatar_url.slice(idx + '/avatars/'.length)])
   }
 
-  // Borrar los RSVPs que dejó en eventos de otras personas, usando el nombre
-  // con el que quedó registrada en cada invitación (rsvps no tiene user_id)
-  const { data: invitacionesPropias } = await admin.from('invitados').select('celebracion_slug, nombre').eq('user_id', user.id)
-  for (const inv of invitacionesPropias || []) {
-    if (inv.nombre) await admin.from('rsvps').delete().eq('celebracion_slug', inv.celebracion_slug).eq('nombre', inv.nombre)
-  }
+  // Borrar los RSVPs que dejó en eventos de otras personas
+  await admin.from('rsvps').delete().eq('user_id', user.id)
 
   // Desvincular (no borrar) registros donde este usuario fue invitado en eventos de otras personas
   await admin.from('invitados').update({ user_id: null }).eq('user_id', user.id)

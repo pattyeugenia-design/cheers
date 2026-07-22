@@ -47,6 +47,11 @@ export default function Onboarding() {
       const nombre = user.user_metadata?.name || ''
       const sugerido = slugifyUsername(nombre.replace(/\s+/g, '_'))
       if (sugerido) setUsername(sugerido)
+    }).catch(async () => {
+      // Sesión guardada inválida/corrupta: sin esto la página se queda
+      // colgada esperando para siempre en vez de mandar a login.
+      await supabase.auth.signOut().catch(() => {})
+      router.push('/login')
     })
   }, [])
 
