@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/reporte-semanal",
-      "schedule": "0 15 * * 1"
+      "schedule": "0 15 * * 1,3,5"
     },
     {
       "path": "/api/cron/recordatorio-15h",

@@ -1288,9 +1288,24 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= limiteInvitados) return
     setGuardandoInvitado(true)
     const isPhone = esTelefono(nuevoInvitado)
-    const row = { celebracion_slug: celebracion.slug, email: nuevoInvitado.includes('@') ? nuevoInvitado.trim() : null, nombre: nuevoInvitado.trim(), user_id: null, created_at: new Date().toISOString() }
+    const emailNuevo = nuevoInvitado.includes('@') ? nuevoInvitado.trim().toLowerCase() : null
+    // Ya estaba invitado a ESTE evento por el mismo email — no se reenvía el correo de invitación
+    // (pero si otro organizador lo invita a un evento distinto, sí le llega, es un slug diferente).
+    const yaInvitadoAquí = !!emailNuevo && invitadosList.some(i => i.email?.toLowerCase() === emailNuevo)
+    const row = { celebracion_slug: celebracion.slug, email: emailNuevo, nombre: nuevoInvitado.trim(), user_id: null, created_at: new Date().toISOString() }
     const { data } = await supabase.from('invitados').insert(row).select().single()
-    if (data) { setInvitadosList(prev => [...prev, data]); if (isPhone) { setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true) } }
+    if (data) {
+      setInvitadosList(prev => [...prev, data])
+      if (isPhone) {
+        setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true)
+      } else if (emailNuevo && !yaInvitadoAquí) {
+        fetch('/api/invitar-por-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ celebracionSlug: celebracion.slug, invitadoEmail: emailNuevo }),
+        }).catch(() => {})
+      }
+    }
     setNuevoInvitado(''); setGuardandoInvitado(false); setShowAddInvitado(false)
   }
 
