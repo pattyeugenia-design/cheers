@@ -865,14 +865,15 @@ function ResizableTile({
         <div
           onMouseDown={startResize}
           onTouchStart={startResize}
+          title={lang === 'en' ? 'Drag to resize' : 'Arrastra para cambiar el tamaño'}
           style={{
-            position: 'absolute', bottom: 0, right: 0, width: 20, height: 20,
-            cursor: 'nwse-resize', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
-            padding: '3px', userSelect: 'none', zIndex: 10,
+            position: 'absolute', bottom: 6, right: 6, width: 30, height: 30, borderRadius: 9,
+            cursor: 'nwse-resize', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            userSelect: 'none', zIndex: 10, background: 'rgba(83,74,183,.14)', border: '1.5px solid rgba(83,74,183,.3)',
           }}
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M9 1L1 9M9 5L5 9M9 9H5" stroke={te.accentText === '#fff' ? 'rgba(255,255,255,.4)' : 'rgba(83,74,183,.4)'} strokeWidth="1.5" strokeLinecap="round"/>
+          <svg width="14" height="14" viewBox="0 0 10 10" fill="none">
+            <path d="M9 1L1 9M9 5L5 9M9 9H5" stroke="#534AB7" strokeWidth="1.7" strokeLinecap="round"/>
           </svg>
         </div>
       )}
@@ -1256,7 +1257,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const ac = new window.google.maps.places.Autocomplete(lugarRef.current, { fields: ['name', 'formatted_address'] })
     ac.addListener('place_changed', () => {
       const p = ac.getPlace()
-      const nombre = p?.name || lugarRef.current?.value || ''
+      // Google ya deja en el campo el texto de la sugerencia que se clickeó
+      // (ej. "Mochomos Monterrey"), que suele traer más contexto que
+      // place.name solo (ej. "Mochomos", sin ciudad) — por eso preferimos lo
+      // que ya está en el campo y usamos place.name solo como respaldo.
+      const nombre = lugarRef.current?.value || p?.name || ''
       setLugar(nombre)
       guardarLugar(nombre)
     })
@@ -1269,7 +1274,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const ac = new window.google.maps.places.Autocomplete(nuevaParadaLugarRef.current, { fields: ['name', 'formatted_address'] })
     ac.addListener('place_changed', () => {
       const p = ac.getPlace()
-      setNuevaParada(prev => ({ ...prev, lugar: p?.name || nuevaParadaLugarRef.current?.value || '' }))
+      setNuevaParada(prev => ({ ...prev, lugar: nuevaParadaLugarRef.current?.value || p?.name || '' }))
     })
     nuevaParadaLugarRef.current.dataset.init = 'true'
   }, [mapsListo, showAddParada])
