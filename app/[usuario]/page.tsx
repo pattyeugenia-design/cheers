@@ -295,12 +295,12 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
 
   return (
     <main style={{ minHeight:'100vh', background:BG, fontFamily:F, padding:'2rem 1.5rem' }}>
-      <div style={{ maxWidth:560, margin:'0 auto' }}>
+      <div style={{ maxWidth:900, margin:'0 auto' }}>
 
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'2rem' }}>
           <div>
-            <div style={{ fontSize:24, fontWeight:900, background:'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', letterSpacing:'-.5px', marginBottom:4 }}>Cheers</div>
+            <div style={{ fontSize:34, fontWeight:900, background:'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', letterSpacing:'-.5px', marginBottom:6 }}>Cheers</div>
             {esPropio
               ? <h1 style={{ fontSize:22, fontWeight:700, color:'#EEEDFE', margin:0 }}>{lang==='en'?`Hi, ${nombre}`:`Hola, ${nombre}`}</h1>
               : <h1 style={{ fontSize:18, fontWeight:700, color:'#EEEDFE', margin:0 }}>@{username}</h1>}
@@ -351,9 +351,11 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           </div>
         )}
 
-        {/* Calendario */}
+        {/* Calendario — más angosto que el resto del dashboard, centrado */}
         {esPropio && eventosCalendario.length > 0 && (
-          <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
+          <div style={{ maxWidth:420, margin:'0 auto' }}>
+            <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
+          </div>
         )}
 
         {/* Botón nueva celebración */}

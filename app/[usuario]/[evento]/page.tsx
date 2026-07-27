@@ -2106,6 +2106,38 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         </div>
       )}
 
+      {/* Modal QR — antes vivía como popup dentro de una tarjeta con overflow
+          hidden (para las esquinas redondeadas), así que aunque el botón
+          funcionaba, el popup se recortaba y nunca se veía. Ahora es un
+          modal fijo como los demás de esta pantalla. */}
+      {mostrarQR && (
+        <div onClick={() => setMostrarQR(false)} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, padding: 24, textAlign: 'center' as const, boxShadow: '0 20px 60px rgba(0,0,0,.3)' }}>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://${shareUrl}`)}`}
+              alt="QR"
+              width={200}
+              height={200}
+              style={{ display: 'block', margin: '0 auto 14px' }}
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <a
+                href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`https://${shareUrl}`)}`}
+                download={`qr-${celebracion?.slug?.replace('/', '-')}.png`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize: 13, fontWeight: 800, color: '#fff', background: '#534AB7', textDecoration: 'none', padding: '9px 18px', borderRadius: 99 }}
+              >
+                {lang === 'en' ? 'Download' : 'Descargar'}
+              </a>
+              <button onClick={() => setMostrarQR(false)} style={{ border: '1.5px solid #e0ddf5', background: 'none', color: '#7a7494', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS }}>
+                {lang === 'en' ? 'Close' : 'Cerrar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal WhatsApp */}
       {showWAPrompt && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -2275,30 +2307,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 </div>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.guest_link}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', position: 'relative' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px' }}>
                     <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{shareUrl}</span>
                     <button onClick={() => navigator.clipboard.writeText(`https://${shareUrl}`)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>{tx.copy}</button>
                     <button onClick={() => setMostrarQR(v => !v)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>QR</button>
-                    {mostrarQR && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 8px 30px rgba(0,0,0,.18)', zIndex: 20, textAlign: 'center' as const }}>
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://${shareUrl}`)}`}
-                          alt="QR"
-                          width={180}
-                          height={180}
-                          style={{ display: 'block', margin: '0 auto 8px' }}
-                        />
-                        <a
-                          href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(`https://${shareUrl}`)}`}
-                          download={`qr-${celebracion?.slug?.replace('/', '-')}.png`}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', textDecoration: 'none' }}
-                        >
-                          {lang === 'en' ? 'Download' : 'Descargar'}
-                        </a>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
