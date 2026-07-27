@@ -18,6 +18,55 @@ const PLANES: Record<string, { label: string; color: string; bg: string }> = {
   lifetime: { label: 'Extra Cheer', color: '#D4537E', bg: '#FCE9F0' },
 }
 
+type NivelNotif = 'leve' | 'importante' | 'todo'
+interface PrefsGrupo { nivel: NivelNotif; periodicidad_dias: number }
+const NOTIF_PREFS_DEFAULT = {
+  generales: { nivel: 'todo' as NivelNotif, periodicidad_dias: 1 },
+  por_tile: { nivel: 'todo' as NivelNotif, periodicidad_dias: 1 },
+}
+
+// Control tipo "volumen" de 3 posiciones (leve / importante / todo) en vez de
+// un slider libre — son solo 3 niveles posibles, así que un slider de arrastre
+// real sería más frágil (valores intermedios sin sentido) sin ganar nada.
+function ControlNivel({ valor, onChange, lang }: { valor: NivelNotif; onChange: (v: NivelNotif) => void; lang: string }) {
+  const niveles: NivelNotif[] = ['leve', 'importante', 'todo']
+  const idx = niveles.indexOf(valor)
+  const pct = (idx / (niveles.length - 1)) * 100
+  const labels = lang === 'en' ? { leve: 'Light', importante: 'Important', todo: 'Everything' } : { leve: 'Leve', importante: 'Importante', todo: 'Todo' }
+  return (
+    <div>
+      <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 99, margin: '14px 4px' }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: 'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius: 99, transition: 'width .2s' }} />
+        {niveles.map((n, i) => {
+          const left = (i / (niveles.length - 1)) * 100
+          return (
+            <button key={n} onClick={() => onChange(n)} aria-label={labels[n]}
+              style={{ position: 'absolute', left: `${left}%`, top: '50%', transform: 'translate(-50%,-50%)', width: 22, height: 22, borderRadius: '50%', border: '3px solid #241c45', background: i <= idx ? '#fff' : 'rgba(255,255,255,.3)', cursor: 'pointer', padding: 0 }} />
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#AFA9EC' }}>
+        <span style={{ opacity: valor === 'leve' ? 1 : .5 }}>{labels.leve}</span>
+        <span style={{ opacity: valor === 'importante' ? 1 : .5 }}>{labels.importante}</span>
+        <span style={{ opacity: valor === 'todo' ? 1 : .5 }}>{labels.todo}</span>
+      </div>
+    </div>
+  )
+}
+
+function SelectorPeriodicidad({ dias, onChange, lang }: { dias: number; onChange: (d: number) => void; lang: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+      <span style={{ fontSize: 12, color: '#AFA9EC' }}>{lang === 'en' ? 'Every' : 'Cada'}</span>
+      {[1, 3, 7].map(d => (
+        <button key={d} onClick={() => onChange(d)} style={{ border: dias === d ? '1.5px solid #fff' : '1.5px solid rgba(255,255,255,.15)', background: dias === d ? 'rgba(255,255,255,.12)' : 'transparent', color: '#EEEDFE', fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 99, cursor: 'pointer', fontFamily: F }}>
+          {d} {lang === 'en' ? (d === 1 ? 'day' : 'days') : (d === 1 ? 'día' : 'días')}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function Perfil() {
   const router = useRouter()
   const [tx, setTx] = useState(t.es)
@@ -39,6 +88,7 @@ export default function Perfil() {
   const [eliminandoCuenta, setEliminandoCuenta] = useState(false)
   const [comprandoLifetime, setComprandoLifetime] = useState(false)
   const [activandoPlan, setActivandoPlan] = useState(false)
+  const [notifPrefs, setNotifPrefs] = useState<{ generales: PrefsGrupo; por_tile: PrefsGrupo }>(NOTIF_PREFS_DEFAULT)
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l])
@@ -54,6 +104,9 @@ export default function Perfil() {
         setAvatarUrl(data.avatar_url || user.user_metadata?.avatar_url || '')
         if (data.lang === 'es' || data.lang === 'en') {
           setLang(data.lang); setTx(t[data.lang as 'es' | 'en']); setLangGuardado(data.lang)
+        }
+        if (data.notificaciones_prefs?.generales && data.notificaciones_prefs?.por_tile) {
+          setNotifPrefs(data.notificaciones_prefs)
         }
       }
       setCargando(false)
@@ -140,6 +193,20 @@ export default function Perfil() {
     if (nuevo === lang || !user) return
     setLang(nuevo); setTx(t[nuevo]); setLangGuardado(nuevo)
     await supabase.from('perfiles').update({ lang: nuevo }).eq('user_id', user.id)
+  }
+
+  async function actualizarNotifNivel(grupo: 'generales' | 'por_tile', nivel: NivelNotif) {
+    if (!user) return
+    const nuevo = { ...notifPrefs, [grupo]: { ...notifPrefs[grupo], nivel } }
+    setNotifPrefs(nuevo)
+    await supabase.from('perfiles').update({ notificaciones_prefs: nuevo }).eq('user_id', user.id)
+  }
+
+  async function actualizarNotifPeriodicidad(grupo: 'generales' | 'por_tile', periodicidad_dias: number) {
+    if (!user) return
+    const nuevo = { ...notifPrefs, [grupo]: { ...notifPrefs[grupo], periodicidad_dias } }
+    setNotifPrefs(nuevo)
+    await supabase.from('perfiles').update({ notificaciones_prefs: nuevo }).eq('user_id', user.id)
   }
 
   async function comprarLifetime() {
@@ -283,6 +350,34 @@ export default function Perfil() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Notificaciones */}
+        <div style={{ background:'rgba(255,255,255,.06)', borderRadius:20, padding:'24px 20px', marginBottom:16 }}>
+          <h2 style={{ fontSize:16, fontWeight:800, color:'#EEEDFE', margin:'0 0 4px' }}>{lang === 'en' ? 'Notifications' : 'Notificaciones'}</h2>
+          <p style={{ fontSize:12, color:'#AFA9EC', margin:'0 0 20px' }}>{lang === 'en' ? 'How much Cheers emails you. Applies to all your celebrations.' : 'Qué tanto te escribe Cheers. Aplica a todas tus celebraciones.'}</p>
+
+          <div style={{ marginBottom:24 }}>
+            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Account general' : 'Generales de cuenta'}</label>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Welcome, event reminders, post-event' : 'Bienvenida, recordatorios de evento, post-evento'}</p>
+            <ControlNivel valor={notifPrefs.generales.nivel} onChange={v => actualizarNotifNivel('generales', v)} lang={lang} />
+            {notifPrefs.generales.nivel === 'importante' && (
+              <SelectorPeriodicidad dias={notifPrefs.generales.periodicidad_dias} onChange={d => actualizarNotifPeriodicidad('generales', d)} lang={lang} />
+            )}
+          </div>
+
+          <div>
+            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Per tile' : 'Por tile'}</label>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Confirmations, gifts reserved, wall messages' : 'Confirmaciones, regalos reservados, mensajes del muro'}</p>
+            <ControlNivel valor={notifPrefs.por_tile.nivel} onChange={v => actualizarNotifNivel('por_tile', v)} lang={lang} />
+            {notifPrefs.por_tile.nivel === 'importante' && (
+              <SelectorPeriodicidad dias={notifPrefs.por_tile.periodicidad_dias} onChange={d => actualizarNotifPeriodicidad('por_tile', d)} lang={lang} />
+            )}
+          </div>
+
+          <p style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:20, marginBottom:0 }}>
+            {lang === 'en' ? 'Purchase confirmations always arrive, no matter what you pick here.' : 'Las confirmaciones de compra siempre llegan, sin importar lo que elijas aquí.'}
+          </p>
         </div>
 
         {/* Idioma de comunicación */}

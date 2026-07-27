@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../emailTemplate'
+import { obtenerPrefs, debeEnviarRsvpInstantaneo } from '../../notificacionesPrefs'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -39,6 +40,11 @@ export async function POST(req: Request) {
 
   const { data: cel } = await admin.from('celebraciones').select('nombre, slug, organizador_id').eq('slug', celebracionSlug).single()
   if (!cel?.organizador_id) return NextResponse.json({ success: true })
+
+  // "importante" no manda esta al instante — se agrupa en el resumen periódico.
+  // "todo" y "leve" sí la mandan al instante, es el comportamiento de siempre.
+  const prefs = await obtenerPrefs(admin, cel.organizador_id)
+  if (!debeEnviarRsvpInstantaneo(prefs.por_tile.nivel)) return NextResponse.json({ success: true })
 
   const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
   if (!organizador?.email) return NextResponse.json({ success: true })

@@ -76,13 +76,16 @@ const STARS = [
 
 function defaultLayouts(type: string, sub?: string): TileLayout[] {
   // 12 cols, tiles en grid de 2 columnas (6 cols cada una)
+  // El tile de gastos ("presupuesto") antes solo venía en viaje — se agregó al resto
+  // de los tipos porque el gating real es por plan (como regalos/itinerario/qué llevar:
+  // visible para todos, limitado en cuentas gratis vía eventoEsPro), no por tipo de evento.
   const SETS: Record<string, string[]> = {
-    cumple:  ['portada', 'invitados', 'regalos', 'mensajes'],
-    cena:    sub === 'restaurante' ? ['portada', 'invitados', 'reservacion'] : ['portada', 'invitados', 'menu'],
+    cumple:  ['portada', 'invitados', 'regalos', 'mensajes', 'presupuesto'],
+    cena:    sub === 'restaurante' ? ['portada', 'invitados', 'reservacion', 'presupuesto'] : ['portada', 'invitados', 'menu', 'presupuesto'],
     viaje:   ['portada', 'invitados', 'itinerario', 'presupuesto', 'quellevar'],
-    reunion: ['portada', 'invitados', 'menu'],
-    evento:  ['portada', 'invitados', 'regalos'],
-    otro:    ['portada', 'invitados', 'regalos'],
+    reunion: ['portada', 'invitados', 'menu', 'presupuesto'],
+    evento:  ['portada', 'invitados', 'regalos', 'presupuesto'],
+    otro:    ['portada', 'invitados', 'regalos', 'presupuesto'],
   }
   const keys = SETS[type] || ['portada', 'invitados', 'regalos']
 
@@ -473,7 +476,14 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
     const nombre = user?.user_metadata?.name || user?.email || ''
     const payload = { celebracion_slug: celebracion.slug, user_id: user.id, nombre, texto: nuevoMensajeMuro.trim() }
     const { data, error } = await supabase.from('mensajes').insert(payload).select().single()
-    if (!error && data) setMensajesMuro(prev => [data, ...prev])
+    if (!error && data) {
+      setMensajesMuro(prev => [data, ...prev])
+      fetch('/api/notificar-mensaje', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreAutor: nombre, texto: nuevoMensajeMuro.trim() }),
+      }).catch(() => {})
+    }
     setNuevoMensajeMuro('')
     setPublicandoMensaje(false)
   }
@@ -1370,7 +1380,14 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const { data, error } = await supabase.from('regalo_reservas')
       .insert({ celebracion_slug: celebracion.slug, regalo_id: regaloId, user_id: user.id })
       .select().single()
-    if (!error && data) setReservasRegalo(prev => [...prev, data])
+    if (!error && data) {
+      setReservasRegalo(prev => [...prev, data])
+      fetch('/api/notificar-regalo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celebracionSlug: celebracion.slug, regaloId }),
+      }).catch(() => {})
+    }
   }
 
   // Solo la organizadora puede liberar la reserva de un invitado (ej. si se equivocó o canceló).
@@ -1458,6 +1475,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       filasParticipantes = pdata || []
     }
     setGastos(prev => [{ ...gastoRow, gasto_participantes: filasParticipantes }, ...prev])
+    if (filasParticipantes.length > 0) {
+      fetch('/api/notificar-gasto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celebracionSlug: celebracion.slug, gastoId: gastoRow.id }),
+      }).catch(() => {})
+    }
     setNuevoGasto(nuevoGastoVacio)
     setShowAddGasto(false)
   }
