@@ -75,8 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Datos estructurados de marca y producto (Organization + WebSite + SoftwareApplication),
             estándar 2026 recomendado para que Google y los motores de IA entiendan qué es Cheers,
             no solo como empresa sino como producto (con sus 3 planes). No incluye "logo" en formato
-            ideal (Google prefiere PNG/JPG, no SVG) ni redes sociales (sameAs) porque Cheers todavía
-            no tiene ninguna cuenta pública — vale la pena crear al menos una y regresar a agregarla aquí. */}
+            ideal (Google prefiere PNG/JPG, no SVG) porque Cheers todavía no tiene ese asset. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -90,6 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   url: 'https://joincheers.app',
                   logo: 'https://joincheers.app/icon.svg',
                   description: 'Organiza cualquier celebración con un solo link — cumpleaños, posadas, quinceañeras, despedidas de soltera, cenas, viajes con amigos.',
+                  sameAs: ['https://www.instagram.com/joincheers/'],
                 },
                 {
                   '@type': 'WebSite',
