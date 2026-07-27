@@ -30,8 +30,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true })
   }
 
-  const { celebracionSlug, nombreInvitado, asistencia, mensaje } = await req.json()
-  if (!celebracionSlug || !nombreInvitado || !asistencia) {
+  const { celebracionSlug, rsvpId } = await req.json()
+  if (!celebracionSlug || !rsvpId) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
   }
 
@@ -41,6 +41,16 @@ export async function POST(req: Request) {
 
   const { data: cel } = await admin.from('celebraciones').select('nombre, slug, organizador_id').eq('slug', celebracionSlug).single()
   if (!cel?.organizador_id) return NextResponse.json({ success: true })
+
+  // Se vuelve a leer el RSVP real de la base de datos por su id — nunca se
+  // confía en el nombre/asistencia/mensaje que mande el navegador, para que
+  // nadie pueda mandarle al organizador una notificación o correo inventado
+  // haciéndose pasar por un invitado que nunca confirmó nada.
+  const { data: rsvp } = await admin.from('rsvps').select('nombre, asistencia, mensaje, celebracion_slug').eq('id', rsvpId).single()
+  if (!rsvp || rsvp.celebracion_slug !== celebracionSlug) return NextResponse.json({ success: true })
+  const nombreInvitado = rsvp.nombre
+  const asistencia = rsvp.asistencia
+  const mensaje = rsvp.mensaje
 
   const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
   const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'

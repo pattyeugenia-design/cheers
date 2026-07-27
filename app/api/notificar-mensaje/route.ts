@@ -24,8 +24,8 @@ export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
   if (excedeLimite(ip)) return NextResponse.json({ success: true })
 
-  const { celebracionSlug, nombreAutor, texto } = await req.json()
-  if (!celebracionSlug || !texto) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+  const { celebracionSlug, mensajeId } = await req.json()
+  if (!celebracionSlug || !mensajeId) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -34,9 +34,16 @@ export async function POST(req: Request) {
   const { data: cel } = await admin.from('celebraciones').select('nombre, slug, organizador_id').eq('slug', celebracionSlug).single()
   if (!cel?.organizador_id) return NextResponse.json({ success: true })
 
+  // Se vuelve a leer el mensaje real de la base de datos por su id — nunca se
+  // confía en el autor/texto que mande el navegador, para que nadie pueda
+  // mandarle al organizador un mensaje inventado haciéndose pasar por invitado.
+  const { data: msg } = await admin.from('mensajes').select('nombre, texto, celebracion_slug').eq('id', mensajeId).single()
+  if (!msg || msg.celebracion_slug !== celebracionSlug) return NextResponse.json({ success: true })
+
   const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
   const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
-  const autor = nombreAutor || (lang === 'en' ? 'Someone' : 'Alguien')
+  const autor = msg.nombre || (lang === 'en' ? 'Someone' : 'Alguien')
+  const texto = msg.texto
 
   // El historial in-app siempre se registra, sin importar el nivel de email elegido.
   await registrarNotificacionApp(admin, cel.organizador_id, 'mensaje', cel.slug, lang === 'en'

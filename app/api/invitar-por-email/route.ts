@@ -24,13 +24,22 @@ export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
   if (excedeLimite(ip)) return NextResponse.json({ success: true })
 
-  const { celebracionSlug, invitadoEmail } = await req.json()
-  if (!celebracionSlug || !invitadoEmail) {
+  const { celebracionSlug, invitadoEmail, accessToken } = await req.json()
+  if (!celebracionSlug || !invitadoEmail || !accessToken) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+  // Verificar que quien llama tiene una sesión real y actual (nunca confiar
+  // en que el navegador diga la verdad) — sin esto, cualquiera podía mandar
+  // "invitaciones" reales a cualquier correo, para eventos que no son suyos.
+  const authClient = createClient(supabaseUrl, anonKey)
+  const { data: { user: caller }, error: callerError } = await authClient.auth.getUser(accessToken)
+  if (callerError || !caller) return NextResponse.json({ success: true })
+
   const admin = createClient(supabaseUrl, serviceKey)
 
   const { data: cel } = await admin
@@ -39,6 +48,7 @@ export async function POST(req: Request) {
     .eq('slug', celebracionSlug)
     .single()
   if (!cel) return NextResponse.json({ success: true })
+  if (cel.organizador_id !== caller.id) return NextResponse.json({ success: true })
 
   const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
   const { data: perfilOrg } = await admin.from('perfiles').select('nombre_completo, plan, lang').eq('user_id', cel.organizador_id).single()

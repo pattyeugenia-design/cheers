@@ -294,16 +294,16 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
   async function confirmarSinCuenta() {
     if (!asistencia || !nombreInvitado.trim()) return
     setGuardando(true)
-    await supabase.from('rsvps').insert({
+    const { data: rsvpNuevo } = await supabase.from('rsvps').insert({
       celebracion_slug: celebracion.slug,
       nombre: nombreInvitado.trim(),
       asistencia,
       mensaje: null,
-    })
+    }).select('id').single()
     fetch('/api/notificar-rsvp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreInvitado: nombreInvitado.trim(), asistencia, mensaje: null }),
+      body: JSON.stringify({ celebracionSlug: celebracion.slug, rsvpId: rsvpNuevo?.id }),
     }).catch(() => {})
     setGuardando(false); setGuardado(true)
   }
@@ -480,7 +480,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
       fetch('/api/notificar-mensaje', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreAutor: nombre, texto: nuevoMensajeMuro.trim() }),
+        body: JSON.stringify({ celebracionSlug: celebracion.slug, mensajeId: data.id }),
       }).catch(() => {})
     }
     setNuevoMensajeMuro('')
@@ -492,12 +492,17 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
     if (!asistencia || !nombre) return
     setGuardando(true)
     const payload = { celebracion_slug: celebracion.slug, nombre, asistencia, mensaje: mensaje.trim() || null }
-    if (rsvpExistente) await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
-    else await supabase.from('rsvps').insert(payload)
+    let rsvpId = rsvpExistente?.id
+    if (rsvpExistente) {
+      await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
+    } else {
+      const { data } = await supabase.from('rsvps').insert(payload).select('id').single()
+      rsvpId = data?.id
+    }
     fetch('/api/notificar-rsvp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreInvitado: nombre, asistencia, mensaje: mensaje.trim() || null }),
+      body: JSON.stringify({ celebracionSlug: celebracion.slug, rsvpId }),
     }).catch(() => {})
     const { data } = await supabase.rpc('get_rsvps_confirmados_por_slug', { p_slug: celebracion.slug })
     setConfirmados(data || [])
@@ -1313,11 +1318,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       if (isPhone) {
         setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true)
       } else if (emailNuevo && !yaInvitadoAquí) {
-        fetch('/api/invitar-por-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ celebracionSlug: celebracion.slug, invitadoEmail: emailNuevo }),
-        }).catch(() => {})
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          fetch('/api/invitar-por-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ celebracionSlug: celebracion.slug, invitadoEmail: emailNuevo, accessToken: session?.access_token }),
+          }).catch(() => {})
+        })
       }
     }
     setNuevoInvitado(''); setGuardandoInvitado(false); setShowAddInvitado(false)
