@@ -30,7 +30,7 @@ function tiempoRelativo(iso: string, lang: string) {
 // celebración (INV, REG, MSG) — nada de emoji, para que se vea consistente.
 const ICONO: Record<string, string> = { rsvp: 'RSV', regalo: 'REG', mensaje: 'MSG' }
 
-export default function NotificacionesBell({ userId, lang }: { userId: string; lang: string }) {
+export default function NotificacionesBell({ userId, lang, light }: { userId: string; lang: string; light?: boolean }) {
   const router = useRouter()
   const [items, setItems] = useState<NotifApp[]>([])
   const [abierto, setAbierto] = useState(false)
@@ -80,10 +80,10 @@ export default function NotificacionesBell({ userId, lang }: { userId: string; l
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <button onClick={alAbrir} style={{ position: 'relative', width: 40, height: 40, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,.15)', background: 'rgba(255,255,255,.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <button onClick={alAbrir} style={{ position: 'relative', width: 40, height: 40, borderRadius: '50%', border: light ? 'none' : '1.5px solid rgba(255,255,255,.15)', background: light ? 'rgba(255,255,255,.92)' : 'rgba(255,255,255,.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: light ? '0 4px 14px rgba(20,10,40,.18)' : 'none' }}>
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-          <path d="M10 2.5c-2.9 0-5.2 2.3-5.2 5.2v2.6c0 .5-.2 1-.5 1.4l-1 1.3c-.5.6-.1 1.5.7 1.5h13.9c.8 0 1.2-.9.7-1.5l-1-1.3c-.3-.4-.5-.9-.5-1.4V7.7c0-2.9-2.3-5.2-5.2-5.2z" stroke="#EEEDFE" strokeWidth="1.4" strokeLinejoin="round"/>
-          <path d="M8 16.2c.3.9 1.1 1.5 2 1.5s1.7-.6 2-1.5" stroke="#EEEDFE" strokeWidth="1.4" strokeLinecap="round"/>
+          <path d="M10 2.5c-2.9 0-5.2 2.3-5.2 5.2v2.6c0 .5-.2 1-.5 1.4l-1 1.3c-.5.6-.1 1.5.7 1.5h13.9c.8 0 1.2-.9.7-1.5l-1-1.3c-.3-.4-.5-.9-.5-1.4V7.7c0-2.9-2.3-5.2-5.2-5.2z" stroke={light ? '#534AB7' : '#EEEDFE'} strokeWidth="1.4" strokeLinejoin="round"/>
+          <path d="M8 16.2c.3.9 1.1 1.5 2 1.5s1.7-.6 2-1.5" stroke={light ? '#534AB7' : '#EEEDFE'} strokeWidth="1.4" strokeLinecap="round"/>
         </svg>
         {noLeidas > 0 && (
           <span style={{ position: 'absolute', top: -2, right: -2, minWidth: 16, height: 16, borderRadius: 99, background: '#D4537E', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', fontFamily: F }}>

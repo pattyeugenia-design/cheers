@@ -5,6 +5,7 @@ import Script from 'next/script'
 import Image from 'next/image'
 import { supabase } from '../../supabase'
 import { getLang, t } from '../../i18n'
+import NotificacionesBell from '../../components/NotificacionesBell'
 
 declare global { interface Window { google: any } }
 
@@ -2225,7 +2226,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   </>}
               </button>
             </div>
-            <button onClick={() => setShowCustomize(v => !v)} style={{ ...pillBtn, background: showCustomize ? '#534AB7' : 'rgba(255,255,255,.92)', color: showCustomize ? '#fff' : '#534AB7' }}>{tx.customize}</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {user?.id && <NotificacionesBell userId={user.id} lang={lang} light />}
+              <button onClick={() => setShowCustomize(v => !v)} style={{ ...pillBtn, background: showCustomize ? '#534AB7' : 'rgba(255,255,255,.92)', color: showCustomize ? '#fff' : '#534AB7' }}>{tx.customize}</button>
+            </div>
           </div>
 
           {/* Hero card */}

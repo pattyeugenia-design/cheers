@@ -21,16 +21,19 @@ const PLANES: Record<string, { label: string; color: string; bg: string }> = {
 
 type NivelNotif = 'leve' | 'importante' | 'todo'
 interface PrefsItem { nivel: NivelNotif; periodicidad_dias?: number }
-interface NotifPrefsState { recordatorio: PrefsItem; rsvp: PrefsItem; regalo: PrefsItem; mensaje: PrefsItem }
+interface NotifPrefsState { recordatorio: PrefsItem; rsvp: PrefsItem; regalo: PrefsItem; mensaje: PrefsItem; gasto: PrefsItem }
 // "Leve" es el piso mínimo garantizado de cada notificación, nunca "apagado":
 // Recordatorio -> el más cercano a la fecha. RSVP -> instantáneo (como
-// siempre). Regalo/Mensaje -> resumen semanal como mínimo (son notificaciones
-// nuevas, no había nada que preservar, así que el piso lo definimos aquí).
+// siempre). Regalo/Mensaje/Gasto -> resumen semanal como mínimo (son
+// notificaciones nuevas, no había nada que preservar, así que el piso lo
+// definimos aquí). Gasto es la única que no depende de si organizas o no —
+// te llega si a ti te tocó pagar algo, seas organizador o invitada.
 const NOTIF_PREFS_DEFAULT: NotifPrefsState = {
   recordatorio: { nivel: 'leve' },
   rsvp: { nivel: 'leve' },
   regalo: { nivel: 'leve', periodicidad_dias: 7 },
   mensaje: { nivel: 'leve', periodicidad_dias: 7 },
+  gasto: { nivel: 'leve', periodicidad_dias: 7 },
 }
 
 // Control tipo "volumen" de 3 posiciones (leve / importante / todo) en vez de
@@ -113,7 +116,7 @@ export default function Perfil() {
         if (data.lang === 'es' || data.lang === 'en') {
           setLang(data.lang); setTx(t[data.lang as 'es' | 'en']); setLangGuardado(data.lang)
         }
-        if (data.notificaciones_prefs?.rsvp && data.notificaciones_prefs?.regalo && data.notificaciones_prefs?.mensaje && data.notificaciones_prefs?.recordatorio) {
+        if (data.notificaciones_prefs?.rsvp && data.notificaciones_prefs?.regalo && data.notificaciones_prefs?.mensaje && data.notificaciones_prefs?.recordatorio && data.notificaciones_prefs?.gasto) {
           setNotifPrefs(data.notificaciones_prefs)
         }
       }
@@ -203,12 +206,12 @@ export default function Perfil() {
     await supabase.from('perfiles').update({ lang: nuevo }).eq('user_id', user.id)
   }
 
-  type NotifTipo = 'recordatorio' | 'rsvp' | 'regalo' | 'mensaje'
+  type NotifTipo = 'recordatorio' | 'rsvp' | 'regalo' | 'mensaje' | 'gasto'
 
   async function actualizarNotifNivel(tipo: NotifTipo, nivel: NivelNotif) {
     if (!user) return
     let periodicidad_dias = notifPrefs[tipo].periodicidad_dias
-    if (tipo === 'regalo' || tipo === 'mensaje') {
+    if (tipo === 'regalo' || tipo === 'mensaje' || tipo === 'gasto') {
       // Leve es el piso fijo (resumen semanal, no elegible). Importante sí se elige (1 o 3 días).
       if (nivel === 'leve') periodicidad_dias = 7
       else if (nivel === 'importante' && (!periodicidad_dias || periodicidad_dias === 7)) periodicidad_dias = 3
@@ -407,6 +410,15 @@ export default function Perfil() {
             <ControlNivel valor={notifPrefs.mensaje.nivel} onChange={v => actualizarNotifNivel('mensaje', v)} lang={lang} />
             {notifPrefs.mensaje.nivel === 'importante' && (
               <SelectorPeriodicidad dias={notifPrefs.mensaje.periodicidad_dias || 3} onChange={d => actualizarNotifPeriodicidad('mensaje', d)} lang={lang} opciones={[1, 3]} />
+            )}
+          </div>
+
+          <div style={{ marginTop:24 }}>
+            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Expense assigned to you' : 'Gasto asignado a ti'}</label>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'When you owe money in a shared expense — as organizer or guest. Leve: weekly summary (minimum) · Importante: every 1-3 days · Todo: instant' : 'Cuando te toca pagar tu parte de un gasto — seas organizadora o invitada. Leve: resumen semanal (mínimo) · Importante: cada 1-3 días · Todo: al instante'}</p>
+            <ControlNivel valor={notifPrefs.gasto.nivel} onChange={v => actualizarNotifNivel('gasto', v)} lang={lang} />
+            {notifPrefs.gasto.nivel === 'importante' && (
+              <SelectorPeriodicidad dias={notifPrefs.gasto.periodicidad_dias || 3} onChange={d => actualizarNotifPeriodicidad('gasto', d)} lang={lang} opciones={[1, 3]} />
             )}
           </div>
 

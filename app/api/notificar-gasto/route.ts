@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../emailTemplate'
+import { obtenerPrefs, debeEnviarNuevaInstantaneo } from '../../notificacionesPrefs'
+import { registrarNotificacionApp } from '../../notificacionesApp'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -56,11 +58,20 @@ export async function POST(req: Request) {
     const inv = invitados?.find(i => i.id === p.invitado_id)
     if (!inv?.email) continue
 
-    // Pendiente: esta notificación todavía no tiene su propio control de nivel
-    // (se definirá aparte más adelante) — por ahora se manda siempre, igual que
-    // antes de que existiera la pantalla de preferencias.
     const { data: perfilInv } = inv.user_id ? await admin.from('perfiles').select('lang').eq('user_id', inv.user_id).single() : { data: null }
     const lang: 'es' | 'en' = perfilInv?.lang === 'en' ? 'en' : 'es'
+
+    // Si tiene cuenta propia, su nivel de "gasto" manda sobre si le llega al
+    // instante o se agrupa en su resumen — el historial in-app siempre se
+    // registra, sin importar el nivel. Sin cuenta, se manda directo (mismo
+    // criterio que invitar-por-email, no hay perfil donde guardar preferencia).
+    if (inv.user_id) {
+      await registrarNotificacionApp(admin, inv.user_id, 'gasto', cel.slug, lang === 'en'
+        ? `You owe $${Number(p.monto_parte).toLocaleString()} in "${cel.nombre}"`
+        : `Te toca pagar $${Number(p.monto_parte).toLocaleString()} en "${cel.nombre}"`)
+      const prefsInv = await obtenerPrefs(admin, inv.user_id)
+      if (!debeEnviarNuevaInstantaneo(prefsInv.gasto.nivel)) continue
+    }
 
     const subject = lang === 'en'
       ? `You owe $${Number(p.monto_parte).toLocaleString()} in "${cel.nombre}"`

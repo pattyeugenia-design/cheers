@@ -15,8 +15,11 @@
 //                     periodicidad_dias días, solo si hubo algo nuevo
 //     "leve"       -> al instante también (es el comportamiento de siempre,
 //                     el piso mínimo de esta notificación ya era "al instante")
-//  - regalo / mensaje: notificaciones nuevas, no había un "de siempre" que
-//    preservar, así que el piso se definió aquí mismo.
+//  - regalo / mensaje / gasto: notificaciones nuevas, no había un "de siempre"
+//    que preservar, así que el piso se definió aquí mismo. "gasto" es la
+//    única que no le llega a la organizadora sino a cada invitado que quedó
+//    debiendo su parte — vive en el mismo perfil de quien sea (organizador o
+//    invitado con cuenta).
 //     "todo"       -> al instante, una por acción
 //     "importante" -> agrupadas en el resumen periódico cada 1-3 días (elige
 //                     el usuario), solo si hubo algo nuevo
@@ -40,6 +43,7 @@ export interface NotificacionesPrefs {
   rsvp: PrefsItem
   regalo: PrefsItem
   mensaje: PrefsItem
+  gasto: PrefsItem
 }
 
 export const DEFAULT_NOTIF_PREFS: NotificacionesPrefs = {
@@ -47,12 +51,13 @@ export const DEFAULT_NOTIF_PREFS: NotificacionesPrefs = {
   rsvp: { nivel: 'leve' },
   regalo: { nivel: 'leve', periodicidad_dias: 7 },
   mensaje: { nivel: 'leve', periodicidad_dias: 7 },
+  gasto: { nivel: 'leve', periodicidad_dias: 7 },
 }
 
 export async function obtenerPrefs(admin: SupabaseClient, organizadorId: string): Promise<NotificacionesPrefs> {
   const { data } = await admin.from('perfiles').select('notificaciones_prefs').eq('user_id', organizadorId).single()
   const prefs = data?.notificaciones_prefs
-  if (!prefs?.rsvp || !prefs?.regalo || !prefs?.mensaje || !prefs?.recordatorio) return DEFAULT_NOTIF_PREFS
+  if (!prefs?.rsvp || !prefs?.regalo || !prefs?.mensaje || !prefs?.recordatorio || !prefs?.gasto) return DEFAULT_NOTIF_PREFS
   return prefs as NotificacionesPrefs
 }
 

@@ -5,7 +5,7 @@
 // que un correo.
 import { SupabaseClient } from '@supabase/supabase-js'
 
-export type TipoNotifApp = 'rsvp' | 'regalo' | 'mensaje'
+export type TipoNotifApp = 'rsvp' | 'regalo' | 'mensaje' | 'gasto'
 
 export async function registrarNotificacionApp(
   admin: SupabaseClient,
