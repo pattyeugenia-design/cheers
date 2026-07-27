@@ -6,9 +6,9 @@ Para no perder esta lista otra vez: aquí queda quién va a recibir Lifetime gra
 |---|---|---|---|---|
 | Valente / Tito (novio) | valente.pina@gmail.com | Sí (@valentepina) | Sí | Confirmado 2026-07-20 |
 | Ximena Mondragón | xxximena@gmail.com | No | No | Falta que cree cuenta |
-| Prima González | linda.gzz@gmail.com | No | No | Falta que cree cuenta |
-| Prima Quiroga | priscillaquiroga@gmail.com | No | No | Falta que cree cuenta |
-| — | Rosa.amoca@gmail.com | No | No | Falta que cree cuenta |
+| Prima González | linda.gzz@gmail.com | Sí (@linda_gzz) | Sí | Activada 2026-07-21 vía SQL |
+| Prima Quiroga | priscillaquiroga@gmail.com | Sí (@priscilla_quiroga) | Sí | Activada 2026-07-23 vía SQL |
+| Rosa Morales | Rosa.amoca@gmail.com | Sí (@rosa_morales) | Sí | Activada 2026-07-21 vía SQL |
 | — | monyale3@gmail.com | No | No | Falta que cree cuenta |
 | Fátima Rodríguez | faty137@gmail.com | Sí (@fatima_rodriguez) | Sí | Activada 2026-07-20 vía SQL |
 
@@ -16,7 +16,7 @@ Para no perder esta lista otra vez: aquí queda quién va a recibir Lifetime gra
 | Vicente Canales | vicecanales@gmail.com | Sin verificar | No | Agregado 2026-07-20 |
 | Carolina Nazar | caronazarv@gmail.com | Sin verificar | No | Agregado 2026-07-20 |
 | Vika Salinas | Vikasalinas@gmail.com | Sí (@victoria_salinas) | Sí | Activada 2026-07-20 vía SQL |
-| Daniela Peña | dany.pena.g@gmail.com | Sin verificar | No | Agregado 2026-07-20 |
+| Daniela Peña | dany.pena.g@gmail.com | Sí (@danythebest) | Sí | Activada 2026-07-21 vía SQL |
 | Marcela R. Treviño | Marcerivera.2122@hotmail.com | No | No | Correo enviado 2026-07-20 vía Resend |
 
 **2026-07-20: se mandaron los 11 correos** (todos menos Valente, que ya tenía todo) vía Resend, desde `Patty (Cheers) <notificaciones@joincheers.app>`, con reply-to a patty.eugenia@gmail.com. Fátima recibió la versión "ya activado" porque se le activó el plan justo antes de mandarle el correo. Los otros 10 quedan pendientes de que creen su cuenta y avisen su username.
