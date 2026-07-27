@@ -82,6 +82,7 @@ export default function NuevaCelebracion() {
   const [slugFinal, setSlugFinal] = useState('')
   const [hasDraft, setHasDraft] = useState(false)
   const [verificando, setVerificando] = useState(true)
+  const [sinAcceso, setSinAcceso] = useState(false)
   const lugarRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -95,6 +96,15 @@ export default function NuevaCelebracion() {
 
       const { data: perfil } = await supabase.from('perfiles').select('username').eq('user_id', user.id).single()
       setUserSlug(perfil?.username || slugify(nombre))
+
+      // Free/Pro (cuenta) ya con una celebración activa: no la dejamos ni
+      // empezar a llenar el formulario, se va directo a la pantalla de pago.
+      // Lifetime siempre puede. Misma regla que ya aplica la policy de INSERT
+      // en la base de datos (puede_crear_celebracion) — aquí solo evitamos
+      // que pierda tiempo llenando algo que al final se va a rechazar.
+      const { data: puedeCrear } = await supabase.rpc('puede_crear_celebracion', { org_id: user.id })
+      if (puedeCrear === false) { setSinAcceso(true); setVerificando(false); return }
+
       setVerificando(false)
 
       // Cargar draft si existe
@@ -132,8 +142,11 @@ export default function NuevaCelebracion() {
     if (!mapsListo || !lugarRef.current || lugarRef.current.dataset.init) return
     const ac = new window.google.maps.places.Autocomplete(lugarRef.current, { fields: ['name', 'formatted_address'] })
     ac.addListener('place_changed', () => {
+      // Google ya deja en el input el texto completo de la sugerencia elegida
+      // (ej. "Mochomos Monterrey"); place.name puede venir más corto (solo
+      // "Mochomos") — se prefiere el valor del input, igual que en el evento.
       const p = ac.getPlace()
-      if (p) setLugar(p.name || lugarRef.current?.value || '')
+      if (p) setLugar(lugarRef.current?.value || p.name || '')
     })
     lugarRef.current.dataset.init = 'true'
   }, [mapsListo, step])
@@ -247,6 +260,18 @@ export default function NuevaCelebracion() {
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 24, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 12 }}>Cheers</div>
         <p style={{ color: 'rgba(255,255,255,.5)', fontSize: 14 }}>{tx.loading}</p>
+      </div>
+    </main>
+  )
+
+  if (sinAcceso) return (
+    <main style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FSYS, padding: '2rem 1.5rem' }}>
+      <div style={{ background: '#fff', borderRadius: 24, padding: '36px 28px', maxWidth: 380, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.35)' }}>
+        <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 18 }}>Cheers</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: '#2a2440', marginBottom: 8 }}>{tx.nueva_limite_celebracion_title}</div>
+        <p style={{ fontSize: 14, color: '#7a7494', lineHeight: 1.5, margin: '0 0 22px' }}>{tx.nueva_limite_celebracion_desc}</p>
+        <button onClick={() => router.push('/perfil')} style={{ width: '100%', border: 'none', borderRadius: 16, padding: '15px', fontSize: 15, fontWeight: 700, fontFamily: FSYS, cursor: 'pointer', color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', boxShadow: '0 12px 28px rgba(83,74,183,.32)' }}>{tx.nueva_limite_celebracion_cta}</button>
+        <button onClick={() => router.push(`/${userSlug}`)} style={{ border: 'none', background: 'none', color: '#a79fc4', fontSize: 13, fontWeight: 600, padding: '14px 0 0', cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? '← Back to my celebrations' : '← Volver a mis celebraciones'}</button>
       </div>
     </main>
   )
