@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../../emailTemplate'
+import { DEFAULT_NOTIF_PREFS, NotificacionesPrefs } from '../../../notificacionesPrefs'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -145,11 +146,30 @@ export async function GET(req: Request) {
     const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
     if (!organizador?.email) continue
 
-    const { data: perfilOrg } = await admin.from('perfiles').select('plan, lang').eq('user_id', cel.organizador_id).single()
+    const { data: perfilOrg } = await admin.from('perfiles').select('plan, lang, notificaciones_prefs').eq('user_id', cel.organizador_id).single()
     const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
     const cuentaEsLifetime = perfilOrg?.plan === 'lifetime'
     const eventoEsPro = cuentaEsLifetime || perfilOrg?.plan === 'pro' || cel.plan === 'pro'
     const totalConfirmados = count ?? 0
+
+    // Nivel de "Recordatorio de evento" — "leve" es el piso mínimo, nunca cero:
+    // todo = todos los configurados, importante = el más cercano + uno más (si
+    // hay varios), leve = solo el más cercano a la fecha del evento.
+    const prefs: NotificacionesPrefs = perfilOrg?.notificaciones_prefs?.recordatorio ? perfilOrg.notificaciones_prefs : DEFAULT_NOTIF_PREFS
+    const nivelRecordatorio = prefs.recordatorio.nivel
+    if (nivelRecordatorio !== 'todo') {
+      const diasConfigList: number[] = Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [7]
+      const sorted = [...diasConfigList].sort((a, b) => a - b)
+      const fechaEvt = new Date(cel.fechaEvento)
+      fechaEvt.setHours(0, 0, 0, 0)
+      const diffDiasHoy = Math.round((fechaEvt.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+      if (nivelRecordatorio === 'leve') {
+        if (diffDiasHoy !== sorted[0]) continue
+      } else if (nivelRecordatorio === 'importante') {
+        const lejano = sorted[sorted.length - 1]
+        if (sorted.length > 1 && diffDiasHoy === lejano) continue
+      }
+    }
 
     try {
       const fechaEvento = new Date(cel.fechaEvento)

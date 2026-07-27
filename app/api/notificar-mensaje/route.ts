@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   if (!cel?.organizador_id) return NextResponse.json({ success: true })
 
   const prefs = await obtenerPrefs(admin, cel.organizador_id)
-  if (!debeEnviarNuevaInstantaneo(prefs.por_tile.nivel)) return NextResponse.json({ success: true })
+  if (!debeEnviarNuevaInstantaneo(prefs.mensaje.nivel)) return NextResponse.json({ success: true })
 
   const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
   if (!organizador?.email) return NextResponse.json({ success: true })

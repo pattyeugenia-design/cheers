@@ -2,20 +2,28 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../../emailTemplate'
+import { DEFAULT_NOTIF_PREFS, NotificacionesPrefs } from '../../../notificacionesPrefs'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Corre diario (ver vercel.json). Para cada organizador con
-// notificaciones_prefs.por_tile.nivel = "importante", agrupa lo que pasó desde
-// el último resumen (RSVPs, regalos reservados, mensajes del muro) en TODAS sus
-// celebraciones, y manda UN correo — pero solo si de verdad hay algo nuevo, y
-// solo si ya pasaron los días de periodicidad que eligió. Si no hay nada nuevo,
-// no se manda nada y no se actualiza el timestamp (se vuelve a revisar mañana).
+type TipoDigest = 'rsvp' | 'regalo' | 'mensaje'
+const TIPOS: TipoDigest[] = ['rsvp', 'regalo', 'mensaje']
+
+// Corre diario (ver vercel.json). RSVP, regalo reservado y mensaje del muro
+// tienen cada uno su propio nivel/periodicidad — un organizador puede tener
+// "regalo" en importante cada 3 días y "mensaje" en leve (resumen semanal),
+// por ejemplo, y ambos se evalúan por separado aunque terminen en el mismo
+// correo si coinciden el mismo día.
 //
-// Nota: los gastos NO van en este resumen — esa notificación es para los
-// invitados que deben dinero, no para la organizadora, y hoy se manda al
-// instante sin importar el nivel. Agruparla en un resumen aparte queda
-// pendiente como mejora futura, no está en esta primera versión.
+// RSVP solo pasa por aquí en "importante" — su piso ("leve") ya es al
+// instante, no por resumen. Regalo y mensaje sí pasan por aquí tanto en
+// "leve" (resumen fijo cada 7 días, el piso) como en "importante" (cada 1-3
+// días, como el usuario elija). Ninguno de los tres pasa por aquí en "todo"
+// (van al instante en sus propias rutas).
+//
+// Si un tipo estaba "due" pero no hubo nada nuevo, no se actualiza su
+// ultimo_envio (se vuelve a revisar mañana). Recordatorio de evento no pasa
+// por este cron — se resuelve solo en su propio cron de recordatorios.
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -29,16 +37,24 @@ export async function GET(req: Request) {
   const { data: perfiles } = await admin
     .from('perfiles')
     .select('user_id, lang, notificaciones_prefs')
-    .eq('notificaciones_prefs->por_tile->>nivel', 'importante')
 
   let enviados = 0
 
   for (const perfil of perfiles || []) {
-    const porTile = perfil.notificaciones_prefs?.por_tile || {}
-    const periodicidadDias = Number(porTile.periodicidad_dias) || 1
-    const ultimoEnvio = porTile.ultimo_envio ? new Date(porTile.ultimo_envio) : new Date(0)
-    const diasDesdeUltimo = (Date.now() - ultimoEnvio.getTime()) / (1000 * 60 * 60 * 24)
-    if (diasDesdeUltimo < periodicidadDias) continue
+    const prefs: NotificacionesPrefs = perfil.notificaciones_prefs?.rsvp ? perfil.notificaciones_prefs : DEFAULT_NOTIF_PREFS
+
+    const due: Partial<Record<TipoDigest, boolean>> = {}
+    for (const tipo of TIPOS) {
+      const item = prefs[tipo]
+      // rsvp: solo digest en "importante". regalo/mensaje: digest en "leve" (piso, 7 días fijo) o "importante".
+      const pasaPorDigest = tipo === 'rsvp' ? item.nivel === 'importante' : (item.nivel === 'leve' || item.nivel === 'importante')
+      if (!pasaPorDigest) continue
+      const periodicidad = item.nivel === 'leve' && tipo !== 'rsvp' ? 7 : (Number(item.periodicidad_dias) || 1)
+      const ultimo = item.ultimo_envio ? new Date(item.ultimo_envio) : new Date(0)
+      const diasDesdeUltimo = (Date.now() - ultimo.getTime()) / (1000 * 60 * 60 * 24)
+      if (diasDesdeUltimo >= periodicidad) due[tipo] = true
+    }
+    if (Object.keys(due).length === 0) continue
 
     const { data: { user } } = await admin.auth.admin.getUserById(perfil.user_id)
     if (!user?.email) continue
@@ -52,35 +68,44 @@ export async function GET(req: Request) {
 
     const slugs = celebraciones.map(c => c.slug)
     const nombrePorSlug = Object.fromEntries(celebraciones.map(c => [c.slug, c.nombre]))
-    const desde = ultimoEnvio.toISOString()
-
-    const [{ data: rsvps }, { data: regalos }, { data: mensajes }] = await Promise.all([
-      admin.from('rsvps').select('celebracion_slug, nombre, asistencia, created_at').in('celebracion_slug', slugs).eq('asistencia', 'si').gt('created_at', desde),
-      admin.from('regalo_reservas').select('celebracion_slug, regalo_id, created_at').in('celebracion_slug', slugs).gt('created_at', desde),
-      admin.from('mensajes').select('celebracion_slug, nombre, texto, created_at').in('celebracion_slug', slugs).gt('created_at', desde),
-    ])
-
-    const totalItems = (rsvps?.length || 0) + (regalos?.length || 0) + (mensajes?.length || 0)
-    if (totalItems === 0) continue // nada nuevo — no se manda, no se resetea el timestamp
-
     const lang: 'es' | 'en' = perfil.lang === 'en' ? 'en' : 'es'
 
     const lineas: string[] = []
-    for (const r of rsvps || []) {
-      lineas.push(lang === 'en'
-        ? `<li>✦ <strong>${r.nombre}</strong> confirmed for "${nombrePorSlug[r.celebracion_slug]}"</li>`
-        : `<li>✦ <strong>${r.nombre}</strong> confirmó asistencia a "${nombrePorSlug[r.celebracion_slug]}"</li>`)
+    const conteoPorTipo: Partial<Record<TipoDigest, number>> = {}
+
+    if (due.rsvp) {
+      const desde = prefs.rsvp.ultimo_envio || new Date(0).toISOString()
+      const { data: rsvps } = await admin.from('rsvps').select('celebracion_slug, nombre, asistencia, created_at').in('celebracion_slug', slugs).eq('asistencia', 'si').gt('created_at', desde)
+      conteoPorTipo.rsvp = rsvps?.length || 0
+      for (const r of rsvps || []) {
+        lineas.push(lang === 'en'
+          ? `<li>✦ <strong>${r.nombre}</strong> confirmed for "${nombrePorSlug[r.celebracion_slug]}"</li>`
+          : `<li>✦ <strong>${r.nombre}</strong> confirmó asistencia a "${nombrePorSlug[r.celebracion_slug]}"</li>`)
+      }
     }
-    for (const g of regalos || []) {
-      lineas.push(lang === 'en'
-        ? `<li>✦ Someone reserved a gift in "${nombrePorSlug[g.celebracion_slug]}"</li>`
-        : `<li>✦ Alguien reservó un regalo en "${nombrePorSlug[g.celebracion_slug]}"</li>`)
+    if (due.regalo) {
+      const desde = prefs.regalo.ultimo_envio || new Date(0).toISOString()
+      const { data: regalos } = await admin.from('regalo_reservas').select('celebracion_slug, regalo_id, created_at').in('celebracion_slug', slugs).gt('created_at', desde)
+      conteoPorTipo.regalo = regalos?.length || 0
+      for (const g of regalos || []) {
+        lineas.push(lang === 'en'
+          ? `<li>✦ Someone reserved a gift in "${nombrePorSlug[g.celebracion_slug]}"</li>`
+          : `<li>✦ Alguien reservó un regalo en "${nombrePorSlug[g.celebracion_slug]}"</li>`)
+      }
     }
-    for (const m of mensajes || []) {
-      lineas.push(lang === 'en'
-        ? `<li>✦ <strong>${m.nombre}</strong> left a message in "${nombrePorSlug[m.celebracion_slug]}"</li>`
-        : `<li>✦ <strong>${m.nombre}</strong> dejó un mensaje en "${nombrePorSlug[m.celebracion_slug]}"</li>`)
+    if (due.mensaje) {
+      const desde = prefs.mensaje.ultimo_envio || new Date(0).toISOString()
+      const { data: mensajes } = await admin.from('mensajes').select('celebracion_slug, nombre, texto, created_at').in('celebracion_slug', slugs).gt('created_at', desde)
+      conteoPorTipo.mensaje = mensajes?.length || 0
+      for (const m of mensajes || []) {
+        lineas.push(lang === 'en'
+          ? `<li>✦ <strong>${m.nombre}</strong> left a message in "${nombrePorSlug[m.celebracion_slug]}"</li>`
+          : `<li>✦ <strong>${m.nombre}</strong> dejó un mensaje en "${nombrePorSlug[m.celebracion_slug]}"</li>`)
+      }
     }
+
+    const totalItems = Object.values(conteoPorTipo).reduce((s, n) => s + (n || 0), 0)
+    if (totalItems === 0) continue // nada nuevo en ningún tipo due — no se manda, no se resetea ningún timestamp
 
     const subject = lang === 'en' ? `Your Cheers summary (${totalItems} updates)` : `Tu resumen de Cheers (${totalItems} novedades)`
     const cuerpo = lang === 'en'
@@ -103,12 +128,14 @@ export async function GET(req: Request) {
     try {
       await resend.emails.send({ from: 'Cheers <notificaciones@joincheers.app>', to: user.email, subject, html })
       enviados++
-      await admin.from('perfiles').update({
-        notificaciones_prefs: {
-          ...perfil.notificaciones_prefs,
-          por_tile: { ...porTile, ultimo_envio: new Date().toISOString() },
-        },
-      }).eq('user_id', perfil.user_id)
+      const ahora = new Date().toISOString()
+      const nuevoPrefs: any = { ...prefs }
+      for (const tipo of TIPOS) {
+        if ((conteoPorTipo[tipo] || 0) > 0) {
+          nuevoPrefs[tipo] = { ...prefs[tipo], ultimo_envio: ahora }
+        }
+      }
+      await admin.from('perfiles').update({ notificaciones_prefs: nuevoPrefs }).eq('user_id', perfil.user_id)
     } catch (e) {
       console.error('Error enviando resumen de notificaciones:', e)
     }

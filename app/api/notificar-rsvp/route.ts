@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   // "importante" no manda esta al instante — se agrupa en el resumen periódico.
   // "todo" y "leve" sí la mandan al instante, es el comportamiento de siempre.
   const prefs = await obtenerPrefs(admin, cel.organizador_id)
-  if (!debeEnviarRsvpInstantaneo(prefs.por_tile.nivel)) return NextResponse.json({ success: true })
+  if (!debeEnviarRsvpInstantaneo(prefs.rsvp.nivel)) return NextResponse.json({ success: true })
 
   const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
   if (!organizador?.email) return NextResponse.json({ success: true })

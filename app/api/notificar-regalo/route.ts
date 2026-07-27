@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   // "importante"/"leve" no mandan esta al instante — importante se agrupa en el
   // resumen periódico (cron resumen-notificaciones), leve la calla del todo.
   const prefs = await obtenerPrefs(admin, cel.organizador_id)
-  if (!debeEnviarNuevaInstantaneo(prefs.por_tile.nivel)) return NextResponse.json({ success: true })
+  if (!debeEnviarNuevaInstantaneo(prefs.regalo.nivel)) return NextResponse.json({ success: true })
 
   const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
   if (!organizador?.email) return NextResponse.json({ success: true })

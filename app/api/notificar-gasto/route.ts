@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../emailTemplate'
-import { obtenerPrefs, debeEnviarNuevaInstantaneo } from '../../notificacionesPrefs'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -57,14 +56,9 @@ export async function POST(req: Request) {
     const inv = invitados?.find(i => i.id === p.invitado_id)
     if (!inv?.email) continue
 
-    // Si el invitado tiene cuenta propia (user_id), su preferencia de "por_tile"
-    // manda sobre si le llega al instante o se agrupa en su resumen. Si no tiene
-    // cuenta, se le manda directo (mismo criterio que invitar-por-email).
-    if (inv.user_id) {
-      const prefs = await obtenerPrefs(admin, inv.user_id)
-      if (!debeEnviarNuevaInstantaneo(prefs.por_tile.nivel)) continue
-    }
-
+    // Pendiente: esta notificación todavía no tiene su propio control de nivel
+    // (se definirá aparte más adelante) — por ahora se manda siempre, igual que
+    // antes de que existiera la pantalla de preferencias.
     const { data: perfilInv } = inv.user_id ? await admin.from('perfiles').select('lang').eq('user_id', inv.user_id).single() : { data: null }
     const lang: 'es' | 'en' = perfilInv?.lang === 'en' ? 'en' : 'es'
 

@@ -19,10 +19,17 @@ const PLANES: Record<string, { label: string; color: string; bg: string }> = {
 }
 
 type NivelNotif = 'leve' | 'importante' | 'todo'
-interface PrefsGrupo { nivel: NivelNotif; periodicidad_dias: number }
-const NOTIF_PREFS_DEFAULT = {
-  generales: { nivel: 'todo' as NivelNotif, periodicidad_dias: 1 },
-  por_tile: { nivel: 'todo' as NivelNotif, periodicidad_dias: 1 },
+interface PrefsItem { nivel: NivelNotif; periodicidad_dias?: number }
+interface NotifPrefsState { recordatorio: PrefsItem; rsvp: PrefsItem; regalo: PrefsItem; mensaje: PrefsItem }
+// "Leve" es el piso mínimo garantizado de cada notificación, nunca "apagado":
+// Recordatorio -> el más cercano a la fecha. RSVP -> instantáneo (como
+// siempre). Regalo/Mensaje -> resumen semanal como mínimo (son notificaciones
+// nuevas, no había nada que preservar, así que el piso lo definimos aquí).
+const NOTIF_PREFS_DEFAULT: NotifPrefsState = {
+  recordatorio: { nivel: 'leve' },
+  rsvp: { nivel: 'leve' },
+  regalo: { nivel: 'leve', periodicidad_dias: 7 },
+  mensaje: { nivel: 'leve', periodicidad_dias: 7 },
 }
 
 // Control tipo "volumen" de 3 posiciones (leve / importante / todo) en vez de
@@ -54,11 +61,11 @@ function ControlNivel({ valor, onChange, lang }: { valor: NivelNotif; onChange: 
   )
 }
 
-function SelectorPeriodicidad({ dias, onChange, lang }: { dias: number; onChange: (d: number) => void; lang: string }) {
+function SelectorPeriodicidad({ dias, onChange, lang, opciones = [1, 3, 7] }: { dias: number; onChange: (d: number) => void; lang: string; opciones?: number[] }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
       <span style={{ fontSize: 12, color: '#AFA9EC' }}>{lang === 'en' ? 'Every' : 'Cada'}</span>
-      {[1, 3, 7].map(d => (
+      {opciones.map(d => (
         <button key={d} onClick={() => onChange(d)} style={{ border: dias === d ? '1.5px solid #fff' : '1.5px solid rgba(255,255,255,.15)', background: dias === d ? 'rgba(255,255,255,.12)' : 'transparent', color: '#EEEDFE', fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 99, cursor: 'pointer', fontFamily: F }}>
           {d} {lang === 'en' ? (d === 1 ? 'day' : 'days') : (d === 1 ? 'día' : 'días')}
         </button>
@@ -88,7 +95,7 @@ export default function Perfil() {
   const [eliminandoCuenta, setEliminandoCuenta] = useState(false)
   const [comprandoLifetime, setComprandoLifetime] = useState(false)
   const [activandoPlan, setActivandoPlan] = useState(false)
-  const [notifPrefs, setNotifPrefs] = useState<{ generales: PrefsGrupo; por_tile: PrefsGrupo }>(NOTIF_PREFS_DEFAULT)
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefsState>(NOTIF_PREFS_DEFAULT)
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l])
@@ -105,7 +112,7 @@ export default function Perfil() {
         if (data.lang === 'es' || data.lang === 'en') {
           setLang(data.lang); setTx(t[data.lang as 'es' | 'en']); setLangGuardado(data.lang)
         }
-        if (data.notificaciones_prefs?.generales && data.notificaciones_prefs?.por_tile) {
+        if (data.notificaciones_prefs?.rsvp && data.notificaciones_prefs?.regalo && data.notificaciones_prefs?.mensaje && data.notificaciones_prefs?.recordatorio) {
           setNotifPrefs(data.notificaciones_prefs)
         }
       }
@@ -195,16 +202,26 @@ export default function Perfil() {
     await supabase.from('perfiles').update({ lang: nuevo }).eq('user_id', user.id)
   }
 
-  async function actualizarNotifNivel(grupo: 'generales' | 'por_tile', nivel: NivelNotif) {
+  type NotifTipo = 'recordatorio' | 'rsvp' | 'regalo' | 'mensaje'
+
+  async function actualizarNotifNivel(tipo: NotifTipo, nivel: NivelNotif) {
     if (!user) return
-    const nuevo = { ...notifPrefs, [grupo]: { ...notifPrefs[grupo], nivel } }
+    let periodicidad_dias = notifPrefs[tipo].periodicidad_dias
+    if (tipo === 'regalo' || tipo === 'mensaje') {
+      // Leve es el piso fijo (resumen semanal, no elegible). Importante sí se elige (1 o 3 días).
+      if (nivel === 'leve') periodicidad_dias = 7
+      else if (nivel === 'importante' && (!periodicidad_dias || periodicidad_dias === 7)) periodicidad_dias = 3
+    } else if (tipo === 'rsvp' && nivel === 'importante' && !periodicidad_dias) {
+      periodicidad_dias = 1
+    }
+    const nuevo = { ...notifPrefs, [tipo]: { nivel, periodicidad_dias } }
     setNotifPrefs(nuevo)
     await supabase.from('perfiles').update({ notificaciones_prefs: nuevo }).eq('user_id', user.id)
   }
 
-  async function actualizarNotifPeriodicidad(grupo: 'generales' | 'por_tile', periodicidad_dias: number) {
+  async function actualizarNotifPeriodicidad(tipo: NotifTipo, periodicidad_dias: number) {
     if (!user) return
-    const nuevo = { ...notifPrefs, [grupo]: { ...notifPrefs[grupo], periodicidad_dias } }
+    const nuevo = { ...notifPrefs, [tipo]: { ...notifPrefs[tipo], periodicidad_dias } }
     setNotifPrefs(nuevo)
     await supabase.from('perfiles').update({ notificaciones_prefs: nuevo }).eq('user_id', user.id)
   }
@@ -341,7 +358,7 @@ export default function Perfil() {
               <div style={{ fontSize:13, color:'#AFA9EC', marginTop:3 }}>
                 {plan === 'free' && (lang === 'en' ? 'Up to 3 guests per celebration' : 'Hasta 3 invitados por celebración')}
                 {plan === 'pro' && (lang === 'en' ? 'Up to 10 guests per celebration' : 'Hasta 10 invitados por celebración')}
-                {plan === 'lifetime' && (lang === 'en' ? 'Unlimited guests · Everything included' : 'Invitados ilimitados · Todo incluido')}
+                {plan === 'lifetime' && (lang === 'en' ? 'Unlimited guests, everything unlocked, forever, on every celebration you create' : 'Invitados ilimitados y todo desbloqueado, para siempre, en todas las celebraciones que crees')}
               </div>
             </div>
             {plan !== 'lifetime' && (
@@ -358,20 +375,35 @@ export default function Perfil() {
           <p style={{ fontSize:12, color:'#AFA9EC', margin:'0 0 20px' }}>{lang === 'en' ? 'How much Cheers emails you. Applies to all your celebrations.' : 'Qué tanto te escribe Cheers. Aplica a todas tus celebraciones.'}</p>
 
           <div style={{ marginBottom:24 }}>
-            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Account general' : 'Generales de cuenta'}</label>
-            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Welcome, event reminders, post-event' : 'Bienvenida, recordatorios de evento, post-evento'}</p>
-            <ControlNivel valor={notifPrefs.generales.nivel} onChange={v => actualizarNotifNivel('generales', v)} lang={lang} />
-            {notifPrefs.generales.nivel === 'importante' && (
-              <SelectorPeriodicidad dias={notifPrefs.generales.periodicidad_dias} onChange={d => actualizarNotifPeriodicidad('generales', d)} lang={lang} />
+            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Event reminders' : 'Recordatorio de evento'}</label>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Leve: closest one only · Importante: closest + one more · Todo: all you configured' : 'Leve: solo el más cercano · Importante: el más cercano + uno más · Todo: todos los que configuraste'}</p>
+            <ControlNivel valor={notifPrefs.recordatorio.nivel} onChange={v => actualizarNotifNivel('recordatorio', v)} lang={lang} />
+          </div>
+
+          <div style={{ marginBottom:24 }}>
+            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'RSVP confirmations' : 'Confirmaciones de RSVP'}</label>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Someone said yes/no to your celebration' : 'Alguien confirmó o no si va a tu celebración'}</p>
+            <ControlNivel valor={notifPrefs.rsvp.nivel} onChange={v => actualizarNotifNivel('rsvp', v)} lang={lang} />
+            {notifPrefs.rsvp.nivel === 'importante' && (
+              <SelectorPeriodicidad dias={notifPrefs.rsvp.periodicidad_dias || 1} onChange={d => actualizarNotifPeriodicidad('rsvp', d)} lang={lang} opciones={[1, 3]} />
+            )}
+          </div>
+
+          <div style={{ marginBottom:24 }}>
+            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Gift reserved' : 'Regalo reservado'}</label>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Leve: weekly summary (minimum) · Importante: every 1-3 days · Todo: instant' : 'Leve: resumen semanal (mínimo) · Importante: cada 1-3 días · Todo: al instante'}</p>
+            <ControlNivel valor={notifPrefs.regalo.nivel} onChange={v => actualizarNotifNivel('regalo', v)} lang={lang} />
+            {notifPrefs.regalo.nivel === 'importante' && (
+              <SelectorPeriodicidad dias={notifPrefs.regalo.periodicidad_dias || 3} onChange={d => actualizarNotifPeriodicidad('regalo', d)} lang={lang} opciones={[1, 3]} />
             )}
           </div>
 
           <div>
-            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Per tile' : 'Por tile'}</label>
-            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Confirmations, gifts reserved, wall messages' : 'Confirmaciones, regalos reservados, mensajes del muro'}</p>
-            <ControlNivel valor={notifPrefs.por_tile.nivel} onChange={v => actualizarNotifNivel('por_tile', v)} lang={lang} />
-            {notifPrefs.por_tile.nivel === 'importante' && (
-              <SelectorPeriodicidad dias={notifPrefs.por_tile.periodicidad_dias} onChange={d => actualizarNotifPeriodicidad('por_tile', d)} lang={lang} />
+            <label style={{ fontSize:13, fontWeight:800, color:'#EEEDFE' }}>{lang === 'en' ? 'Wall messages' : 'Mensaje del muro'}</label>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', margin:'2px 0 0' }}>{lang === 'en' ? 'Leve: weekly summary (minimum) · Importante: every 1-3 days · Todo: instant' : 'Leve: resumen semanal (mínimo) · Importante: cada 1-3 días · Todo: al instante'}</p>
+            <ControlNivel valor={notifPrefs.mensaje.nivel} onChange={v => actualizarNotifNivel('mensaje', v)} lang={lang} />
+            {notifPrefs.mensaje.nivel === 'importante' && (
+              <SelectorPeriodicidad dias={notifPrefs.mensaje.periodicidad_dias || 3} onChange={d => actualizarNotifPeriodicidad('mensaje', d)} lang={lang} opciones={[1, 3]} />
             )}
           </div>
 
