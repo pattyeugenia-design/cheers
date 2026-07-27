@@ -461,9 +461,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
           }
         })
     }
-    supabase.from('rsvps').select('nombre, mensaje')
-      .eq('celebracion_slug', celebracion.slug)
-      .eq('asistencia', 'si')
+    supabase.rpc('get_rsvps_confirmados_por_slug', { p_slug: celebracion.slug })
       .then(({ data }) => setConfirmados(data || []))
     supabase.from('mensajes').select('*')
       .eq('celebracion_slug', celebracion.slug)
@@ -501,7 +499,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ celebracionSlug: celebracion.slug, nombreInvitado: nombre, asistencia, mensaje: mensaje.trim() || null }),
     }).catch(() => {})
-    const { data } = await supabase.from('rsvps').select('nombre, mensaje').eq('celebracion_slug', celebracion.slug).eq('asistencia', 'si')
+    const { data } = await supabase.rpc('get_rsvps_confirmados_por_slug', { p_slug: celebracion.slug })
     setConfirmados(data || [])
     setGuardando(false); setGuardado(true)
     setTimeout(() => setGuardado(false), 3000)
