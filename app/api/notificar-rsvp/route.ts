@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../emailTemplate'
 import { obtenerPrefs, debeEnviarRsvpInstantaneo } from '../../notificacionesPrefs'
+import { registrarNotificacionApp } from '../../notificacionesApp'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -41,6 +42,18 @@ export async function POST(req: Request) {
   const { data: cel } = await admin.from('celebraciones').select('nombre, slug, organizador_id').eq('slug', celebracionSlug).single()
   if (!cel?.organizador_id) return NextResponse.json({ success: true })
 
+  const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
+  const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
+
+  const asistenciaLabel = lang === 'en'
+    ? (asistencia === 'si' ? "is going" : asistencia === 'no' ? "can't go" : 'might go')
+    : (asistencia === 'si' ? 'sí va' : asistencia === 'no' ? 'no puede ir' : 'tal vez va')
+
+  // El historial in-app siempre se registra, sin importar el nivel de email elegido.
+  await registrarNotificacionApp(admin, cel.organizador_id, 'rsvp', cel.slug, lang === 'en'
+    ? `${nombreInvitado} ${asistenciaLabel} to "${cel.nombre}"`
+    : `${nombreInvitado} ${asistenciaLabel} a "${cel.nombre}"`)
+
   // "importante" no manda esta al instante — se agrupa en el resumen periódico.
   // "todo" y "leve" sí la mandan al instante, es el comportamiento de siempre.
   const prefs = await obtenerPrefs(admin, cel.organizador_id)
@@ -48,13 +61,6 @@ export async function POST(req: Request) {
 
   const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
   if (!organizador?.email) return NextResponse.json({ success: true })
-
-  const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
-  const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
-
-  const asistenciaLabel = lang === 'en'
-    ? (asistencia === 'si' ? "is going" : asistencia === 'no' ? "can't go" : 'might go')
-    : (asistencia === 'si' ? 'sí va' : asistencia === 'no' ? 'no puede ir' : 'tal vez va')
 
   const subject = lang === 'en'
     ? `${nombreInvitado} responded: ${asistenciaLabel} to "${cel.nombre}"`

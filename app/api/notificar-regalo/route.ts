@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../emailTemplate'
 import { obtenerPrefs, debeEnviarNuevaInstantaneo } from '../../notificacionesPrefs'
+import { registrarNotificacionApp } from '../../notificacionesApp'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -34,19 +35,24 @@ export async function POST(req: Request) {
   const { data: cel } = await admin.from('celebraciones').select('nombre, slug, organizador_id, gifts').eq('slug', celebracionSlug).single()
   if (!cel?.organizador_id) return NextResponse.json({ success: true })
 
-  // "importante"/"leve" no mandan esta al instante — importante se agrupa en el
-  // resumen periódico (cron resumen-notificaciones), leve la calla del todo.
-  const prefs = await obtenerPrefs(admin, cel.organizador_id)
-  if (!debeEnviarNuevaInstantaneo(prefs.regalo.nivel)) return NextResponse.json({ success: true })
-
-  const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
-  if (!organizador?.email) return NextResponse.json({ success: true })
-
   const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
   const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
 
   const regalo = (cel.gifts || []).find((g: any) => g.id === regaloId)
   const nombreRegalo = regalo?.nombre || (lang === 'en' ? 'A gift' : 'Un regalo')
+
+  // El historial in-app siempre se registra, sin importar el nivel de email elegido.
+  await registrarNotificacionApp(admin, cel.organizador_id, 'regalo', cel.slug, lang === 'en'
+    ? `Someone reserved "${nombreRegalo}" for "${cel.nombre}"`
+    : `Alguien reservó "${nombreRegalo}" en "${cel.nombre}"`)
+
+  // "importante"/"leve" no mandan esta al instante — importante se agrupa en el
+  // resumen periódico (cron resumen-notificaciones), leve la agrupa cada 7 días.
+  const prefs = await obtenerPrefs(admin, cel.organizador_id)
+  if (!debeEnviarNuevaInstantaneo(prefs.regalo.nivel)) return NextResponse.json({ success: true })
+
+  const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
+  if (!organizador?.email) return NextResponse.json({ success: true })
 
   const subject = lang === 'en'
     ? `Someone reserved "${nombreRegalo}" for "${cel.nombre}"`

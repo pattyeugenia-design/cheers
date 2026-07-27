@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '../supabase'
 import { getLang, setLang as setLangGuardado, t, RESERVED_USERNAMES } from '../i18n'
+import TopBanner from '../components/TopBanner'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'linear-gradient(160deg,#241c45,#302b63,#24243e)'
@@ -288,6 +289,8 @@ export default function Perfil() {
   return (
     <main style={{ minHeight:'100vh', background:BG, fontFamily:F, padding:'2rem 1.5rem' }}>
       <div style={{ maxWidth:480, margin:'0 auto' }}>
+
+        {user && username && <TopBanner userId={user.id} username={username} lang={lang} />}
 
         <button onClick={() => router.back()} style={{ border:'none', background:'rgba(255,255,255,.08)', color:'rgba(255,255,255,.6)', fontSize:13, fontWeight:700, padding:'8px 16px', borderRadius:99, cursor:'pointer', fontFamily:F, marginBottom:28 }}>← {lang === 'en' ? 'Back' : 'Atrás'}</button>
 

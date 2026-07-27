@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '../supabase'
 import { getLang, t } from '../i18n'
+import TopBanner from '../components/TopBanner'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'linear-gradient(160deg,#241c45,#302b63,#24243e)'
@@ -297,10 +298,13 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     <main style={{ minHeight:'100vh', background:BG, fontFamily:F, padding:'2rem 1.5rem' }}>
       <div style={{ maxWidth:900, margin:'0 auto' }}>
 
+        {esPropio && user
+          ? <TopBanner userId={user.id} username={username} lang={lang} />
+          : <div style={{ fontSize:34, fontWeight:900, background:'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', letterSpacing:'-.5px', marginBottom:22 }}>Cheers</div>}
+
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'2rem' }}>
           <div>
-            <div style={{ fontSize:34, fontWeight:900, background:'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', letterSpacing:'-.5px', marginBottom:6 }}>Cheers</div>
             {esPropio
               ? <h1 style={{ fontSize:22, fontWeight:700, color:'#EEEDFE', margin:0 }}>{lang==='en'?`Hi, ${nombre}`:`Hola, ${nombre}`}</h1>
               : <h1 style={{ fontSize:18, fontWeight:700, color:'#EEEDFE', margin:0 }}>@{username}</h1>}

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../emailTemplate'
 import { obtenerPrefs, debeEnviarNuevaInstantaneo } from '../../notificacionesPrefs'
+import { registrarNotificacionApp } from '../../notificacionesApp'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -33,15 +34,20 @@ export async function POST(req: Request) {
   const { data: cel } = await admin.from('celebraciones').select('nombre, slug, organizador_id').eq('slug', celebracionSlug).single()
   if (!cel?.organizador_id) return NextResponse.json({ success: true })
 
+  const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
+  const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
+  const autor = nombreAutor || (lang === 'en' ? 'Someone' : 'Alguien')
+
+  // El historial in-app siempre se registra, sin importar el nivel de email elegido.
+  await registrarNotificacionApp(admin, cel.organizador_id, 'mensaje', cel.slug, lang === 'en'
+    ? `${autor} left a message in "${cel.nombre}"`
+    : `${autor} dejó un mensaje en "${cel.nombre}"`)
+
   const prefs = await obtenerPrefs(admin, cel.organizador_id)
   if (!debeEnviarNuevaInstantaneo(prefs.mensaje.nivel)) return NextResponse.json({ success: true })
 
   const { data: { user: organizador } } = await admin.auth.admin.getUserById(cel.organizador_id)
   if (!organizador?.email) return NextResponse.json({ success: true })
-
-  const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
-  const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
-  const autor = nombreAutor || (lang === 'en' ? 'Someone' : 'Alguien')
 
   const subject = lang === 'en'
     ? `New message in "${cel.nombre}"`
