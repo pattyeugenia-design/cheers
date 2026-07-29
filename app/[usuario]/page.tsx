@@ -14,6 +14,7 @@ const CHIPS: Record<string, string> = {
 }
 
 const NOMBRE_PLAN: Record<string, string> = { free: 'Cheer', pro: 'Super Cheer', lifetime: 'Extra Cheer' }
+const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 
 function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string) {
   const ahora = new Date()
@@ -304,10 +305,13 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
 
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'2rem' }}>
-          <div>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             {esPropio
               ? <h1 style={{ fontSize:22, fontWeight:700, color:'#EEEDFE', margin:0 }}>{lang==='en'?`Hi, ${nombre}`:`Hola, ${nombre}`}</h1>
               : <h1 style={{ fontSize:18, fontWeight:700, color:'#EEEDFE', margin:0 }}>@{username}</h1>}
+            {esPropio && user?.email === ADMIN_EMAIL && (
+              <span style={{ fontSize:10, fontWeight:800, color:'#f08cb0', background:'rgba(212,83,126,.15)', padding:'3px 9px', borderRadius:99, letterSpacing:'.5px' }}>ADMIN</span>
+            )}
           </div>
 
           {esPropio && (
@@ -329,6 +333,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
                     <div style={{ borderTop:'1px solid rgba(255,255,255,.08)', paddingTop:8 }}>
                       {[
                         { label: lang==='en'?'My profile':'Mi perfil', action: () => { router.push('/perfil'); setShowMenu(false) } },
+                        ...(user?.email === ADMIN_EMAIL ? [{ label: lang==='en'?'Admin panel':'Panel de Admin', action: () => { router.push(`/${username}/admin_login`); setShowMenu(false) } }] : []),
                         { label: lang==='en'?'Sign out':'Cerrar sesión', action: cerrarSesion, danger: true },
                       ].map(item => (
                         <button key={item.label} onClick={item.action} style={{ width:'100%', border:'none', background:'none', color:(item as any).danger?'#f08cb0':'#EEEDFE', fontSize:14, fontWeight:600, padding:'10px 12px', borderRadius:10, cursor:'pointer', fontFamily:F, textAlign:'left', display:'block' }}>
