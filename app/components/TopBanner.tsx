@@ -48,7 +48,9 @@ export default function TopBanner({ userId, username, lang }: { userId: string; 
       }
 
       const candidatos = [propias?.[0], deInvitado].filter(Boolean) as { slug: string; nombre: string; fecha: string }[]
-      candidatos.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+      // Sin la hora local, "new Date('2026-08-01')" se lee como UTC y en
+      // México cae un día antes — puede alterar cuál evento sale como "NEXT".
+      candidatos.sort((a, b) => new Date(a.fecha + 'T00:00:00').getTime() - new Date(b.fecha + 'T00:00:00').getTime())
       setProximo(candidatos[0] || null)
     }
     cargarProximo()

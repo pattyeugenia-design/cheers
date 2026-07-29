@@ -57,8 +57,10 @@ export async function POST(req: Request) {
 
   const primeraParada = (cel.paradas || []).find((p: any) => p?.lugar)
   const lugarNombre: string | null = primeraParada?.lugar || null
+  // Este server corre en UTC, así que hoy no se nota el corrimiento, pero se
+  // deja igual de blindado que el resto del código por si eso cambia.
   const fechaFmt = cel.fecha
-    ? new Date(cel.fecha).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(cel.fecha + 'T00:00:00').toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : null
 
   const tituloEvento = cel.festejado_nombre

@@ -28,7 +28,9 @@ function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string) {
   celebraciones.forEach(cel => {
     if (cel.archivada) return
     if (!cel.fecha) { sinFecha.push(cel); return }
-    const f = new Date(cel.fecha)
+    // Mismo bug de zona horaria que en el calendario: sin la hora local,
+    // "new Date('2026-08-01')" se lee como UTC y en México cae un día antes.
+    const f = new Date(cel.fecha + 'T00:00:00')
     if (f < ahora) {
       // Lifetime desbloquea todo el historial de la cuenta; Pro desbloquea solo esta celebración
       if (plan === 'free' && cel.plan !== 'pro' && f < tresMesesAtras) { pasadasBloqueadas.push(cel) } else { pasadas.push(cel) }
@@ -58,7 +60,11 @@ function construirMesInfo(mes: Date, eventos: any[]) {
   const eventosPorDia: Record<number, any[]> = {}
   eventos.forEach(e => {
     if (!e.fecha) return
-    const f = new Date(e.fecha)
+    // OJO: "new Date('2026-08-01')" sin hora se lee como medianoche UTC, y en
+    // zonas horarias detrás de UTC (México) eso cae el día ANTERIOR en hora
+    // local — por eso un evento del 1 de agosto aparecía pintado el 31 de
+    // julio. Agregar la hora local evita que el navegador asuma UTC.
+    const f = new Date(e.fecha + 'T00:00:00')
     if (f.getFullYear() === mes.getFullYear() && f.getMonth() === mes.getMonth()) {
       const dia = f.getDate()
       if (!eventosPorDia[dia]) eventosPorDia[dia] = []
@@ -333,7 +339,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:15, fontWeight:700, color:'#EEEDFE', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{cel.nombre}</div>
         <div style={{ fontSize:12, color:'#AFA9EC', marginTop:1 }}>
-          {cel.fecha ? new Date(cel.fecha).toLocaleDateString(lang==='en'?'en-US':'es-MX', { month:'short', day:'numeric', year:'numeric' }) : 'Sin fecha'}
+          {cel.fecha ? new Date(cel.fecha + 'T00:00:00').toLocaleDateString(lang==='en'?'en-US':'es-MX', { month:'short', day:'numeric', year:'numeric' }) : 'Sin fecha'}
         </div>
         {!cel.esPropia && (cel.miAsistencia || cel.miRegalo) && (
           <div style={{ display:'flex', gap:6, marginTop:4, flexWrap:'wrap' }}>
@@ -447,7 +453,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
             <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>
               {lang==='en' ? 'Your invitations' : 'Tus invitaciones'}
             </p>
-            {[...invitaciones].sort((a,b) => new Date(a.fecha||0).getTime() - new Date(b.fecha||0).getTime()).map(cel => (
+            {[...invitaciones].sort((a,b) => new Date((a.fecha ? a.fecha + 'T00:00:00' : 0)).getTime() - new Date((b.fecha ? b.fecha + 'T00:00:00' : 0)).getTime()).map(cel => (
               <CelCard key={cel.slug} cel={{ ...cel, esPropia:false }} />
             ))}
           </div>
