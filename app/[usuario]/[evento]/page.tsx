@@ -984,6 +984,17 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [miPlan, setMiPlan] = useState<string | null>(null)
   const [lugar, setLugar] = useState('')
   const [horaPrincipal, setHoraPrincipal] = useState('')
+  // Configuración de recurrencia — se puede activar aquí después de crear el
+  // evento, no solo al momento de crearlo en el wizard.
+  const [recTipo, setRecTipo] = useState<'diario' | 'semanal' | 'mensual_dia' | 'mensual_nesimo' | 'anual'>('semanal')
+  const [recIntervalo, setRecIntervalo] = useState(1)
+  const [recDiasSemana, setRecDiasSemana] = useState<number[]>([5])
+  const [recDiaMes, setRecDiaMes] = useState(1)
+  const [recDiaSemana, setRecDiaSemana] = useState(5)
+  const [recSemanaMes, setRecSemanaMes] = useState(1)
+  const [recFinTipo, setRecFinTipo] = useState<'nunca' | 'fecha' | 'conteo'>('nunca')
+  const [recFinFecha, setRecFinFecha] = useState('')
+  const [recFinConteo, setRecFinConteo] = useState(10)
   const [mapsListo, setMapsListo] = useState(false)
   const lugarRef = useRef<HTMLInputElement>(null)
   const nuevaParadaLugarRef = useRef<HTMLInputElement>(null)
@@ -1159,6 +1170,15 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setRecordatorioDias(Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [2])
       setLugar(cel.paradas?.[0]?.lugar || '')
       setHoraPrincipal(cel.paradas?.[0]?.hora || '')
+      if (cel.recurrencia_tipo) setRecTipo(cel.recurrencia_tipo)
+      setRecIntervalo(cel.recurrencia_intervalo || 1)
+      setRecDiasSemana(cel.recurrencia_dias_semana?.length ? cel.recurrencia_dias_semana : [5])
+      setRecDiaMes(cel.recurrencia_dia_mes || 1)
+      setRecDiaSemana(cel.recurrencia_dia_semana ?? 5)
+      setRecSemanaMes(cel.recurrencia_semana_mes || 1)
+      setRecFinTipo(cel.recurrencia_fin_tipo || 'nunca')
+      setRecFinFecha(cel.recurrencia_fin_fecha || '')
+      setRecFinConteo(cel.recurrencia_fin_conteo || 10)
       setPortadaUrl(cel.portada_url || null)
       setImgPosition(cel.portada_posicion || 'center')
       setParadas(cel.paradas || [])
@@ -1347,6 +1367,36 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const ps = [...paradas]
     if (ps.length > 0) ps[0].hora = val; else ps.push({ lugar: '', hora: val, nota: '' })
     setParadas(ps); await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
+  }
+
+  // Guarda toda la configuración de recurrencia de una vez y actualiza
+  // "celebracion" en memoria — a diferencia de guardarCampo, esto sí necesita
+  // reflejarse de inmediato en celebracion.recurrente para que "Próximas fechas"
+  // aparezca/desaparezca sin tener que refrescar la página.
+  async function guardarRecurrencia(patch: Record<string, any>) {
+    if (!celebracion) return
+    const { error } = await supabase.from('celebraciones').update(patch).eq('slug', celebracion.slug)
+    if (!error) setCelebracion((prev: any) => ({ ...prev, ...patch }))
+  }
+
+  function activarRecurrencia() {
+    const patch = {
+      recurrente: true,
+      recurrencia_tipo: recTipo,
+      recurrencia_intervalo: recIntervalo,
+      recurrencia_dias_semana: recTipo === 'semanal' ? recDiasSemana : null,
+      recurrencia_dia_mes: recTipo === 'mensual_dia' ? recDiaMes : null,
+      recurrencia_dia_semana: recTipo === 'mensual_nesimo' ? recDiaSemana : null,
+      recurrencia_semana_mes: recTipo === 'mensual_nesimo' ? recSemanaMes : null,
+      recurrencia_fin_tipo: recFinTipo,
+      recurrencia_fin_fecha: recFinTipo === 'fecha' ? recFinFecha : null,
+      recurrencia_fin_conteo: recFinTipo === 'conteo' ? recFinConteo : null,
+    }
+    guardarRecurrencia(patch)
+  }
+
+  function desactivarRecurrencia() {
+    guardarRecurrencia({ recurrente: false })
   }
 
   // Autocompletado de Google Places en el campo principal de lugar
@@ -2467,7 +2517,117 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                     <button onClick={() => setMostrarQR(v => !v)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>QR</button>
                   </div>
                 </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{lang === 'en' ? 'Repeats' : 'Se repite'}</div>
+                  <div onClick={() => celebracion?.recurrente ? desactivarRecurrencia() : activarRecurrencia()} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '7px 8px' }}>
+                    <Toggle on={!!celebracion?.recurrente} onToggle={() => celebracion?.recurrente ? desactivarRecurrencia() : activarRecurrencia()} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: te.tileText }}>{celebracion?.recurrente ? (lang === 'en' ? 'Yes' : 'Sí') : (lang === 'en' ? 'One-time event' : 'Evento único')}</span>
+                  </div>
+                </div>
               </div>
+
+              {celebracion?.recurrente && (() => {
+                const diasSemanaCortos = lang === 'en' ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'] : ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+                const nombresDia = lang === 'en'
+                  ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                  : ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+                const toggleDia = (d: number) => {
+                  const nuevo = recDiasSemana.includes(d) ? (recDiasSemana.length > 1 ? recDiasSemana.filter(x => x !== d) : recDiasSemana) : [...recDiasSemana, d].sort((a, b) => a - b)
+                  setRecDiasSemana(nuevo)
+                  guardarRecurrencia({ recurrencia_dias_semana: nuevo })
+                }
+                const frecuencias: { key: typeof recTipo; label: string }[] = [
+                  { key: 'diario', label: lang === 'en' ? 'Daily' : 'Diario' },
+                  { key: 'semanal', label: lang === 'en' ? 'Weekly' : 'Semanal' },
+                  { key: 'mensual_dia', label: lang === 'en' ? 'Monthly' : 'Mensual' },
+                  { key: 'anual', label: lang === 'en' ? 'Yearly' : 'Anual' },
+                ]
+                function cambiarTipo(t: typeof recTipo) {
+                  setRecTipo(t)
+                  guardarRecurrencia({
+                    recurrencia_tipo: t,
+                    recurrencia_dias_semana: t === 'semanal' ? recDiasSemana : null,
+                    recurrencia_dia_mes: t === 'mensual_dia' ? recDiaMes : null,
+                    recurrencia_dia_semana: t === 'mensual_nesimo' ? recDiaSemana : null,
+                    recurrencia_semana_mes: t === 'mensual_nesimo' ? recSemanaMes : null,
+                  })
+                }
+                return (
+                  <div style={{ margin: '4px 4px 0', padding: 14, background: 'rgba(0,0,0,.03)', borderRadius: 14 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 12 }}>
+                      {frecuencias.map(f => {
+                        const activo = f.key === recTipo || (f.key === 'mensual_dia' && recTipo === 'mensual_nesimo')
+                        return (
+                          <button key={f.key} type="button" onClick={() => cambiarTipo(f.key)} style={{ border: 'none', borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: activo ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: activo ? '#fff' : '#534AB7' }}>{f.label}</button>
+                        )
+                      })}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontSize: 12, color: '#6d668c', fontWeight: 600 }}>{lang === 'en' ? 'Every' : 'Cada'}</span>
+                      <input type="number" min={1} max={99} value={recIntervalo} onChange={e => setRecIntervalo(Math.max(1, Number(e.target.value) || 1))} onBlur={e => guardarRecurrencia({ recurrencia_intervalo: Math.max(1, Number(e.target.value) || 1) })} style={{ ...fieldInput, background: '#fff', border: '1.5px solid #e2dff5', width: 56, flex: '0 0 auto', padding: '8px', textAlign: 'center' }} />
+                      <span style={{ fontSize: 12, color: '#6d668c', fontWeight: 600 }}>{recTipo === 'diario' ? (lang === 'en' ? 'days' : 'días') : recTipo === 'semanal' ? (lang === 'en' ? 'weeks' : 'semanas') : recTipo === 'anual' ? (lang === 'en' ? 'years' : 'años') : (lang === 'en' ? 'months' : 'meses')}</span>
+                    </div>
+
+                    {recTipo === 'semanal' && (
+                      <div style={{ display: 'flex', gap: 5, marginBottom: 4 }}>
+                        {diasSemanaCortos.map((d, i) => (
+                          <button key={i} type="button" onClick={() => toggleDia(i)} title={nombresDia[i]} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: FSYS, background: recDiasSemana.includes(i) ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recDiasSemana.includes(i) ? '#fff' : '#534AB7' }}>{d}</button>
+                        ))}
+                      </div>
+                    )}
+
+                    {(recTipo === 'mensual_dia' || recTipo === 'mensual_nesimo') && (
+                      <>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                          <button type="button" onClick={() => cambiarTipo('mensual_dia')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recTipo === 'mensual_dia' ? '#fff' : 'transparent', color: '#534AB7', boxShadow: recTipo === 'mensual_dia' ? '0 1px 4px rgba(0,0,0,.12)' : 'none' }}>
+                            {lang === 'en' ? `Day ${recDiaMes}` : `Día ${recDiaMes}`}
+                          </button>
+                          <button type="button" onClick={() => cambiarTipo('mensual_nesimo')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recTipo === 'mensual_nesimo' ? '#fff' : 'transparent', color: '#534AB7', boxShadow: recTipo === 'mensual_nesimo' ? '0 1px 4px rgba(0,0,0,.12)' : 'none' }}>
+                            {lang === 'en' ? 'Nth weekday' : 'Enésimo día'}
+                          </button>
+                        </div>
+                        {recTipo === 'mensual_dia' ? (
+                          <input type="number" min={1} max={31} value={recDiaMes} onChange={e => setRecDiaMes(Math.min(31, Math.max(1, Number(e.target.value) || 1)))} onBlur={e => guardarRecurrencia({ recurrencia_dia_mes: Math.min(31, Math.max(1, Number(e.target.value) || 1)) })} style={{ ...fieldInput, background: '#fff', border: '1.5px solid #e2dff5', width: 72 }} />
+                        ) : (
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <select value={recSemanaMes} onChange={e => { const v = Number(e.target.value); setRecSemanaMes(v); guardarRecurrencia({ recurrencia_semana_mes: v }) }} style={{ ...fieldInput, background: '#fff', border: '1.5px solid #e2dff5', flex: '0 0 auto', width: 'auto', padding: '8px' }}>
+                              <option value={1}>{lang === 'en' ? '1st' : '1er'}</option>
+                              <option value={2}>{lang === 'en' ? '2nd' : '2do'}</option>
+                              <option value={3}>{lang === 'en' ? '3rd' : '3er'}</option>
+                              <option value={4}>{lang === 'en' ? '4th' : '4to'}</option>
+                              <option value={-1}>{lang === 'en' ? 'Last' : 'Último'}</option>
+                            </select>
+                            <select value={recDiaSemana} onChange={e => { const v = Number(e.target.value); setRecDiaSemana(v); guardarRecurrencia({ recurrencia_dia_semana: v }) }} style={{ ...fieldInput, background: '#fff', border: '1.5px solid #e2dff5', flex: 1 }}>
+                              {nombresDia.map((n, i) => <option key={i} value={i}>{n}</option>)}
+                            </select>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div style={{ height: 1, background: 'rgba(0,0,0,.06)', margin: '14px 0 12px' }} />
+
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase' as const, letterSpacing: '.4px', display: 'block', marginBottom: 8 }}>{lang === 'en' ? 'Ends' : 'Termina'}</label>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: recFinTipo === 'nunca' ? 0 : 10 }}>
+                      {(['nunca', 'fecha', 'conteo'] as const).map(op => (
+                        <button key={op} type="button" onClick={() => { setRecFinTipo(op); guardarRecurrencia({ recurrencia_fin_tipo: op, recurrencia_fin_fecha: op === 'fecha' ? recFinFecha : null, recurrencia_fin_conteo: op === 'conteo' ? recFinConteo : null }) }} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recFinTipo === op ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recFinTipo === op ? '#fff' : '#534AB7' }}>
+                          {op === 'nunca' ? (lang === 'en' ? 'Never' : 'Nunca') : op === 'fecha' ? (lang === 'en' ? 'On date' : 'En fecha') : (lang === 'en' ? 'After N times' : 'Después de N')}
+                        </button>
+                      ))}
+                    </div>
+                    {recFinTipo === 'fecha' && (
+                      <input type="date" value={recFinFecha} onChange={e => setRecFinFecha(e.target.value)} onBlur={e => guardarRecurrencia({ recurrencia_fin_fecha: e.target.value })} style={{ ...fieldInput, background: '#fff', border: '1.5px solid #e2dff5' }} />
+                    )}
+                    {recFinTipo === 'conteo' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="number" min={1} max={999} value={recFinConteo} onChange={e => setRecFinConteo(Math.max(1, Number(e.target.value) || 1))} onBlur={e => guardarRecurrencia({ recurrencia_fin_conteo: Math.max(1, Number(e.target.value) || 1) })} style={{ ...fieldInput, background: '#fff', border: '1.5px solid #e2dff5', width: 64, flex: '0 0 auto', padding: '8px', textAlign: 'center' }} />
+                        <span style={{ fontSize: 12, color: '#6d668c', fontWeight: 600 }}>{lang === 'en' ? 'repetitions' : 'repeticiones'}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           </div>
 
