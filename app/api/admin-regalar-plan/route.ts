@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 
 export async function POST(req: Request) {
-  const { accessToken, email, tipo, slug } = await req.json()
-  if (!accessToken || !email || (tipo !== 'pro' && tipo !== 'lifetime')) {
+  const { accessToken, email, userId, tipo, slug } = await req.json()
+  if (!accessToken || (!email && !userId) || (tipo !== 'pro' && tipo !== 'lifetime')) {
     return NextResponse.json({ ok: false, error: 'datos_incompletos' }, { status: 400 })
   }
 
@@ -22,15 +22,20 @@ export async function POST(req: Request) {
 
   const admin = createClient(supabaseUrl, serviceKey)
 
-  // Buscar la cuenta por email — auth.users no es consultable directo desde el navegador,
-  // por eso esto pasa por el servidor con la llave de administrador.
-  const { data: listado, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  if (listError) return NextResponse.json({ ok: false, error: 'error_buscando' }, { status: 500 })
-  const cuenta = listado.users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase())
-  if (!cuenta) return NextResponse.json({ ok: false, error: 'no_encontrado' })
+  // Si ya viene el userId (ej. seleccionado de una lista dentro del dashboard) no hace
+  // falta buscar por email; si no, sí hay que ir a auth.users con la llave de administrador,
+  // porque esa tabla no es consultable directo desde el navegador.
+  let cuentaId = userId as string | undefined
+  if (!cuentaId) {
+    const { data: listado, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    if (listError) return NextResponse.json({ ok: false, error: 'error_buscando' }, { status: 500 })
+    const cuenta = listado.users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase())
+    if (!cuenta) return NextResponse.json({ ok: false, error: 'no_encontrado' })
+    cuentaId = cuenta.id
+  }
 
   if (tipo === 'lifetime') {
-    const { error } = await admin.from('perfiles').update({ plan: 'lifetime' }).eq('user_id', cuenta.id)
+    const { error } = await admin.from('perfiles').update({ plan: 'lifetime' }).eq('user_id', cuentaId)
     if (error) return NextResponse.json({ ok: false, error: 'error_guardando' }, { status: 500 })
     return NextResponse.json({ ok: true })
   }
@@ -39,7 +44,7 @@ export async function POST(req: Request) {
   const { data: celebraciones } = await admin
     .from('celebraciones')
     .select('slug, nombre, plan')
-    .eq('organizador_id', cuenta.id)
+    .eq('organizador_id', cuentaId)
     .eq('archivada', false)
     .order('created_at', { ascending: false })
 

@@ -28,6 +28,32 @@ export default function Admin() {
   const [regaloMensaje, setRegaloMensaje] = useState('')
   const [regaloOpciones, setRegaloOpciones] = useState<any[] | null>(null)
 
+  // Borrar cuenta por moderación (abuso, bullying, etc.) — una por una, con preview y confirmación escrita
+  const [moderarEmail, setModerarEmail] = useState('')
+  const [moderarPreview, setModerarPreview] = useState<any | null>(null)
+  const [moderarConfirmTexto, setModerarConfirmTexto] = useState('')
+  const [moderarCargando, setModerarCargando] = useState(false)
+  const [moderarMensaje, setModerarMensaje] = useState('')
+
+  // Selección múltiple en la pestaña Crecimiento + acciones sobre lo seleccionado
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [accionActiva, setAccionActiva] = useState<'mensaje' | 'cortesia' | null>(null)
+  const [msgAsunto, setMsgAsunto] = useState('')
+  const [msgTexto, setMsgTexto] = useState('')
+  const [msgCargando, setMsgCargando] = useState(false)
+  const [msgResultado, setMsgResultado] = useState('')
+  const [cortesiaTipoMasiva, setCortesiaTipoMasiva] = useState<'pro' | 'lifetime'>('lifetime')
+  const [cortesiaCargando, setCortesiaCargando] = useState(false)
+  const [cortesiaResultado, setCortesiaResultado] = useState('')
+
+  function toggleSeleccion(uid: string) {
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      if (next.has(uid)) next.delete(uid); else next.add(uid)
+      return next
+    })
+  }
+
   const cargarDatos = useCallback(async () => {
     const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }, { data: eventosData }, { data: comprasData }] = await Promise.all([
       supabase.from('celebraciones').select('*').order('created_at', { ascending: false }),
@@ -126,6 +152,90 @@ export default function Admin() {
     } else {
       setRegaloMensaje('Algo falló, intenta de nuevo.')
     }
+  }
+
+  async function buscarParaModerar() {
+    if (!moderarEmail.trim()) return
+    setModerarCargando(true)
+    setModerarMensaje('')
+    setModerarPreview(null)
+    setModerarConfirmTexto('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin-borrar-usuario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token, email: moderarEmail.trim() }),
+    })
+    const data = await res.json()
+    setModerarCargando(false)
+    if (data.ok && data.preview) setModerarPreview(data.preview)
+    else if (data.error === 'no_encontrado') setModerarMensaje('No encontré ninguna cuenta con ese email.')
+    else setModerarMensaje('Algo falló, intenta de nuevo.')
+  }
+
+  async function confirmarBorrarModeracion() {
+    if (moderarConfirmTexto !== 'BORRAR') return
+    setModerarCargando(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin-borrar-usuario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token, email: moderarEmail.trim(), confirmar: true }),
+    })
+    const data = await res.json()
+    setModerarCargando(false)
+    if (data.ok) {
+      setModerarMensaje(`✓ Cuenta de ${moderarEmail.trim()} borrada.`)
+      setModerarPreview(null)
+      setModerarEmail('')
+      setModerarConfirmTexto('')
+      cargarDatos()
+    } else {
+      setModerarMensaje('Algo falló al borrar, intenta de nuevo.')
+    }
+  }
+
+  async function enviarMensajeMasivo() {
+    if (!msgTexto.trim() || seleccionados.size === 0) return
+    if (!confirm(`¿Mandar este mensaje a ${seleccionados.size} persona${seleccionados.size > 1 ? 's' : ''}?`)) return
+    setMsgCargando(true)
+    setMsgResultado('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin-mensaje-masivo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token, userIds: Array.from(seleccionados), asunto: msgAsunto, mensaje: msgTexto }),
+    })
+    const data = await res.json()
+    setMsgCargando(false)
+    if (data.ok) {
+      setMsgResultado(`✓ Enviado a ${data.enviados} de ${seleccionados.size}.`)
+      setMsgTexto(''); setMsgAsunto('')
+    } else {
+      setMsgResultado('Algo falló, intenta de nuevo.')
+    }
+  }
+
+  async function aplicarCortesiaMasiva() {
+    if (seleccionados.size === 0) return
+    const nombrePlan = cortesiaTipoMasiva === 'lifetime' ? 'Extra Cheer' : 'Super Cheer'
+    if (!confirm(`¿Dar ${nombrePlan} a ${seleccionados.size} persona${seleccionados.size > 1 ? 's' : ''}?`)) return
+    setCortesiaCargando(true)
+    setCortesiaResultado('')
+    const { data: { session } } = await supabase.auth.getSession()
+    let ok = 0, fallo = 0
+    for (const uid of Array.from(seleccionados)) {
+      const res = await fetch('/api/admin-regalar-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: session?.access_token, userId: uid, tipo: cortesiaTipoMasiva }),
+      })
+      const data = await res.json()
+      if (data.ok) ok++; else fallo++
+    }
+    setCortesiaCargando(false)
+    setCortesiaResultado(`✓ Aplicado a ${ok}${fallo ? `, ${fallo} sin poder aplicar (revisa si tienen celebración activa o más de una)` : ''}.`)
+    cargarDatos()
   }
 
   if (cargando) return (
@@ -398,6 +508,46 @@ export default function Admin() {
               )}
             </div>
 
+            {/* Borrar cuenta por moderación */}
+            <div style={{ background:'rgba(212,83,126,.05)', border:'1px solid rgba(212,83,126,.2)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'#f08cb0', marginBottom:6, textTransform:'uppercase', letterSpacing:'.5px' }}>Borrar cuenta (moderación)</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:16 }}>Para casos de abuso o bullying — borra la cuenta, sus celebraciones y todo lo asociado. No se puede deshacer.</div>
+              <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+                <input
+                  value={moderarEmail}
+                  onChange={e => { setModerarEmail(e.target.value); setModerarPreview(null); setModerarMensaje('') }}
+                  onKeyDown={e => e.key === 'Enter' && buscarParaModerar()}
+                  placeholder="email@ejemplo.com"
+                  style={{ flex:1, border:'1px solid rgba(255,255,255,.12)', background:'rgba(255,255,255,.04)', color:'#fff', fontFamily:F, fontSize:14, padding:'10px 14px', borderRadius:10, outline:'none' }}
+                />
+                <button onClick={buscarParaModerar} disabled={moderarCargando || !moderarEmail.trim()} style={{ border:'1px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 20px', borderRadius:10, cursor:moderarCargando||!moderarEmail.trim()?'default':'pointer', opacity:moderarCargando||!moderarEmail.trim()?0.5:1, fontFamily:F }}>
+                  Buscar
+                </button>
+              </div>
+
+              {moderarPreview && (
+                <div style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, padding:'14px 16px', marginBottom:12 }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:4 }}>@{moderarPreview.username || '(sin username)'}</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.5)', marginBottom:12 }}>
+                    {moderarPreview.celebraciones} celebracion{moderarPreview.celebraciones !== 1 ? 'es' : ''} · registrada {moderarPreview.creado ? new Date(moderarPreview.creado).toLocaleDateString('es-MX') : '—'}
+                  </div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.6)', marginBottom:8 }}>Escribe <strong>BORRAR</strong> para confirmar:</div>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <input
+                      value={moderarConfirmTexto}
+                      onChange={e => setModerarConfirmTexto(e.target.value)}
+                      placeholder="BORRAR"
+                      style={{ flex:1, border:'1px solid rgba(212,83,126,.3)', background:'rgba(255,255,255,.04)', color:'#fff', fontFamily:F, fontSize:14, padding:'10px 14px', borderRadius:10, outline:'none' }}
+                    />
+                    <button onClick={confirmarBorrarModeracion} disabled={moderarConfirmTexto !== 'BORRAR' || moderarCargando} style={{ border:'none', background:'#D4537E', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 20px', borderRadius:10, cursor:moderarConfirmTexto==='BORRAR'&&!moderarCargando?'pointer':'default', opacity:moderarConfirmTexto==='BORRAR'&&!moderarCargando?1:0.4, fontFamily:F }}>
+                      Borrar cuenta
+                    </button>
+                  </div>
+                </div>
+              )}
+              {moderarMensaje && <div style={{ fontSize:13, color:'rgba(255,255,255,.7)' }}>{moderarMensaje}</div>}
+            </div>
+
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
               {stat('Usuarios totales', totalUsuarios, `${usuariosEstaSemana} esta semana (${diffPct(usuariosEstaSemana, usuariosSemanaAnterior)} vs. anterior)`)}
               {stat('Celebraciones totales', totalCels, `${celsEstaSeamana} esta semana (${diffPct(celsEstaSeamana, celsSemanaAnterior)} vs. anterior)`, '#f08cb0')}
@@ -574,6 +724,7 @@ export default function Admin() {
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {topCreadores.map((x, i) => (
                     <div key={x.usuario.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <input type="checkbox" checked={seleccionados.has(x.usuario.user_id)} onChange={() => toggleSeleccion(x.usuario.user_id)} style={{ width:16, height:16, cursor:'pointer', accentColor:'#D4537E' }} />
                       <span style={{ width:20, fontSize:12, fontWeight:800, color:'rgba(255,255,255,.3)' }}>{i+1}</span>
                       <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{x.usuario.username}</span>
                       <span style={{ fontSize:14, fontWeight:800, color:'#a89df0' }}>{x.count}</span>
@@ -592,6 +743,7 @@ export default function Admin() {
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {topInvitadores.map((x, i) => (
                     <div key={x.usuario.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <input type="checkbox" checked={seleccionados.has(x.usuario.user_id)} onChange={() => toggleSeleccion(x.usuario.user_id)} style={{ width:16, height:16, cursor:'pointer', accentColor:'#D4537E' }} />
                       <span style={{ width:20, fontSize:12, fontWeight:800, color:'rgba(255,255,255,.3)' }}>{i+1}</span>
                       <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{x.usuario.username}</span>
                       <span style={{ fontSize:14, fontWeight:800, color:'#f08cb0' }}>{x.count}</span>
@@ -611,6 +763,7 @@ export default function Admin() {
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {usuariosEnfriados.slice(0, 20).map(u => (
                     <div key={u.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <input type="checkbox" checked={seleccionados.has(u.user_id)} onChange={() => toggleSeleccion(u.user_id)} style={{ width:16, height:16, cursor:'pointer', accentColor:'#D4537E' }} />
                       <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{u.username}</span>
                       <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>última celebración: {ultimaActividadPorUsuario[u.user_id].toLocaleDateString('es-MX')}</span>
                     </div>
@@ -629,6 +782,7 @@ export default function Admin() {
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {usuariosNuncaUsaron.slice(0, 20).map(u => (
                     <div key={u.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <input type="checkbox" checked={seleccionados.has(u.user_id)} onChange={() => toggleSeleccion(u.user_id)} style={{ width:16, height:16, cursor:'pointer', accentColor:'#D4537E' }} />
                       <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{u.username}</span>
                       <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>se registró: {new Date(u.created_at).toLocaleDateString('es-MX')}</span>
                     </div>
@@ -636,6 +790,62 @@ export default function Admin() {
                 </div>
               )}
             </div>
+
+            {/* Barra de acciones sobre seleccionados */}
+            {seleccionados.size > 0 && (
+              <div style={{ position:'sticky', bottom:16, background:'#1a1740', border:'1px solid rgba(255,255,255,.15)', borderRadius:16, padding:'16px 20px', boxShadow:'0 16px 40px rgba(0,0,0,.4)' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom: accionActiva ? 16 : 0, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:13, fontWeight:800, color:'#fff' }}>{seleccionados.size} seleccionado{seleccionados.size > 1 ? 's' : ''}</span>
+                  <button onClick={() => setSeleccionados(new Set())} style={{ border:'none', background:'none', color:'rgba(255,255,255,.4)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:F }}>Quitar selección</button>
+                  <div style={{ flex:1 }} />
+                  <button onClick={() => setAccionActiva(accionActiva === 'mensaje' ? null : 'mensaje')} style={{ border:'1px solid rgba(255,255,255,.15)', background:accionActiva==='mensaje'?'rgba(168,157,240,.2)':'rgba(255,255,255,.06)', color:'#fff', fontSize:13, fontWeight:700, padding:'8px 16px', borderRadius:10, cursor:'pointer', fontFamily:F }}>✉️ Mensaje</button>
+                  <button onClick={() => setAccionActiva(accionActiva === 'cortesia' ? null : 'cortesia')} style={{ border:'1px solid rgba(255,255,255,.15)', background:accionActiva==='cortesia'?'rgba(168,157,240,.2)':'rgba(255,255,255,.06)', color:'#fff', fontSize:13, fontWeight:700, padding:'8px 16px', borderRadius:10, cursor:'pointer', fontFamily:F }}>🎁 Cortesía</button>
+                </div>
+
+                {accionActiva === 'mensaje' && (
+                  <div>
+                    <input
+                      value={msgAsunto}
+                      onChange={e => setMsgAsunto(e.target.value)}
+                      placeholder="Asunto (opcional)"
+                      style={{ width:'100%', boxSizing:'border-box', border:'1px solid rgba(255,255,255,.12)', background:'rgba(255,255,255,.04)', color:'#fff', fontFamily:F, fontSize:14, padding:'10px 14px', borderRadius:10, outline:'none', marginBottom:8 }}
+                    />
+                    <textarea
+                      value={msgTexto}
+                      onChange={e => setMsgTexto(e.target.value)}
+                      placeholder="Escribe tu mensaje... se manda con el mismo diseño de los demás correos de Cheers."
+                      rows={5}
+                      style={{ width:'100%', boxSizing:'border-box', border:'1px solid rgba(255,255,255,.12)', background:'rgba(255,255,255,.04)', color:'#fff', fontFamily:F, fontSize:14, padding:'10px 14px', borderRadius:10, outline:'none', marginBottom:8, resize:'vertical' }}
+                    />
+                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <button onClick={enviarMensajeMasivo} disabled={msgCargando || !msgTexto.trim()} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 20px', borderRadius:10, cursor:msgCargando||!msgTexto.trim()?'default':'pointer', opacity:msgCargando||!msgTexto.trim()?0.5:1, fontFamily:F }}>
+                        {msgCargando ? 'Enviando...' : `Enviar a ${seleccionados.size}`}
+                      </button>
+                      {msgResultado && <span style={{ fontSize:13, color:'rgba(255,255,255,.7)' }}>{msgResultado}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {accionActiva === 'cortesia' && (
+                  <div>
+                    <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+                      {(['pro', 'lifetime'] as const).map(t => (
+                        <button key={t} onClick={() => setCortesiaTipoMasiva(t)} style={{ flex:1, border:'1px solid rgba(255,255,255,.12)', background:cortesiaTipoMasiva===t?'linear-gradient(135deg,#534AB7,#D4537E)':'rgba(255,255,255,.04)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px', borderRadius:10, cursor:'pointer', fontFamily:F }}>
+                          {t === 'pro' ? 'Super Cheer' : 'Extra Cheer'}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <button onClick={aplicarCortesiaMasiva} disabled={cortesiaCargando} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 20px', borderRadius:10, cursor:cortesiaCargando?'default':'pointer', opacity:cortesiaCargando?0.5:1, fontFamily:F }}>
+                        {cortesiaCargando ? 'Aplicando...' : `Dar a ${seleccionados.size}`}
+                      </button>
+                      {cortesiaResultado && <span style={{ fontSize:13, color:'rgba(255,255,255,.7)' }}>{cortesiaResultado}</span>}
+                    </div>
+                    {cortesiaTipoMasiva === 'pro' && <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:8 }}>Super Cheer necesita que la persona tenga exactamente 1 celebración activa — si no tiene ninguna o tiene varias, esa persona no se actualiza.</div>}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
