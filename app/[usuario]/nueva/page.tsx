@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import { supabase } from '../../supabase'
 import { getLang, t } from '../../i18n'
+import { track } from '../../track'
 
 declare global { interface Window { google: any } }
 
@@ -194,7 +195,7 @@ export default function NuevaCelebracion() {
       gifts: [], created_at: new Date().toISOString(),
     })
     setSaving(false)
-    if (!error) { clearDraft(); setStep('link') }
+    if (!error) { clearDraft(); setStep('link'); track('celebracion_creada', { userId: user?.id, celebracionSlug: slug, metadata: { tipo } }) }
     else if (error.code === '23505') setErrorMsg(tx.nueva_slug_error)
     else if (error.message?.includes('Limite de 1 celebracion activa')) setLimiteCelebracionActiva(true)
     else setErrorMsg(tx.nueva_error)

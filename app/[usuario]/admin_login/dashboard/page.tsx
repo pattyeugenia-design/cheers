@@ -6,7 +6,7 @@ import { supabase } from '../../../supabase'
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 
-type Vista = 'qa' | 'admin'
+type Vista = 'qa' | 'admin' | 'embudo'
 
 export default function Admin() {
   const router = useRouter()
@@ -16,20 +16,24 @@ export default function Admin() {
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitados, setInvitados] = useState<any[]>([])
+  const [eventos, setEventos] = useState<any[]>([])
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date>(new Date())
   const [busqueda, setBusqueda] = useState('')
 
   const cargarDatos = useCallback(async () => {
-    const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }] = await Promise.all([
+    const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }, { data: eventosData }] = await Promise.all([
       supabase.from('celebraciones').select('*').order('created_at', { ascending: false }),
       supabase.from('perfiles').select('*').order('created_at', { ascending: false }),
       supabase.from('rsvps').select('*').order('created_at', { ascending: false }),
       supabase.from('invitados').select('*').order('created_at', { ascending: false }),
+      // Últimos 90 días — suficiente para ver el embudo y las fuentes sin traer la tabla completa
+      supabase.from('eventos_analytics').select('*').gte('created_at', new Date(Date.now() - 90*24*60*60*1000).toISOString()).order('created_at', { ascending: false }),
     ])
     setCelebraciones(cels || [])
     setUsuarios(users || [])
     setRsvps(rsvpData || [])
     setInvitados(invData || [])
+    setEventos(eventosData || [])
     setUltimaActualizacion(new Date())
   }, [])
 
@@ -141,6 +145,27 @@ export default function Admin() {
   // Cuentas que se registraron y nunca crearon una celebración
   const usuariosSinCelebraciones = usuarios.filter(u => !celebraciones.some(c => c.organizador_id === u.user_id)).length
 
+  // Embudo de conversión (últimos 90 días, de la tabla eventos_analytics)
+  const contarTipo = (tipo: string) => eventos.filter(e => e.tipo === tipo).length
+  const visitantesUnicos = new Set(eventos.filter(e => e.tipo === 'visita').map(e => e.session_id).filter(Boolean)).size
+  const pasos = [
+    { label: 'Visitantes únicos', value: visitantesUnicos },
+    { label: 'Registros completados', value: contarTipo('registro_completado') },
+    { label: 'Celebraciones creadas', value: contarTipo('celebracion_creada') },
+    { label: 'Invitados agregados', value: contarTipo('invitado_agregado') },
+    { label: 'RSVPs confirmados', value: contarTipo('rsvp_confirmado') },
+    { label: 'Checkouts iniciados', value: contarTipo('checkout_iniciado') },
+    { label: 'Compras completadas', value: contarTipo('compra_completada') },
+  ]
+  const maxPaso = Math.max(...pasos.map(p => p.value), 1)
+
+  // Fuentes de tráfico (utm_source de las visitas, últimos 90 días)
+  const visitas = eventos.filter(e => e.tipo === 'visita')
+  const porFuente: Record<string, number> = {}
+  visitas.forEach(v => { const f = v.utm_source || (v.referrer ? 'referral' : 'directo'); porFuente[f] = (porFuente[f] || 0) + 1 })
+  const fuentesOrdenadas = Object.entries(porFuente).sort((a, b) => b[1] - a[1])
+  const totalVisitas = visitas.length
+
   // Horas pico de actividad (registros + celebraciones creadas, agrupado por hora del día)
   const porHora = Array(24).fill(0)
   ;[...usuarios, ...celebraciones].forEach(it => { porHora[new Date(it.created_at).getHours()]++ })
@@ -172,9 +197,9 @@ export default function Admin() {
 
       {/* Tabs */}
       <div style={{ padding:'16px 24px 0', display:'flex', gap:8 }}>
-        {(['qa', 'admin'] as Vista[]).map(v => (
+        {(['qa', 'admin', 'embudo'] as Vista[]).map(v => (
           <button key={v} onClick={() => setVista(v)} style={{ border:'none', background:vista===v?'rgba(168,157,240,.2)':'transparent', color:vista===v?'#a89df0':'rgba(255,255,255,.4)', fontSize:14, fontWeight:700, padding:'8px 18px', borderRadius:10, cursor:'pointer', fontFamily:F, borderBottom:vista===v?'2px solid #a89df0':'2px solid transparent' }}>
-            {v === 'qa' ? '🧪 QA / Pruebas' : '📊 Métricas'}
+            {v === 'qa' ? '🧪 QA / Pruebas' : v === 'admin' ? '📊 Métricas' : '🔻 Embudo'}
           </button>
         ))}
       </div>
@@ -321,6 +346,58 @@ export default function Admin() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* VISTA EMBUDO */}
+        {vista === 'embudo' && (
+          <div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', marginBottom:20 }}>
+              Últimos 90 días · datos propios de Cheers (tabla eventos_analytics), sin herramientas externas.
+            </div>
+
+            {/* Embudo de conversión */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Embudo de conversión</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {pasos.map((p, i) => {
+                  const anterior = i > 0 ? pasos[i-1].value : null
+                  const pct = anterior && anterior > 0 ? Math.round((p.value / anterior) * 100) : null
+                  return (
+                    <div key={p.label} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ width:170, fontSize:12, fontWeight:700, color:'rgba(255,255,255,.55)' }}>{p.label}</span>
+                      <div style={{ flex:1, height:20, background:'rgba(255,255,255,.06)', borderRadius:8, overflow:'hidden' }}>
+                        <div style={{ width:`${(p.value/maxPaso)*100}%`, height:'100%', background:'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius:8, minWidth:p.value>0?4:0 }} />
+                      </div>
+                      <span style={{ fontSize:14, fontWeight:800, color:'#a89df0', minWidth:40, textAlign:'right' }}>{p.value}</span>
+                      <span style={{ fontSize:11, fontWeight:700, color: pct===null?'transparent':pct>=50?'#4ade80':pct>=20?'#f5c04e':'#f08cb0', minWidth:44, textAlign:'right' }}>{pct===null?'—':`${pct}%`}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:12 }}>El % es contra el paso anterior, no contra el total de visitantes.</div>
+            </div>
+
+            {/* Fuentes de tráfico */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Fuentes de tráfico ({totalVisitas} visitas)</div>
+              {fuentesOrdenadas.length === 0 ? (
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Todavía no hay visitas registradas.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {fuentesOrdenadas.map(([fuente, count]) => (
+                    <div key={fuente} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ width:100, fontSize:12, fontWeight:700, color:'rgba(255,255,255,.5)' }}>{fuente}</span>
+                      <div style={{ flex:1, height:8, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
+                        <div style={{ width:`${(count/totalVisitas)*100}%`, height:'100%', background:'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius:99 }} />
+                      </div>
+                      <span style={{ fontSize:14, fontWeight:800, color:'#a89df0', minWidth:24, textAlign:'right' }}>{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:12 }}>"directo" = sin utm_source y sin referrer (llegó escribiendo la URL o desde una app que no lo manda, como suele pasar en Instagram). "referral" = llegó de otro sitio pero sin utm_source.</div>
             </div>
           </div>
         )}

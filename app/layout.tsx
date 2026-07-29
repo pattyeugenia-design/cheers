@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import ClientEffects from './components/ClientEffects'
+import Tracker from './components/Tracker'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://joincheers.app'),
@@ -146,6 +147,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</style>
 
         <ClientEffects />
+        <Tracker />
 
         {destellos.map((d, i) => (
           <span key={i} style={{

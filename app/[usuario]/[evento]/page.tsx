@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { supabase } from '../../supabase'
 import { getLang, t } from '../../i18n'
 import NotificacionesBell from '../../components/NotificacionesBell'
+import { track } from '../../track'
 
 declare global { interface Window { google: any } }
 
@@ -305,6 +306,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ celebracionSlug: celebracion.slug, rsvpId: rsvpNuevo?.id }),
     }).catch(() => {})
+    track('rsvp_confirmado', { celebracionSlug: celebracion.slug, metadata: { asistencia, con_cuenta: false } })
     setGuardando(false); setGuardado(true)
   }
 
@@ -482,6 +484,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ celebracionSlug: celebracion.slug, mensajeId: data.id }),
       }).catch(() => {})
+      track('mensaje_publicado', { userId: user.id, celebracionSlug: celebracion.slug })
     }
     setNuevoMensajeMuro('')
     setPublicandoMensaje(false)
@@ -504,6 +507,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ celebracionSlug: celebracion.slug, rsvpId }),
     }).catch(() => {})
+    track('rsvp_confirmado', { userId: user?.id, celebracionSlug: celebracion.slug, metadata: { asistencia, con_cuenta: !!user } })
     const { data } = await supabase.rpc('get_rsvps_confirmados_por_slug', { p_slug: celebracion.slug })
     setConfirmados(data || [])
     setGuardando(false); setGuardado(true)
@@ -1063,6 +1067,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
               }).select().single()
               inv = nuevoInv
               setRol(inv ? 'invitado' : 'brief')
+              if (inv) track('invitado_agregado', { userId: authUser.id, celebracionSlug: cel.slug, metadata: { origen: 'auto_desbloqueo' } })
             } else {
               // Lifetime: los primeros 10 que inicien sesión en este evento se desbloquean solos ("regalo" del organizador)
               const { data: yaDesbloqueados } = await supabase.rpc('contar_desbloqueados', { p_slug: cel.slug })
@@ -1076,6 +1081,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 }).select().single()
                 inv = nuevoInv
                 setRol(inv ? 'invitado' : 'brief')
+                if (inv) track('invitado_agregado', { userId: authUser.id, celebracionSlug: cel.slug, metadata: { origen: 'auto_desbloqueo' } })
               } else {
                 // Cupo lleno: solo se desbloquea si SU PROPIA cuenta ya es Lifetime (no consume cupo del organizador, no se registra como invitado)
                 setRol(perfilMio?.plan === 'lifetime' ? 'invitado' : 'brief')
@@ -1315,6 +1321,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const { data } = await supabase.from('invitados').insert(row).select().single()
     if (data) {
       setInvitadosList(prev => [...prev, data])
+      track('invitado_agregado', { userId: user?.id, celebracionSlug: celebracion.slug, metadata: { origen: 'organizador' } })
       if (isPhone) {
         setInvitadoPendienteWA(data); setWaPhone(nuevoInvitado.trim()); setShowWAPrompt(true)
       } else if (emailNuevo && !yaInvitadoAquí) {
@@ -1393,6 +1400,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       .select().single()
     if (!error && data) {
       setReservasRegalo(prev => [...prev, data])
+      track('regalo_reservado', { userId: user.id, celebracionSlug: celebracion.slug })
       fetch('/api/notificar-regalo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

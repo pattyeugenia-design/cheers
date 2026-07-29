@@ -55,5 +55,15 @@ export async function POST(req: Request) {
     cancel_url: `${origin}${rutaVuelta}?compra=cancelada`,
   })
 
+  // No bloquea la respuesta si falla — analytics nunca debe tumbar el checkout real.
+  try {
+    await admin.from('eventos_analytics').insert({
+      tipo: 'checkout_iniciado',
+      user_id: user.id,
+      celebracion_slug: tipo === 'pro' ? slug : null,
+      metadata: { tipo },
+    })
+  } catch {}
+
   return NextResponse.json({ url: session.url })
 }

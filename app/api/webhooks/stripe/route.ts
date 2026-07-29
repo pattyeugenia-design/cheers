@@ -37,6 +37,17 @@ export async function POST(req: Request) {
       await admin.from('celebraciones').update({ plan: 'pro' }).eq('slug', slug).eq('organizador_id', userId)
     }
 
+    if (userId && (tipo === 'lifetime' || tipo === 'pro')) {
+      try {
+        await admin.from('eventos_analytics').insert({
+          tipo: 'compra_completada',
+          user_id: userId,
+          celebracion_slug: tipo === 'pro' ? slug : null,
+          metadata: { tipo },
+        })
+      } catch {}
+    }
+
     // Confirmación de compra — antes solo se avisaba cuando alguien NO terminaba
     // de pagar (checkout abandonado), pero a quien SÍ compra no le llegaba nada.
     if (email && userId && (tipo === 'lifetime' || tipo === 'pro')) {

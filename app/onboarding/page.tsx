@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../supabase'
 import { getLang, t, RESERVED_USERNAMES } from '../i18n'
+import { track } from '../track'
 
 const BG = 'radial-gradient(circle at 12% 18%,rgba(127,119,221,.55),transparent 45%),radial-gradient(circle at 88% 82%,rgba(212,83,126,.5),transparent 50%),linear-gradient(160deg,#534AB7 0%,#7b46a8 52%,#D4537E 100%)'
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
@@ -101,6 +102,8 @@ export default function Onboarding() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: user.email, nombre: user.user_metadata?.name?.split(' ')[0], username, lang: langDetectado }),
     }).catch(() => {})
+
+    track('registro_completado', { userId: user.id })
 
     const redirect = typeof window !== 'undefined' ? sessionStorage.getItem('redirect_after_login') : null
     if (redirect) { sessionStorage.removeItem('redirect_after_login'); router.push(redirect) }
