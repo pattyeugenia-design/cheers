@@ -204,6 +204,17 @@ export default function Admin() {
   const fuentesOrdenadas = Object.entries(porFuente).sort((a, b) => b[1] - a[1])
   const totalVisitas = visitas.length
 
+  // Páginas más visitadas + sesiones únicas por página (para distinguir "muchos refrescos
+  // de la misma persona" de "mucha gente distinta pasando por ahí")
+  const porRuta: Record<string, { vistas: number; sesiones: Set<string> }> = {}
+  visitas.forEach(v => {
+    const r = v.ruta || '(desconocida)'
+    if (!porRuta[r]) porRuta[r] = { vistas: 0, sesiones: new Set() }
+    porRuta[r].vistas++
+    if (v.session_id) porRuta[r].sesiones.add(v.session_id)
+  })
+  const rutasOrdenadas = Object.entries(porRuta).sort((a, b) => b[1].vistas - a[1].vistas)
+
   // Horas pico de actividad (registros + celebraciones creadas, agrupado por hora del día)
   const porHora = Array(24).fill(0)
   ;[...usuarios, ...celebraciones].forEach(it => { porHora[new Date(it.created_at).getHours()]++ })
@@ -470,6 +481,28 @@ export default function Admin() {
                 </div>
               )}
               <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:12 }}>"directo" = sin utm_source y sin referrer (llegó escribiendo la URL o desde una app que no lo manda, como suele pasar en Instagram). "referral" = llegó de otro sitio pero sin utm_source.</div>
+            </div>
+
+            {/* Páginas más visitadas */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Páginas más visitadas ({totalVisitas} visitas)</div>
+              {rutasOrdenadas.length === 0 ? (
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Todavía no hay visitas registradas.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {rutasOrdenadas.map(([ruta, info]) => (
+                    <div key={ruta} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ width:180, fontSize:12, fontWeight:700, color:'rgba(255,255,255,.55)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={ruta}>{ruta}</span>
+                      <div style={{ flex:1, height:8, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
+                        <div style={{ width:`${(info.vistas/totalVisitas)*100}%`, height:'100%', background:'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius:99 }} />
+                      </div>
+                      <span style={{ fontSize:14, fontWeight:800, color:'#a89df0', minWidth:24, textAlign:'right' }}>{info.vistas}</span>
+                      <span style={{ fontSize:11, color:'rgba(255,255,255,.35)', minWidth:70, textAlign:'right' }}>{info.sesiones.size} sesión{info.sesiones.size !== 1 ? 'es' : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:12 }}>"Visitas" cuenta cada carga de página (recargar cuenta de nuevo). "Sesiones" son personas/pestañas distintas — si una página tiene muchas visitas pero pocas sesiones, es la misma persona recargando, no tráfico nuevo.</div>
             </div>
           </div>
         )}
