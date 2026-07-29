@@ -12,7 +12,7 @@ Para no perder esta lista otra vez: aquí queda quién va a recibir Lifetime gra
 | — | monyale3@gmail.com | No | No | Falta que cree cuenta |
 | Fátima Rodríguez | faty137@gmail.com | Sí (@fatima_rodriguez) | Sí | Activada 2026-07-20 vía SQL |
 
-| Martha Aguilar | mmarthaa@hotmail.com | Sin verificar | No | Agregado 2026-07-20 |
+| Martha Aguilar | mmarthaa@hotmail.com | Sí (@mmarthaac) | Sí | Activada 2026-07-29 vía SQL |
 | Vicente Canales | vicecanales@gmail.com | Sin verificar | No | Agregado 2026-07-20 |
 | Carolina Nazar | caronazarv@gmail.com | Sin verificar | No | Agregado 2026-07-20 |
 | Vika Salinas | Vikasalinas@gmail.com | Sí (@victoria_salinas) | Sí | Activada 2026-07-20 vía SQL |
