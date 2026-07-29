@@ -916,7 +916,12 @@ function ResizableTile({
         <div style={{ width: 26, height: 26, borderRadius: 7, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <span style={{ fontSize: 9, fontWeight: 800, color: te.accentText }}>{info.label}</span>
         </div>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 800, color: te.tileText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{tileLabel}</span>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 800, color: te.tileText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+          {tileLabel}
+          {layout.key === 'reservacion' && (
+            <span style={{ fontSize: 11, fontWeight: 600, fontStyle: 'italic', color: '#a39ec0' }}> ({lang === 'en' ? 'External link' : 'Enlace externo'})</span>
+          )}
+        </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ fontSize: 10, color: '#a39ec0', fontWeight: 600 }}>{visible ? (tx.visible || 'Visible') : (tx.hidden || 'Oculto')}</span>
           <Toggle on={visible} onToggle={onToggleVisible} />
