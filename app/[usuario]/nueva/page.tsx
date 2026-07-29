@@ -296,12 +296,12 @@ export default function NuevaCelebracion() {
   )
 
   const TIPOS = [
-    { key: 'cumple', label: tx.tipo_cumple, chip: 'BDAY' },
-    { key: 'cena',   label: tx.tipo_cena,   chip: 'DINE' },
-    { key: 'viaje',  label: tx.tipo_viaje,  chip: 'TRIP' },
-    { key: 'reunion',label: tx.tipo_reunion, chip: 'MEET' },
-    { key: 'evento', label: tx.tipo_evento,  chip: 'EVENT' },
-    { key: 'otro',   label: tx.tipo_otro,    chip: 'OTHER' },
+    { key: 'cumple', label: tx.tipo_cumple, chip: 'BDAY', sub: tx.tipo_cumple_sub },
+    { key: 'cena',   label: tx.tipo_cena,   chip: 'DINE', sub: tx.tipo_cena_sub },
+    { key: 'viaje',  label: tx.tipo_viaje,  chip: 'TRIP', sub: tx.tipo_viaje_sub },
+    { key: 'reunion',label: tx.tipo_reunion, chip: 'MEET', sub: tx.tipo_reunion_sub },
+    { key: 'evento', label: tx.tipo_evento,  chip: 'EVENT', sub: tx.tipo_evento_sub },
+    { key: 'otro',   label: tx.tipo_otro,    chip: 'OTHER', sub: tx.tipo_otro_sub },
   ]
 
   const ROLES = [
@@ -410,6 +410,7 @@ export default function NuevaCelebracion() {
                       {tipo === t.key && <div style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>✓</span></div>}
                       <div style={{ fontSize: 14, fontWeight: 700, color: tipo === t.key ? '#fff' : '#534AB7', background: tipo === t.key ? 'rgba(255,255,255,.2)' : '#EEEDFE', padding: '6px 10px', borderRadius: 8 }}>{t.chip}</div>
                       <div style={{ fontSize: 15, fontWeight: 650, color: tipo === t.key ? '#fff' : '#2a2440', textAlign: 'center' }}>{t.label}</div>
+                      <div style={{ fontSize: 11.5, color: tipo === t.key ? 'rgba(255,255,255,.8)' : '#a39ec0', textAlign: 'center', lineHeight: 1.3 }}>{t.sub}</div>
                     </div>
                   ))}
                 </div>
