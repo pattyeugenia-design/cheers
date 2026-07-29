@@ -20,6 +20,13 @@ export default function Admin() {
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date>(new Date())
   const [busqueda, setBusqueda] = useState('')
 
+  // Regalar Super Cheer / Extra Cheer por email, sin tener que pedírmelo
+  const [regaloEmail, setRegaloEmail] = useState('')
+  const [regaloTipo, setRegaloTipo] = useState<'pro' | 'lifetime'>('lifetime')
+  const [regaloCargando, setRegaloCargando] = useState(false)
+  const [regaloMensaje, setRegaloMensaje] = useState('')
+  const [regaloOpciones, setRegaloOpciones] = useState<any[] | null>(null)
+
   const cargarDatos = useCallback(async () => {
     const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }, { data: eventosData }] = await Promise.all([
       supabase.from('celebraciones').select('*').order('created_at', { ascending: false }),
@@ -84,6 +91,37 @@ export default function Admin() {
   async function cambiarPlan(userId: string, plan: string) {
     await supabase.from('perfiles').update({ plan }).eq('user_id', userId)
     setUsuarios(prev => prev.map(u => u.user_id === userId ? { ...u, plan } : u))
+  }
+
+  async function regalarPlan(slugElegido?: string) {
+    if (!regaloEmail.trim()) return
+    const nombrePlan = regaloTipo === 'lifetime' ? 'Extra Cheer' : 'Super Cheer'
+    if (!confirm(`¿Dar ${nombrePlan} a ${regaloEmail.trim()}?`)) return
+    setRegaloCargando(true)
+    setRegaloMensaje('')
+    setRegaloOpciones(null)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin-regalar-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token, email: regaloEmail.trim(), tipo: regaloTipo, slug: slugElegido }),
+    })
+    const data = await res.json()
+    setRegaloCargando(false)
+    if (data.ok) {
+      setRegaloMensaje(`✓ Listo — ${regaloEmail.trim()} ya tiene ${nombrePlan}${data.celebracion ? ` (${data.celebracion})` : ''}.`)
+      setRegaloEmail('')
+      cargarDatos()
+    } else if (data.error === 'elegir_celebracion') {
+      setRegaloOpciones(data.celebraciones)
+      setRegaloMensaje('Esa cuenta tiene más de una celebración activa — elige cuál:')
+    } else if (data.error === 'no_encontrado') {
+      setRegaloMensaje('No encontré ninguna cuenta con ese email.')
+    } else if (data.error === 'sin_celebraciones') {
+      setRegaloMensaje('Esa cuenta no tiene ninguna celebración activa para mejorar.')
+    } else {
+      setRegaloMensaje('Algo falló, intenta de nuevo.')
+    }
   }
 
   if (cargando) return (
@@ -265,6 +303,40 @@ export default function Admin() {
         {/* VISTA ADMIN MÉTRICAS */}
         {vista === 'admin' && (
           <div>
+            {/* Regalar plan */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Regalar plan</div>
+              <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+                {(['pro', 'lifetime'] as const).map(t => (
+                  <button key={t} onClick={() => setRegaloTipo(t)} style={{ flex:1, border:'1px solid rgba(255,255,255,.12)', background:regaloTipo===t?'linear-gradient(135deg,#534AB7,#D4537E)':'rgba(255,255,255,.04)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px', borderRadius:10, cursor:'pointer', fontFamily:F }}>
+                    {t === 'pro' ? 'Super Cheer' : 'Extra Cheer'}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                <input
+                  value={regaloEmail}
+                  onChange={e => setRegaloEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && regalarPlan()}
+                  placeholder="email@ejemplo.com"
+                  style={{ flex:1, border:'1px solid rgba(255,255,255,.12)', background:'rgba(255,255,255,.04)', color:'#fff', fontFamily:F, fontSize:14, padding:'10px 14px', borderRadius:10, outline:'none' }}
+                />
+                <button onClick={() => regalarPlan()} disabled={regaloCargando || !regaloEmail.trim()} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 20px', borderRadius:10, cursor:regaloCargando||!regaloEmail.trim()?'default':'pointer', opacity:regaloCargando||!regaloEmail.trim()?0.5:1, fontFamily:F }}>
+                  {regaloCargando ? '...' : 'Regalar'}
+                </button>
+              </div>
+              {regaloMensaje && <div style={{ fontSize:13, color:'rgba(255,255,255,.7)', marginTop:12 }}>{regaloMensaje}</div>}
+              {regaloOpciones && (
+                <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:10 }}>
+                  {regaloOpciones.map(c => (
+                    <button key={c.slug} onClick={() => regalarPlan(c.slug)} style={{ textAlign:'left', border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', color:'#fff', fontSize:13, fontWeight:600, padding:'8px 12px', borderRadius:8, cursor:'pointer', fontFamily:F }}>
+                      {c.nombre || 'Sin título'} <span style={{ color:'rgba(255,255,255,.4)', fontFamily:'monospace', fontSize:11 }}>({c.slug})</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
               {stat('Usuarios totales', totalUsuarios, `${usuariosEstaSemana} esta semana (${diffPct(usuariosEstaSemana, usuariosSemanaAnterior)} vs. anterior)`)}
               {stat('Celebraciones totales', totalCels, `${celsEstaSeamana} esta semana (${diffPct(celsEstaSeamana, celsSemanaAnterior)} vs. anterior)`, '#f08cb0')}
