@@ -10,7 +10,12 @@ declare global { interface Window { google: any } }
 
 type Step = 'type' | 'details' | 'link' | 'invite'
 type TipoEvento = 'cumple' | 'cena' | 'viaje' | 'reunion' | 'evento' | 'otro' | null
-type Rol = 'yo' | 'otro' | 'sorpresa' | null
+type Rol = 'yo' | 'otro' | 'sorpresa' | 'grupal' | null
+
+// Cumpleaños siempre tiene un festejado por definición — el resto de los tipos
+// (cena, viaje, reunión, evento, otro) muchas veces son casuales/grupales, sin
+// una sola persona en el centro, así que ahí sí se ofrece esa 4ta opción.
+const TIPOS_CON_OPCION_GRUPAL: TipoEvento[] = ['cena', 'viaje', 'reunion', 'evento', 'otro']
 
 const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'radial-gradient(circle at 12% 18%,rgba(127,119,221,.55),transparent 45%),radial-gradient(circle at 88% 82%,rgba(212,83,126,.5),transparent 50%),linear-gradient(160deg,#534AB7 0%,#7b46a8 52%,#D4537E 100%)'
@@ -182,7 +187,7 @@ export default function NuevaCelebracion() {
     const { error } = await supabase.from('celebraciones').insert({
       nombre: titulo || tipo,
       tipo, sub_tipo: tipo === 'cena' ? cenaSubTipo : null,
-      festejado_nombre: rol === 'yo' ? userNombre : festejado,
+      festejado_nombre: rol === 'yo' ? userNombre : rol === 'grupal' ? null : festejado,
       organizador_id: user?.id,
       slug, es_sorpresa: rol === 'sorpresa',
       organizador_rol: rol || 'otro',
@@ -290,6 +295,7 @@ export default function NuevaCelebracion() {
     { key: 'yo',       label: tx.role_me,      sub: tx.role_me_sub },
     { key: 'otro',     label: tx.role_other,   sub: tx.role_other_sub },
     { key: 'sorpresa', label: tx.role_surprise, sub: tx.role_surprise_sub },
+    ...(TIPOS_CON_OPCION_GRUPAL.includes(tipo) ? [{ key: 'grupal', label: tx.role_group, sub: tx.role_group_sub }] : []),
   ]
 
   const shareUrl = `joincheers.app/${userSlug}/${eventSlug || 'mi-evento'}`

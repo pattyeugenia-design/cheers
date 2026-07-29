@@ -425,8 +425,30 @@ export default function Admin() {
               {stat('RSVPs', totalRsvps, `${rsvpVan} confirmaron ir`, '#60a5fa')}
             </div>
 
+            {/* Salud de datos — conteos nada más, sin mostrar cuáles son, para no
+                andar viendo el detalle de celebraciones de nadie sin una razón real */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Salud de datos</div>
+              <div style={{ display:'flex', gap:20, flexWrap:'wrap' }}>
+                {[
+                  { label:'sin foto', count: celebraciones.filter(c => !c.portada_url).length },
+                  { label:'sin fecha', count: celebraciones.filter(c => !c.fecha).length },
+                  { label:'sin invitados', count: celebraciones.filter(c => !invitados.some(i => i.celebracion_slug === c.slug)).length },
+                  { label:'sin rsvps', count: celebraciones.filter(c => !rsvps.some(r => r.celebracion_slug === c.slug)).length },
+                ].map(x => (
+                  <div key={x.label}>
+                    <div style={{ fontSize:22, fontWeight:900, color: x.count>0?'#f08cb0':'#4ade80' }}>{x.count}</div>
+                    <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{x.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:12, textTransform:'uppercase', letterSpacing:'.5px' }}>
-              Todas las celebraciones ({celebracionesFiltradas.length}{busqueda ? ` de ${celebraciones.length}` : ''})
+              Buscar una celebración
+            </div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', marginBottom:12 }}>
+              Por privacidad, aquí ya no se lista todo de entrada — busca por nombre o slug solo cuando tengas una razón real (soporte, reporte, limpieza de spam).
             </div>
 
             <input
@@ -437,7 +459,10 @@ export default function Admin() {
             />
 
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {celebracionesFiltradas.map(cel => {
+              {busqueda.trim() && celebracionesFiltradas.length === 0 && (
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Sin resultados para "{busqueda}".</div>
+              )}
+              {busqueda.trim() && celebracionesFiltradas.map(cel => {
                 const invCel = invitados.filter(i => i.celebracion_slug === cel.slug)
                 const rsvpCel = rsvps.filter(r => r.celebracion_slug === cel.slug)
                 const checks = [
