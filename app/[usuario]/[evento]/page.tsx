@@ -689,22 +689,39 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
           </div>
         )}
 
-        {paradas.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'The plan' : 'El plan'}</div>
-            {paradas.map((p: any, i: number) => (
-              <div key={p.id} style={{ display: 'flex', gap: 14, marginBottom: i < paradas.length - 1 ? 14 : 0, paddingBottom: i < paradas.length - 1 ? 14 : 0, borderBottom: i < paradas.length - 1 ? '1px solid #f0edf8' : 'none' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#2a2440' }}>{p.lugar}</div>
-                  {p.hora && <div style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, marginTop: 1 }}>{p.hora}</div>}
-                  {p.nota && <div style={{ fontSize: 12, color: '#a39ec0', marginTop: 1 }}>{p.nota}</div>}
-                  <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>{lang === 'en' ? 'See on Maps →' : 'Ver en Maps →'}</a>
+        {paradas.length > 0 && (() => {
+          // Mismo agrupado por día que ve la organizadora en su tablero.
+          const diasOrden: string[] = []
+          const porDia: Record<string, any[]> = {}
+          paradas.forEach((p: any) => {
+            const dia = p.dia?.trim() || (lang === 'en' ? 'No day' : 'Sin día')
+            if (!porDia[dia]) { porDia[dia] = []; diasOrden.push(dia) }
+            porDia[dia].push(p)
+          })
+          return (
+            <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{lang === 'en' ? 'The plan' : 'El plan'}</div>
+              {diasOrden.map((dia, di) => (
+                <div key={dia} style={{ marginBottom: di < diasOrden.length - 1 ? 18 : 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#534AB7', textTransform: 'uppercase' as const, letterSpacing: '.4px', marginBottom: 10 }}>{dia}</div>
+                  {porDia[dia].map((p: any, i: number) => (
+                    <div key={p.id} style={{ display: 'flex', gap: 14, marginBottom: i < porDia[dia].length - 1 ? 14 : 0, paddingBottom: i < porDia[dia].length - 1 ? 14 : 0, borderBottom: i < porDia[dia].length - 1 ? '1px solid #f0edf8' : 'none' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: '#2a2440' }}>{p.lugar}</div>
+                          {p.categoria && <span style={{ fontSize: 10, fontWeight: 800, color: '#534AB7', background: '#EEEDFE', padding: '2px 8px', borderRadius: 99, textTransform: 'uppercase' as const }}>{p.categoria}</span>}
+                        </div>
+                        {p.nota && <div style={{ fontSize: 12, color: '#a39ec0', marginTop: 1 }}>{p.nota}</div>}
+                        <a href={`https://maps.google.com/?q=${encodeURIComponent(p.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#1a73e8', textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>{lang === 'en' ? 'See on Maps →' : 'Ver en Maps →'}</a>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )
+        })()}
 
         {regalos.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
@@ -1052,7 +1069,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [reservasRegalo, setReservasRegalo] = useState<any[]>([])
   const [paradas, setParadas] = useState<any[]>([])
   const [showAddParada, setShowAddParada] = useState(false)
-  const [nuevaParada, setNuevaParada] = useState({ lugar: '', hora: '', nota: '' })
+  // El itinerario de viaje ya no usa hora — se organiza por día ("Día 1",
+  // "Lunes", lo que la organizadora escriba) y una categoría libre (tour,
+  // actividad, restaurante, parada...). "hora" se queda fuera de aquí; sigue
+  // existiendo como campo genérico de paradas[0] para otros tipos de evento.
+  const [nuevaParada, setNuevaParada] = useState({ lugar: '', dia: '', categoria: '', nota: '' })
   const [quellevar, setQuellevar] = useState<any[]>([])
   const [showAddItem, setShowAddItem] = useState(false)
   const [nuevoItem, setNuevoItem] = useState('')
@@ -1587,7 +1608,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     setParadas(nuevo)
     const { error } = await supabase.from('celebraciones').update({ paradas: nuevo }).eq('slug', celebracion.slug)
     if (error) { setParadas(anterior); setBloqueoPro(tx.stop_limit_title); return }
-    setNuevaParada({ lugar: '', hora: '', nota: '' }); setShowAddParada(false)
+    setNuevaParada({ lugar: '', dia: '', categoria: '', nota: '' }); setShowAddParada(false)
   }
 
   async function borrarParada(id: string) {
@@ -2008,40 +2029,61 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       </div>
     )
 
-    if (tileKey === 'itinerario') return (
-      <div>
-        {paradas.filter(p => p.id).map((p, i) => (
-          <div key={p.id} style={{ display: 'flex', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${te.accentBg}` }}>
-            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: te.tileText }}>{p.lugar}</div>
-              {p.hora && <div style={{ fontSize: 11, color: '#534AB7', fontWeight: 600 }}>{p.hora}</div>}
-              {p.nota && <div style={{ fontSize: 11, color: '#a39ec0' }}>{p.nota}</div>}
+    if (tileKey === 'itinerario') {
+      const paradasConId = paradas.filter((p: any) => p.id)
+      // Agrupamos por día, respetando el orden en que la organizadora los fue
+      // armando (no alfabético) — así "Día 1, Día 2..." o "Lunes, Martes..."
+      // salen en el orden real del viaje, no reordenados solos.
+      const diasOrden: string[] = []
+      const porDia: Record<string, any[]> = {}
+      paradasConId.forEach((p: any) => {
+        const dia = p.dia?.trim() || (lang === 'en' ? 'No day' : 'Sin día')
+        if (!porDia[dia]) { porDia[dia] = []; diasOrden.push(dia) }
+        porDia[dia].push(p)
+      })
+      return (
+        <div>
+          {diasOrden.map(dia => (
+            <div key={dia} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#534AB7', textTransform: 'uppercase' as const, letterSpacing: '.4px', marginBottom: 8 }}>{dia}</div>
+              {porDia[dia].map((p: any, i: number) => (
+                <div key={p.id} style={{ display: 'flex', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${te.accentBg}` }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: te.tileText }}>{p.lugar}</div>
+                      {p.categoria && <span style={{ fontSize: 9, fontWeight: 800, color: '#534AB7', background: te.accentBg, padding: '2px 7px', borderRadius: 99, textTransform: 'uppercase' as const }}>{p.categoria}</span>}
+                    </div>
+                    {p.nota && <div style={{ fontSize: 11, color: '#a39ec0', marginTop: 2 }}>{p.nota}</div>}
+                  </div>
+                  <button onClick={() => borrarParada(p.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
+                </div>
+              ))}
             </div>
-            <button onClick={() => borrarParada(p.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11 }}>×</button>
-          </div>
-        ))}
-        {showAddParada ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <input ref={nuevaParadaLugarRef} value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} autoFocus onFocus={e => e.stopPropagation()} />
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input value={nuevaParada.hora} onChange={e => setNuevaParada(p => ({ ...p, hora: e.target.value }))} placeholder={lang === 'en' ? 'Time' : 'Hora'} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
-              <input value={nuevaParada.nota} onChange={e => setNuevaParada(p => ({ ...p, nota: e.target.value }))} placeholder={lang === 'en' ? 'Note' : 'Nota'} style={{ ...inputStyle, flex: 2 }} onFocus={e => e.stopPropagation()} />
+          ))}
+          {showAddParada ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input value={nuevaParada.dia} onChange={e => setNuevaParada(p => ({ ...p, dia: e.target.value }))} placeholder={lang === 'en' ? 'Day (e.g. Day 1)' : 'Día (ej. Día 1)'} style={{ ...inputStyle, flex: 1 }} autoFocus onFocus={e => e.stopPropagation()} />
+                <input value={nuevaParada.categoria} onChange={e => setNuevaParada(p => ({ ...p, categoria: e.target.value }))} placeholder={lang === 'en' ? 'Category (tour, food...)' : 'Categoría (tour, comida...)'} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.stopPropagation()} />
+              </div>
+              <input ref={nuevaParadaLugarRef} value={nuevaParada.lugar} onChange={e => setNuevaParada(p => ({ ...p, lugar: e.target.value }))} placeholder={lang === 'en' ? 'Place or address' : 'Lugar o dirección'} style={inputStyle} onFocus={e => e.stopPropagation()} />
+              <input value={nuevaParada.nota} onChange={e => setNuevaParada(p => ({ ...p, nota: e.target.value }))} placeholder={lang === 'en' ? 'Note' : 'Nota'} style={inputStyle} onFocus={e => e.stopPropagation()} />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={agregarParada} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add stop' : 'Agregar'}</button>
+                <button onClick={() => { setShowAddParada(false); setNuevaParada({ lugar: '', dia: '', categoria: '', nota: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={agregarParada} style={{ ...addBtn, flex: 1, fontSize: 12 }}>{lang === 'en' ? 'Add stop' : 'Agregar'}</button>
-              <button onClick={() => { setShowAddParada(false); setNuevaParada({ lugar: '', hora: '', nota: '' }) }} style={{ ...cancelBtn, fontSize: 12 }}>{tx.cancel}</button>
+          ) : paradasConId.length >= limiteParadas ? (
+            <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.stop_limit_title}</div>
+              <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.stop_limit_desc}</div>
+              <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{comprandoPro ? '...' : tx.stop_upgrade_cta}</button>
             </div>
-          </div>
-        ) : paradas.filter(p => p.id).length >= limiteParadas ? (
-          <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.stop_limit_title}</div>
-            <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 6 }}>{tx.stop_limit_desc}</div>
-            <button onClick={comprarPro} disabled={comprandoPro} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>{comprandoPro ? '...' : tx.stop_upgrade_cta}</button>
-          </div>
-        ) : <button onClick={() => setShowAddParada(true)} style={dashedBtn}>{tx.add_stop}</button>}
-      </div>
-    )
+          ) : <button onClick={() => setShowAddParada(true)} style={dashedBtn}>{tx.add_stop}</button>}
+        </div>
+      )
+    }
 
     if (tileKey === 'quellevar') return (
       <div>
