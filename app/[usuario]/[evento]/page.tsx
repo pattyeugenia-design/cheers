@@ -989,6 +989,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [miPlan, setMiPlan] = useState<string | null>(null)
   const [lugar, setLugar] = useState('')
   const [horaPrincipal, setHoraPrincipal] = useState('')
+  // Controla si el Hero card muestra solo el resumen (fecha/hora/lugar en
+  // grande) o el panel completo de edición — colapsado por default para que
+  // el card se sienta como el encabezado de la celebración, no un formulario.
+  const [mostrarEditarEvento, setMostrarEditarEvento] = useState(false)
   // Configuración de recurrencia — se puede activar aquí después de crear el
   // evento, no solo al momento de crearlo en el wizard.
   const [recTipo, setRecTipo] = useState<'diario' | 'semanal' | 'mensual_dia' | 'mensual_nesimo' | 'anual'>('semanal')
@@ -1741,18 +1745,40 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   })()
   const totalRows = layouts.reduce((max, l) => Math.max(max, l.row + l.rowSpan - 1), 1)
 
-  const progressItems = [
-    { label: lang === 'en' ? 'Cover photo' : 'Foto de portada', done: !!portadaUrl },
-    { label: lang === 'en' ? 'Event title' : 'Título del evento', done: !!(titleRef.current?.innerText || celebracion?.nombre) },
+  // El último renglón del checklist depende del tipo de evento — antes siempre
+  // decía "Regalos o itinerario", que no aplica ni a una cena de restaurante
+  // (usa Reservación) ni a una casera/reunión (usa Menú).
+  const itemTipoEspecifico = (() => {
+    const tipo = celebracion?.tipo
+    const subTipo = celebracion?.sub_tipo
+    if (tipo === 'cena' && subTipo === 'restaurante') {
+      return { label: lang === 'en' ? 'Reservation' : 'Reservación', done: !!(reservacion.lugar || reservacion.hora || reservacion.personas), tile: 'reservacion' }
+    }
+    if (tipo === 'cena' || tipo === 'reunion') {
+      return { label: lang === 'en' ? 'Menu' : 'Menú', done: menuItems.length > 0, tile: 'menu' }
+    }
+    if (tipo === 'viaje') {
+      return { label: lang === 'en' ? 'Itinerary' : 'Itinerario', done: paradas.filter(p => p.id).length > 0, tile: 'itinerario' }
+    }
+    // cumple, evento, otro — o cualquier tipo futuro sin caso especial
+    return { label: lang === 'en' ? 'Gift list' : 'Lista de regalos', done: regalos.length > 0, tile: 'regalos' }
+  })()
+
+  type ItemProgreso = { label: string; done: boolean; tile: string | undefined }
+  const progressItems: ItemProgreso[] = [
+    { label: lang === 'en' ? 'Cover photo' : 'Foto de portada', done: !!portadaUrl, tile: 'portada' },
+    { label: lang === 'en' ? 'Event title' : 'Título del evento', done: !!(titleRef.current?.innerText || celebracion?.nombre), tile: undefined },
     // Eventos "grupales" (casuales, sin festejado) no deben quedarse atorados sin
     // llegar al 100% por un campo que ni siquiera se les muestra.
-    ...(celebracion?.organizador_rol !== 'grupal' ? [{ label: lang === 'en' ? 'Guest of honor' : 'Festejado/a', done: !!festejado }] : []),
-    { label: lang === 'en' ? 'Date' : 'Fecha', done: !!fecha },
-    { label: lang === 'en' ? 'Place' : 'Lugar', done: !!lugar },
-    { label: lang === 'en' ? 'Description' : 'Descripción', done: !!tagline },
-    { label: lang === 'en' ? 'At least 1 guest' : 'Al menos 1 invitado', done: invitadosList.length > 0 },
-    { label: lang === 'en' ? 'Gift list or itinerary' : 'Regalos o itinerario', done: regalos.length > 0 || paradas.filter(p => p.id).length > 0 },
-  ]
+    ...(celebracion?.organizador_rol !== 'grupal' ? [{ label: lang === 'en' ? 'Guest of honor' : 'Festejado/a', done: !!festejado, tile: undefined }] : []),
+    { label: lang === 'en' ? 'Date' : 'Fecha', done: !!fecha, tile: undefined },
+    { label: lang === 'en' ? 'Place' : 'Lugar', done: !!lugar, tile: undefined },
+    { label: lang === 'en' ? 'Description' : 'Descripción', done: !!tagline, tile: undefined },
+    { label: lang === 'en' ? 'At least 1 guest' : 'Al menos 1 invitado', done: invitadosList.length > 0, tile: 'invitados' },
+    itemTipoEspecifico,
+    // Si apagaste un tile a propósito ("Oculto"), ese requisito no debe seguir
+    // contando como pendiente — ya decidiste que no lo quieres en este evento.
+  ].filter(item => !item.tile || tilesVisibles[item.tile] !== false)
   const progress = Math.round((progressItems.filter(p => p.done).length / progressItems.length) * 100)
   const progressLabel = getProgressLabel(progress, lang)
   const isComplete = progress === 100
@@ -2430,10 +2456,72 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             </div>
           </div>
 
-          {/* Hero card */}
+          {/* Hero card — vista grande (fecha/hora/lugar como encabezado, no
+              formulario) + panel de edición que se abre aparte con
+              "Editar detalles". Los handlers de abajo (guardarCampo,
+              guardarHora, guardarLugar, activarRecurrencia, etc.) son los
+              mismos de siempre, solo se movió dónde viven visualmente. */}
           <div style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', boxShadow: '0 12px 32px rgba(25,12,50,.18)', marginBottom: 14 }}>
             <div style={{ padding: '14px 16px 16px' }}>
               <input value={tagline} onChange={e => setTagline(e.target.value)} onBlur={e => guardarCampo('tagline', e.target.value)} placeholder={tx.tagline_placeholder} style={{ border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 13, color: '#7a7494', padding: '3px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' as const, marginBottom: 8 }} />
+
+              {celebracion?.organizador_rol !== 'grupal' && festejado && (
+                <div style={{ fontSize: 15, fontWeight: 700, color: te.tileText, padding: '0 8px', marginBottom: 10 }}>{festejado}</div>
+              )}
+
+              {(() => {
+                const fechaLegible = fecha
+                  ? new Date(fecha + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+                  : null
+                const horaLegible = horaPrincipal
+                  ? new Date(`2000-01-01T${horaPrincipal}`).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-MX', { hour: 'numeric', minute: '2-digit' })
+                  : null
+                const recordatorioResumen = recordatorioDias.length === 0
+                  ? (lang === 'en' ? 'No reminders' : 'Sin recordatorios')
+                  : recordatorioDias.length === 1
+                    ? (lang === 'en' ? '1 reminder' : '1 recordatorio')
+                    : (lang === 'en' ? `${recordatorioDias.length} reminders` : `${recordatorioDias.length} recordatorios`)
+                return (
+                  <>
+                    <div style={{ background: te.accentBg, borderRadius: 14, padding: '12px 16px', marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: te.accentText, textTransform: 'capitalize' as const, marginBottom: 2 }}>
+                        {fechaLegible || (lang === 'en' ? 'Add a date' : 'Agrega una fecha')}
+                      </div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: te.accentText }}>
+                        {horaLegible || (lang === 'en' ? 'Add a time' : 'Agrega una hora')}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'rgba(0,0,0,.03)', borderRadius: 12, padding: '9px 12px', marginBottom: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: te.tileText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                        {lugar || (lang === 'en' ? 'Add a place' : 'Agrega un lugar')}
+                      </span>
+                      {lugar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{tx.see_map}</a>}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1 }}>{shareUrl}</span>
+                      <button onClick={() => navigator.clipboard.writeText(`https://${shareUrl}`)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>{tx.copy}</button>
+                      <button onClick={() => setMostrarQR(v => !v)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>QR</button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, padding: '0 8px', marginBottom: 12, flexWrap: 'wrap' as const }}>
+                      {celebracion?.recurrente && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: te.accentText, background: te.accentBg, padding: '4px 10px', borderRadius: 99 }}>{lang === 'en' ? 'Repeats' : 'Se repite'}</span>
+                      )}
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#6d668c', background: 'rgba(0,0,0,.04)', padding: '4px 10px', borderRadius: 99 }}>{recordatorioResumen}</span>
+                    </div>
+                  </>
+                )
+              })()}
+
+              <button type="button" onClick={() => setMostrarEditarEvento(v => !v)} style={{ width: '100%', border: 'none', background: 'rgba(0,0,0,.03)', color: te.tileText, fontSize: 13, fontWeight: 700, padding: '10px 8px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {mostrarEditarEvento ? (lang === 'en' ? 'Hide details' : 'Ocultar detalles') : (lang === 'en' ? 'Edit details' : 'Editar detalles')}
+                <span style={{ fontSize: 11, transform: mostrarEditarEvento ? 'rotate(180deg)' : 'none', display: 'inline-block' }}>▾</span>
+              </button>
+
+              {mostrarEditarEvento && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,0,0,.06)' }}>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '6px 14px', padding: '0 4px' }}>
                 {celebracion?.organizador_rol !== 'grupal' && (
                   <div>
@@ -2633,6 +2721,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   </div>
                 )
               })()}
+              </div>
+              )}
             </div>
           </div>
 
