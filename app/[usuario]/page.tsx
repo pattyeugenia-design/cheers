@@ -92,7 +92,7 @@ function MiniCalendario({ eventos, lang, router }: { eventos: any[]; lang: strin
   const renderMes = (mes: Date, info: ReturnType<typeof construirMesInfo>) => {
     const nombreMes = mes.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long', year: 'numeric' })
     return (
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: 16 }}>
         <div style={{ textAlign: 'center', color: '#EEEDFE', fontWeight: 800, fontSize: 13, textTransform: 'capitalize', marginBottom: 8 }}>{nombreMes}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
           {diasSemana.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,.35)' }}>{d}</div>)}
@@ -125,16 +125,16 @@ function MiniCalendario({ eventos, lang, router }: { eventos: any[]; lang: strin
   }
 
   return (
-    <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: 16, marginBottom: 24 }}>
+    <div style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16, marginBottom: 14 }}>
         <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() - 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>←</button>
-        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 20 : 16 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 16 }}>
           {renderMes(mesActual, infoActual)}
           {renderMes(mesSiguiente, infoSiguiente)}
         </div>
         <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() + 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>→</button>
       </div>
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
         <span style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#534AB7', marginRight: 4 }} />{lang === 'en' ? 'You organize' : 'Organizas tú'}</span>
         <span style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#D4537E', marginRight: 4 }} />{lang === 'en' ? "You're invited" : 'Te invitaron'}</span>
       </div>
@@ -428,13 +428,10 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           </div>
         )}
 
-        {/* Calendario — más angosto que el resto del dashboard, centrado.
-            Ahora muestra dos meses lado a lado, así que necesita más ancho
-            que cuando era un solo mes (antes 420px). */}
+        {/* Calendario — dos tarjetas de mes separadas, del mismo ancho que el
+            resto del dashboard (antes era angosto, un solo mes de 420px). */}
         {esPropio && eventosCalendario.length > 0 && (
-          <div style={{ maxWidth:680, margin:'0 auto' }}>
-            <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
-          </div>
+          <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
         )}
 
         {/* Botón nueva celebración */}
