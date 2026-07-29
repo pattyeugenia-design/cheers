@@ -1,8 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { supabase } from '../../supabase'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 
 export default function AdminLogin() {
   const router = useRouter()
@@ -10,6 +12,16 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [verificando, setVerificando] = useState(true)
+
+  useEffect(() => {
+    // Primera capa: solo tu cuenta real puede ver este formulario. Cualquier
+    // otra persona se manda a home sin ninguna pista de que esto existe.
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user || user.email !== ADMIN_EMAIL) { router.push('/'); return }
+      setVerificando(false)
+    }).catch(() => router.push('/'))
+  }, [])
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault()
@@ -27,6 +39,10 @@ export default function AdminLogin() {
     } else {
       setError('Password incorrecto')
     }
+  }
+
+  if (verificando) {
+    return <div style={{ minHeight: '100vh', background: '#0d0b1a' }} />
   }
 
   return (

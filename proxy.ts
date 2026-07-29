@@ -1,55 +1,25 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { hashAdminSecret } from './app/lib/adminHash'
 
-const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
-
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
   const parts = request.nextUrl.pathname.split('/').filter(Boolean)
 
-  // Panel de admin: primera capa es tu sesión real (tu cuenta de Google/Cheers) en
-  // vez de un código que memorizar — si no estás logueada como tú, se manda a home
-  // sin dar pistas de que existe un panel de admin. La segunda capa sigue siendo
-  // el password del panel, para entrar a /dashboard.
-  if (parts[1] === 'admin_login') {
-    if (!user || user.email !== ADMIN_EMAIL) {
+  // Cheers guarda la sesión en el navegador (localStorage), no en cookies —
+  // por eso el servidor (aquí) nunca puede ver quién eres. La primera capa
+  // ("¿eres tú?") se revisa dentro de la propia página de admin_login, en el
+  // navegador, con el mismo método que ya usa el resto de la app. Aquí solo
+  // se protege /dashboard con el password del panel, vía cookie propia.
+  if (parts[1] === 'admin_login' && parts[2] === 'dashboard') {
+    const cookie = request.cookies.get('admin_auth')?.value
+    const expected = await hashAdminSecret(process.env.ADMIN_PANEL_PASSWORD || '')
+    if (!cookie || cookie !== expected) {
       const url = request.nextUrl.clone()
-      url.pathname = '/'
+      url.pathname = `/${parts[0]}/admin_login`
       return NextResponse.redirect(url)
-    }
-    if (parts[2] === 'dashboard') {
-      const cookie = request.cookies.get('admin_auth')?.value
-      const expected = await hashAdminSecret(process.env.ADMIN_PANEL_PASSWORD || '')
-      if (!cookie || cookie !== expected) {
-        const url = request.nextUrl.clone()
-        url.pathname = `/${parts[0]}/admin_login`
-        return NextResponse.redirect(url)
-      }
     }
   }
 
-  return supabaseResponse
+  return NextResponse.next()
 }
 
 export const config = {
