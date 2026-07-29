@@ -124,7 +124,17 @@ export default function Login() {
       if (error) setErrorEmail('Email o contraseña incorrectos.')
       setCargandoEmail(false)
     } else {
-      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        // Sin esto, el link de confirmación del correo manda al usuario a la
+        // Site URL genérica configurada en Supabase (normalmente el home),
+        // donde nadie revisa si ya hay sesión — se queda viendo el home como
+        // si no hubiera pasado nada, aunque técnicamente ya esté logueado.
+        // Mandándolo de vuelta a /login, la lógica que ya existe aquí (arriba)
+        // lo detecta y lo manda solo a /onboarding o a su dashboard.
+        options: { emailRedirectTo: `${window.location.origin}/login` },
+      })
       if (error) {
         setErrorEmail(error.message.includes('already registered') ? 'Ese email ya tiene cuenta, inicia sesión.' : 'No se pudo crear la cuenta.')
       } else if (!data.session) {
