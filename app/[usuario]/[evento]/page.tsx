@@ -2486,6 +2486,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   : recordatorioDias.length === 1
                     ? (lang === 'en' ? '1 reminder' : '1 recordatorio')
                     : (lang === 'en' ? `${recordatorioDias.length} reminders` : `${recordatorioDias.length} recordatorios`)
+                // Para que la organizadora también pueda agregar su propio evento a
+                // su calendario (antes esto solo existía en la vista de invitados).
+                const linksCalendario = fecha ? calendarLinks(celebracion?.nombre || 'Cheers', fecha, horaPrincipal, lugar, celebracion?.recurrente ? {
+                  tipo: celebracion.recurrencia_tipo,
+                  intervalo: celebracion.recurrencia_intervalo,
+                  diasSemana: celebracion.recurrencia_dias_semana,
+                  diaMes: celebracion.recurrencia_dia_mes,
+                  diaSemana: celebracion.recurrencia_dia_semana,
+                  semanaMes: celebracion.recurrencia_semana_mes,
+                  finTipo: celebracion.recurrencia_fin_tipo,
+                  finFecha: celebracion.recurrencia_fin_fecha,
+                  finConteo: celebracion.recurrencia_fin_conteo,
+                } : null) : null
                 return (
                   <>
                     <div style={{ background: te.accentBg, borderRadius: 14, padding: '12px 16px', marginBottom: 10 }}>
@@ -2503,6 +2516,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                       </span>
                       {lugar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{tx.see_map}</a>}
                     </div>
+
+                    {linksCalendario && (
+                      <div style={{ display: 'flex', gap: 8, padding: '0 8px', marginBottom: 10, flexWrap: 'wrap' as const }}>
+                        <a href={linksCalendario.googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: te.accentText, background: te.accentBg, padding: '5px 10px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
+                        <a href={linksCalendario.icsUrl} download={`${celebracion?.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 11, fontWeight: 700, color: te.accentText, background: te.accentBg, padding: '5px 10px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
+                      </div>
+                    )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', marginBottom: 10 }}>
                       <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1 }}>{shareUrl}</span>
@@ -2522,7 +2542,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
               <button type="button" onClick={() => setMostrarEditarEvento(v => !v)} style={{ width: '100%', border: 'none', background: 'rgba(0,0,0,.03)', color: te.tileText, fontSize: 13, fontWeight: 700, padding: '10px 8px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 {mostrarEditarEvento ? (lang === 'en' ? 'Hide details' : 'Ocultar detalles') : (lang === 'en' ? 'Edit details' : 'Editar detalles')}
-                <span style={{ fontSize: 11, transform: mostrarEditarEvento ? 'rotate(180deg)' : 'none', display: 'inline-block' }}>▾</span>
+                <svg width="10" height="6" viewBox="0 0 10 6" style={{ transform: mostrarEditarEvento ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+                  <path d="M1 1L5 5L9 1" stroke={te.tileText} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
               </button>
 
               {mostrarEditarEvento && (
