@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { calcularProximasFechas, TipoRecurrencia } from '../../../recurrencia'
+import { calcularProximasFechas, ConfigRecurrencia, TipoRecurrencia } from '../../../recurrencia'
 
 const OBJETIVO_FUTURAS = 10 // siempre mantener al menos estas fechas futuras generadas
 
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   const { data: series } = await admin
     .from('celebraciones')
-    .select('slug, fecha, plan, organizador_id, recurrente, recurrencia_tipo, recurrencia_dia_semana, recurrencia_semana_mes')
+    .select('slug, fecha, plan, organizador_id, recurrente, recurrencia_tipo, recurrencia_intervalo, recurrencia_dias_semana, recurrencia_dia_semana, recurrencia_dia_mes, recurrencia_semana_mes, recurrencia_fin_tipo, recurrencia_fin_fecha, recurrencia_fin_conteo')
     .eq('recurrente', true)
     .eq('archivada', false)
 
@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   let seriesSinPagar = 0
 
   for (const serie of series || []) {
-    if (!serie.recurrencia_tipo || serie.recurrencia_dia_semana === null || serie.recurrencia_dia_semana === undefined) continue
+    if (!serie.recurrencia_tipo) continue
 
     const { data: perfilOrg } = await admin.from('perfiles').select('plan').eq('user_id', serie.organizador_id).single()
     const esPro = perfilOrg?.plan === 'lifetime' || serie.plan === 'pro'
@@ -48,17 +48,35 @@ export async function GET(req: Request) {
     const faltantes = OBJETIVO_FUTURAS - futuras.length
     if (faltantes <= 0) continue
 
+    // Si la serie termina "después de X repeticiones", el conteo es sobre el
+    // total histórico (incluye pasadas y canceladas — canceladas sí cuentan
+    // como repetición usada, igual que en Outlook/Google Calendar).
+    let restantesPorConteo: number | null = null
+    if (serie.recurrencia_fin_tipo === 'conteo' && serie.recurrencia_fin_conteo) {
+      restantesPorConteo = serie.recurrencia_fin_conteo - (existentes?.length || 0)
+      if (restantesPorConteo <= 0) continue
+    }
+
     const ultimaFecha = existentes && existentes.length > 0 ? existentes[0].fecha : null
     const fechaInicio = ultimaFecha
       ? new Date(new Date(ultimaFecha + 'T00:00:00').getTime() + 86400000).toISOString().slice(0, 10)
       : (serie.fecha || hoyStr)
 
+    const config: ConfigRecurrencia = {
+      tipo: serie.recurrencia_tipo as TipoRecurrencia,
+      intervalo: serie.recurrencia_intervalo,
+      diasSemana: serie.recurrencia_dias_semana,
+      diaMes: serie.recurrencia_dia_mes,
+      diaSemana: serie.recurrencia_dia_semana,
+      semanaMes: serie.recurrencia_semana_mes,
+    }
+
     const nuevasFechas = calcularProximasFechas(
-      serie.recurrencia_tipo as TipoRecurrencia,
-      serie.recurrencia_dia_semana,
-      serie.recurrencia_semana_mes,
+      config,
       fechaInicio,
-      faltantes
+      faltantes,
+      serie.recurrencia_fin_tipo === 'fecha' ? serie.recurrencia_fin_fecha : null,
+      restantesPorConteo
     )
 
     if (nuevasFechas.length === 0) continue

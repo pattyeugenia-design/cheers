@@ -94,7 +94,7 @@ function MiniCalendario({ eventos, lang, router }: { eventos: any[]; lang: strin
               {dia && eventosPorDia[dia]?.slice(0, 2).map((e, idx) => (
                 <div
                   key={idx}
-                  onClick={() => router.push(`/${e.slug}`)}
+                  onClick={() => router.push(`/${e.slug}${e.recurrente ? '#proximas-fechas' : ''}`)}
                   title={e.nombre}
                   style={{ fontSize: 8, fontWeight: 700, background: e.esPropia ? '#534AB7' : '#D4537E', color: '#fff', borderRadius: 4, padding: '1px 3px', marginTop: 2, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
                 >
@@ -125,6 +125,10 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   const [perfilAuth, setPerfilAuth] = useState<any>(null)
   const [celebraciones, setCelebraciones] = useState<any[]>([])
   const [invitaciones, setInvitaciones] = useState<any[]>([])
+  // Fechas reales generadas para cada serie recurrente (slug -> ['YYYY-MM-DD', ...]),
+  // para que el Mini Calendario pinte el evento en CADA fecha en la que ocurre, no
+  // solo en la fecha ancla con la que se creó la serie.
+  const [ocurrenciasPorSlug, setOcurrenciasPorSlug] = useState<Record<string, string[]>>({})
   const [cargando, setCargando] = useState(true)
   const [esPropio, setEsPropio] = useState(false)
   const [username, setUsername] = useState('')
@@ -141,6 +145,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     // porque este efecto solo corría una vez, al montar el componente.
     async function cargarDatos(usuario: string) {
       setUsername(usuario)
+      const nuevoOcurrenciasPorSlug: Record<string, string[]> = {}
       const { data: perfilRows } = await supabase.rpc('get_perfil_publico_por_username', { p_username: usuario })
       const perfil = perfilRows?.[0]
       if (!perfil) { setCargando(false); return }
@@ -178,11 +183,40 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
                 miRegalo: (c.gifts || []).find((g: any) => g.id === regaloIdPorSlug[c.slug])?.nombre || null,
               }))
             )
+
+            // Fechas reales de las series recurrentes a las que estoy invitado (vía RPC,
+            // como invitado no tengo permiso de leer "ocurrencias" directo)
+            const invitadasRecurrentes = (celsInvitado || []).filter((c: any) => c.recurrente)
+            if (invitadasRecurrentes.length) {
+              const listas = await Promise.all(
+                invitadasRecurrentes.map((c: any) => supabase.rpc('get_ocurrencias_por_slug', { p_slug: c.slug }))
+              )
+              invitadasRecurrentes.forEach((c: any, i: number) => {
+                const fechas = (listas[i].data || []).map((o: any) => o.fecha)
+                if (fechas.length) nuevoOcurrenciasPorSlug[c.slug] = fechas
+              })
+            }
           }
 
           // La lista de celebraciones organizadas solo se muestra al dueño del perfil, nunca a otros visitantes
           const { data } = await supabase.from('celebraciones').select('*').eq('organizador_id', perfil.user_id).order('fecha', { ascending: true })
           setCelebraciones(data || [])
+
+          // Fechas reales de mis propias series recurrentes (acceso directo, soy el organizador)
+          const propiasRecurrentes = (data || []).filter((c: any) => c.recurrente)
+          if (propiasRecurrentes.length) {
+            const { data: ocs } = await supabase
+              .from('ocurrencias')
+              .select('celebracion_slug, fecha')
+              .in('celebracion_slug', propiasRecurrentes.map((c: any) => c.slug))
+              .eq('cancelada', false)
+            ;(ocs || []).forEach((o: any) => {
+              if (!nuevoOcurrenciasPorSlug[o.celebracion_slug]) nuevoOcurrenciasPorSlug[o.celebracion_slug] = []
+              nuevoOcurrenciasPorSlug[o.celebracion_slug].push(o.fecha)
+            })
+          }
+
+          setOcurrenciasPorSlug(nuevoOcurrenciasPorSlug)
         }
       }
 
@@ -249,9 +283,17 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   const avatar = user?.user_metadata?.avatar_url
   const plan = perfilOwner?.plan || 'free'
   const { grupos, pasadas, pasadasBloqueadas, sinFecha } = agruparPorTrimestre(celebraciones, lang, plan)
+  // Las series recurrentes se pintan en CADA una de sus fechas reales (tabla
+  // "ocurrencias"), no solo en la fecha ancla con la que se crearon — si no,
+  // un evento "cada viernes" solo aparecería una vez en todo el calendario.
+  const expandirRecurrente = (c: any) =>
+    c.recurrente && ocurrenciasPorSlug[c.slug]?.length
+      ? ocurrenciasPorSlug[c.slug].map(fecha => ({ ...c, fecha }))
+      : [c]
+
   const eventosCalendario = [
-    ...celebraciones.filter(c => !c.archivada).map(c => ({ ...c, esPropia: true })),
-    ...invitaciones.map(c => ({ ...c, esPropia: false })),
+    ...celebraciones.filter(c => !c.archivada).flatMap(expandirRecurrente).map(c => ({ ...c, esPropia: true })),
+    ...invitaciones.flatMap(expandirRecurrente).map(c => ({ ...c, esPropia: false })),
   ]
   const invitacionesNuevas = invitaciones.filter(c => c.invitadoDesde && (Date.now() - new Date(c.invitadoDesde).getTime()) < 7 * 24 * 60 * 60 * 1000)
 

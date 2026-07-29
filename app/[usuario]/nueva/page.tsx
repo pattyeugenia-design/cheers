@@ -69,9 +69,15 @@ export default function NuevaCelebracion() {
   const [lugar, setLugar] = useState('')
   const [cenaSubTipo, setCenaSubTipo] = useState<'restaurante' | 'casa'>('casa')
   const [recurrente, setRecurrente] = useState(false)
-  const [recurrenciaTipo, setRecurrenciaTipo] = useState<'semanal' | 'mensual_nesimo'>('semanal')
-  const [recurrenciaDiaSemana, setRecurrenciaDiaSemana] = useState(5) // 5 = viernes
-  const [recurrenciaSemanaMes, setRecurrenciaSemanaMes] = useState(1)
+  const [recurrenciaTipo, setRecurrenciaTipo] = useState<'diario' | 'semanal' | 'mensual_dia' | 'mensual_nesimo' | 'anual'>('semanal')
+  const [recurrenciaIntervalo, setRecurrenciaIntervalo] = useState(1) // "cada N" días/semanas/meses/años
+  const [recurrenciaDiasSemana, setRecurrenciaDiasSemana] = useState<number[]>([5]) // 'semanal': uno o varios, 5 = viernes
+  const [recurrenciaDiaMes, setRecurrenciaDiaMes] = useState(1) // 'mensual_dia': día fijo del mes
+  const [recurrenciaDiaSemana, setRecurrenciaDiaSemana] = useState(5) // 'mensual_nesimo': 5 = viernes
+  const [recurrenciaSemanaMes, setRecurrenciaSemanaMes] = useState(1) // 'mensual_nesimo': 1-4, o -1 = último
+  const [recurrenciaFinTipo, setRecurrenciaFinTipo] = useState<'nunca' | 'fecha' | 'conteo'>('nunca')
+  const [recurrenciaFinFecha, setRecurrenciaFinFecha] = useState('')
+  const [recurrenciaFinConteo, setRecurrenciaFinConteo] = useState(10)
   const [userSlug, setUserSlug] = useState('')
   const [eventSlug, setEventSlug] = useState('')
   const [linkConfirmed, setLinkConfirmed] = useState(false)
@@ -194,8 +200,14 @@ export default function NuevaCelebracion() {
       fecha: fecha || null,
       recurrente,
       recurrencia_tipo: recurrente ? recurrenciaTipo : null,
-      recurrencia_dia_semana: recurrente ? recurrenciaDiaSemana : null,
+      recurrencia_intervalo: recurrente ? recurrenciaIntervalo : null,
+      recurrencia_dias_semana: recurrente && recurrenciaTipo === 'semanal' ? recurrenciaDiasSemana : null,
+      recurrencia_dia_mes: recurrente && recurrenciaTipo === 'mensual_dia' ? recurrenciaDiaMes : null,
+      recurrencia_dia_semana: recurrente && recurrenciaTipo === 'mensual_nesimo' ? recurrenciaDiaSemana : null,
       recurrencia_semana_mes: recurrente && recurrenciaTipo === 'mensual_nesimo' ? recurrenciaSemanaMes : null,
+      recurrencia_fin_tipo: recurrente ? recurrenciaFinTipo : null,
+      recurrencia_fin_fecha: recurrente && recurrenciaFinTipo === 'fecha' ? recurrenciaFinFecha : null,
+      recurrencia_fin_conteo: recurrente && recurrenciaFinTipo === 'conteo' ? recurrenciaFinConteo : null,
       paradas: lugar ? [{ lugar, hora: '', nota: '' }] : [],
       gifts: [], created_at: new Date().toISOString(),
     })
@@ -454,40 +466,113 @@ export default function NuevaCelebracion() {
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#2a2440' }}>{lang === 'en' ? 'Repeats' : 'Se repite'}</span>
                   </div>
 
-                  {recurrente && (
-                    <div style={{ background: '#F5F4FB', borderRadius: 14, padding: 14, marginBottom: 0 }}>
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                        <button type="button" onClick={() => setRecurrenciaTipo('semanal')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recurrenciaTipo === 'semanal' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recurrenciaTipo === 'semanal' ? '#fff' : '#534AB7' }}>{lang === 'en' ? 'Every week' : 'Cada semana'}</button>
-                        <button type="button" onClick={() => setRecurrenciaTipo('mensual_nesimo')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recurrenciaTipo === 'mensual_nesimo' ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recurrenciaTipo === 'mensual_nesimo' ? '#fff' : '#534AB7' }}>{lang === 'en' ? 'Monthly' : 'Cada mes'}</button>
-                      </div>
+                  {recurrente && (() => {
+                    const diasSemanaCortos = lang === 'en' ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'] : ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+                    const nombresDia = lang === 'en'
+                      ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                      : ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+                    const unidad = (n: number) => {
+                      const plural = n !== 1
+                      if (lang === 'en') return { diario: plural ? 'days' : 'day', semanal: plural ? 'weeks' : 'week', mensual_dia: plural ? 'months' : 'month', mensual_nesimo: plural ? 'months' : 'month', anual: plural ? 'years' : 'year' }[recurrenciaTipo]
+                      return { diario: plural ? 'días' : 'día', semanal: plural ? 'semanas' : 'semana', mensual_dia: plural ? 'meses' : 'mes', mensual_nesimo: plural ? 'meses' : 'mes', anual: plural ? 'años' : 'año' }[recurrenciaTipo]
+                    }
+                    const toggleDia = (d: number) => setRecurrenciaDiasSemana(prev =>
+                      prev.includes(d) ? (prev.length > 1 ? prev.filter(x => x !== d) : prev) : [...prev, d].sort((a, b) => a - b)
+                    )
+                    const frecuencias: { key: typeof recurrenciaTipo; label: string }[] = [
+                      { key: 'diario', label: lang === 'en' ? 'Daily' : 'Diario' },
+                      { key: 'semanal', label: lang === 'en' ? 'Weekly' : 'Semanal' },
+                      { key: 'mensual_dia', label: lang === 'en' ? 'Monthly' : 'Mensual' },
+                      { key: 'anual', label: lang === 'en' ? 'Yearly' : 'Anual' },
+                    ]
+                    return (
+                      <div style={{ background: '#F5F4FB', borderRadius: 14, padding: 14, marginBottom: 0 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 12 }}>
+                          {frecuencias.map(f => {
+                            const activo = f.key === recurrenciaTipo || (f.key === 'mensual_dia' && recurrenciaTipo === 'mensual_nesimo')
+                            return (
+                              <button key={f.key} type="button" onClick={() => setRecurrenciaTipo(f.key)} style={{ border: 'none', borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: activo ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: activo ? '#fff' : '#534AB7' }}>{f.label}</button>
+                            )
+                          })}
+                        </div>
 
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {recurrenciaTipo === 'mensual_nesimo' && (
-                          <select value={recurrenciaSemanaMes} onChange={e => setRecurrenciaSemanaMes(Number(e.target.value))} style={{ ...inputStyle, marginBottom: 0, fontSize: 13, flex: '0 0 auto', width: 'auto', padding: '10px 8px' }}>
-                            <option value={1}>{lang === 'en' ? '1st' : '1er'}</option>
-                            <option value={2}>{lang === 'en' ? '2nd' : '2do'}</option>
-                            <option value={3}>{lang === 'en' ? '3rd' : '3er'}</option>
-                            <option value={4}>{lang === 'en' ? '4th' : '4to'}</option>
-                          </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                          <span style={{ fontSize: 12, color: '#6d668c', fontWeight: 600, flexShrink: 0 }}>{lang === 'en' ? 'Every' : 'Cada'}</span>
+                          <input type="number" min={1} max={99} value={recurrenciaIntervalo} onChange={e => setRecurrenciaIntervalo(Math.max(1, Number(e.target.value) || 1))} style={{ ...inputStyle, marginBottom: 0, width: 56, flex: '0 0 auto', padding: '10px 8px', textAlign: 'center' }} />
+                          <span style={{ fontSize: 12, color: '#6d668c', fontWeight: 600 }}>{unidad(recurrenciaIntervalo)}</span>
+                        </div>
+
+                        {recurrenciaTipo === 'semanal' && (
+                          <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
+                            {diasSemanaCortos.map((d, i) => (
+                              <button key={i} type="button" onClick={() => toggleDia(i)} title={nombresDia[i]} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: FSYS, background: recurrenciaDiasSemana.includes(i) ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recurrenciaDiasSemana.includes(i) ? '#fff' : '#534AB7' }}>{d}</button>
+                            ))}
+                          </div>
                         )}
-                        <select value={recurrenciaDiaSemana} onChange={e => setRecurrenciaDiaSemana(Number(e.target.value))} style={{ ...inputStyle, marginBottom: 0, fontSize: 13, flex: 1 }}>
-                          <option value={0}>{lang === 'en' ? 'Sunday' : 'domingo'}</option>
-                          <option value={1}>{lang === 'en' ? 'Monday' : 'lunes'}</option>
-                          <option value={2}>{lang === 'en' ? 'Tuesday' : 'martes'}</option>
-                          <option value={3}>{lang === 'en' ? 'Wednesday' : 'miércoles'}</option>
-                          <option value={4}>{lang === 'en' ? 'Thursday' : 'jueves'}</option>
-                          <option value={5}>{lang === 'en' ? 'Friday' : 'viernes'}</option>
-                          <option value={6}>{lang === 'en' ? 'Saturday' : 'sábado'}</option>
-                        </select>
-                      </div>
 
-                      <p style={{ fontSize: 11, color: '#a39ec0', margin: '10px 2px 0', lineHeight: 1.5 }}>
-                        {lang === 'en'
-                          ? 'You can pick this for free, but the future dates only generate once this celebration is Super Cheer or your account is Extra Cheer.'
-                          : 'Puedes elegirlo gratis, pero las fechas futuras solo se generan cuando esta celebración sea Super Cheer o tu cuenta sea Extra Cheer.'}
-                      </p>
-                    </div>
-                  )}
+                        {(recurrenciaTipo === 'mensual_dia' || recurrenciaTipo === 'mensual_nesimo') && (
+                          <>
+                            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                              <button type="button" onClick={() => setRecurrenciaTipo('mensual_dia')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recurrenciaTipo === 'mensual_dia' ? '#fff' : 'transparent', color: '#534AB7', boxShadow: recurrenciaTipo === 'mensual_dia' ? '0 1px 4px rgba(0,0,0,.12)' : 'none' }}>
+                                {lang === 'en' ? `Day ${recurrenciaDiaMes}` : `Día ${recurrenciaDiaMes}`}
+                              </button>
+                              <button type="button" onClick={() => setRecurrenciaTipo('mensual_nesimo')} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 6px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recurrenciaTipo === 'mensual_nesimo' ? '#fff' : 'transparent', color: '#534AB7', boxShadow: recurrenciaTipo === 'mensual_nesimo' ? '0 1px 4px rgba(0,0,0,.12)' : 'none' }}>
+                                {lang === 'en' ? 'Nth weekday' : 'Enésimo día'}
+                              </button>
+                            </div>
+                            {recurrenciaTipo === 'mensual_dia' ? (
+                              <input type="number" min={1} max={31} value={recurrenciaDiaMes} onChange={e => setRecurrenciaDiaMes(Math.min(31, Math.max(1, Number(e.target.value) || 1)))} style={{ ...inputStyle, marginBottom: 0, fontSize: 13, width: 72 }} />
+                            ) : (
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <select value={recurrenciaSemanaMes} onChange={e => setRecurrenciaSemanaMes(Number(e.target.value))} style={{ ...inputStyle, marginBottom: 0, fontSize: 13, flex: '0 0 auto', width: 'auto', padding: '10px 8px' }}>
+                                  <option value={1}>{lang === 'en' ? '1st' : '1er'}</option>
+                                  <option value={2}>{lang === 'en' ? '2nd' : '2do'}</option>
+                                  <option value={3}>{lang === 'en' ? '3rd' : '3er'}</option>
+                                  <option value={4}>{lang === 'en' ? '4th' : '4to'}</option>
+                                  <option value={-1}>{lang === 'en' ? 'Last' : 'Último'}</option>
+                                </select>
+                                <select value={recurrenciaDiaSemana} onChange={e => setRecurrenciaDiaSemana(Number(e.target.value))} style={{ ...inputStyle, marginBottom: 0, fontSize: 13, flex: 1 }}>
+                                  {nombresDia.map((n, i) => <option key={i} value={i}>{n}</option>)}
+                                </select>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {recurrenciaTipo === 'anual' && (
+                          <p style={{ fontSize: 12, color: '#6d668c', margin: 0 }}>
+                            {lang === 'en' ? 'Repeats every year on the date above.' : 'Se repite cada año en la fecha de arriba.'}
+                          </p>
+                        )}
+
+                        <div style={{ height: 1, background: 'rgba(0,0,0,.06)', margin: '14px 0 12px' }} />
+
+                        <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 8 }}>{lang === 'en' ? 'Ends' : 'Termina'}</label>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: recurrenciaFinTipo === 'nunca' ? 0 : 10 }}>
+                          {(['nunca', 'fecha', 'conteo'] as const).map(op => (
+                            <button key={op} type="button" onClick={() => setRecurrenciaFinTipo(op)} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, background: recurrenciaFinTipo === op ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#fff', color: recurrenciaFinTipo === op ? '#fff' : '#534AB7' }}>
+                              {op === 'nunca' ? (lang === 'en' ? 'Never' : 'Nunca') : op === 'fecha' ? (lang === 'en' ? 'On date' : 'En fecha') : (lang === 'en' ? 'After N times' : 'Después de N')}
+                            </button>
+                          ))}
+                        </div>
+                        {recurrenciaFinTipo === 'fecha' && (
+                          <input type="date" value={recurrenciaFinFecha} onChange={e => setRecurrenciaFinFecha(e.target.value)} style={{ ...inputStyle, marginBottom: 0, fontSize: 13 }} />
+                        )}
+                        {recurrenciaFinTipo === 'conteo' && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="number" min={1} max={999} value={recurrenciaFinConteo} onChange={e => setRecurrenciaFinConteo(Math.max(1, Number(e.target.value) || 1))} style={{ ...inputStyle, marginBottom: 0, width: 64, flex: '0 0 auto', padding: '10px 8px', textAlign: 'center' }} />
+                            <span style={{ fontSize: 12, color: '#6d668c', fontWeight: 600 }}>{lang === 'en' ? 'repetitions' : 'repeticiones'}</span>
+                          </div>
+                        )}
+
+                        <p style={{ fontSize: 11, color: '#a39ec0', margin: '14px 2px 0', lineHeight: 1.5 }}>
+                          {lang === 'en'
+                            ? 'You can pick this for free, but the future dates only generate once this celebration is Super Cheer or your account is Extra Cheer.'
+                            : 'Puedes elegirlo gratis, pero las fechas futuras solo se generan cuando esta celebración sea Super Cheer o tu cuenta sea Extra Cheer.'}
+                        </p>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {limiteCelebracionActiva ? (

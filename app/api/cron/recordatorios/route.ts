@@ -125,7 +125,7 @@ export async function GET(req: Request) {
   }
 
   const candidatasHoy = candidatas.filter(c => {
-    const diasConfigurados: number[] = Array.isArray(c.recordatorio_dias) ? c.recordatorio_dias : [7]
+    const diasConfigurados: number[] = Array.isArray(c.recordatorio_dias) ? c.recordatorio_dias : [2]
     const fechaEvento = new Date(c.fechaEvento)
     fechaEvento.setHours(0, 0, 0, 0)
     const diffDias = Math.round((fechaEvento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
@@ -158,7 +158,7 @@ export async function GET(req: Request) {
     const prefs: NotificacionesPrefs = perfilOrg?.notificaciones_prefs?.recordatorio ? perfilOrg.notificaciones_prefs : DEFAULT_NOTIF_PREFS
     const nivelRecordatorio = prefs.recordatorio.nivel
     if (nivelRecordatorio !== 'todo') {
-      const diasConfigList: number[] = Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [7]
+      const diasConfigList: number[] = Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [2]
       const sorted = [...diasConfigList].sort((a, b) => a - b)
       const fechaEvt = new Date(cel.fechaEvento)
       fechaEvt.setHours(0, 0, 0, 0)

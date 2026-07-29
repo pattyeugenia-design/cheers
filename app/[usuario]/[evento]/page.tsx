@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import Image from 'next/image'
@@ -140,19 +141,54 @@ function formatICSDate(date: Date) {
 
 const DIAS_ICS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
 
+export type ConfigRecurrenciaICS = {
+  tipo?: 'diario' | 'semanal' | 'mensual_dia' | 'mensual_nesimo' | 'anual' | null
+  intervalo?: number | null
+  diasSemana?: number[] | null   // 'semanal': uno o varios
+  diaMes?: number | null         // 'mensual_dia'
+  diaSemana?: number | null      // 'mensual_nesimo'
+  semanaMes?: number | null      // 'mensual_nesimo': 1-4, o -1 = último
+  finTipo?: 'nunca' | 'fecha' | 'conteo' | null
+  finFecha?: string | null       // 'YYYY-MM-DD'
+  finConteo?: number | null
+}
+
 // Si la celebración es una serie recurrente, agrega la línea RRULE para que
-// Apple/Outlook/Google entiendan el patrón de repetición, no solo esta fecha suelta.
-function construirRRULE(tipo?: 'semanal' | 'mensual_nesimo' | null, diaSemana?: number | null, semanaMes?: number | null): string | null {
-  if (!tipo || diaSemana == null || diaSemana < 0 || diaSemana > 6) return null
-  const dia = DIAS_ICS[diaSemana]
-  if (tipo === 'semanal') return `RRULE:FREQ=WEEKLY;BYDAY=${dia}`
-  if (tipo === 'mensual_nesimo' && semanaMes) return `RRULE:FREQ=MONTHLY;BYDAY=${semanaMes}${dia}`
-  return null
+// Apple/Outlook/Google entiendan el patrón de repetición completo (cada N,
+// varios días, y cuándo termina), no solo esta fecha suelta.
+function construirRRULE(config?: ConfigRecurrenciaICS | null): string | null {
+  if (!config?.tipo) return null
+  const intervalo = Math.max(1, config.intervalo || 1)
+  let regla: string
+
+  if (config.tipo === 'diario') {
+    regla = `FREQ=DAILY;INTERVAL=${intervalo}`
+  } else if (config.tipo === 'semanal') {
+    const dias = (config.diasSemana?.length ? config.diasSemana : (config.diaSemana != null ? [config.diaSemana] : []))
+      .filter(d => d >= 0 && d <= 6).map(d => DIAS_ICS[d])
+    if (!dias.length) return null
+    regla = `FREQ=WEEKLY;INTERVAL=${intervalo};BYDAY=${dias.join(',')}`
+  } else if (config.tipo === 'mensual_dia') {
+    if (!config.diaMes) return null
+    regla = `FREQ=MONTHLY;INTERVAL=${intervalo};BYMONTHDAY=${config.diaMes}`
+  } else if (config.tipo === 'mensual_nesimo') {
+    if (config.diaSemana == null || config.diaSemana < 0 || config.diaSemana > 6 || !config.semanaMes) return null
+    regla = `FREQ=MONTHLY;INTERVAL=${intervalo};BYDAY=${config.semanaMes}${DIAS_ICS[config.diaSemana]}`
+  } else if (config.tipo === 'anual') {
+    regla = `FREQ=YEARLY;INTERVAL=${intervalo}`
+  } else {
+    return null
+  }
+
+  if (config.finTipo === 'conteo' && config.finConteo) regla += `;COUNT=${config.finConteo}`
+  else if (config.finTipo === 'fecha' && config.finFecha) regla += `;UNTIL=${config.finFecha.replace(/-/g, '')}T235959Z`
+
+  return `RRULE:${regla}`
 }
 
 function calendarLinks(
   nombre: string, fecha: string, hora: string, lugar: string,
-  recurrencia?: { tipo?: 'semanal' | 'mensual_nesimo' | null; diaSemana?: number | null; semanaMes?: number | null } | null
+  recurrencia?: ConfigRecurrenciaICS | null
 ) {
   const inicio = new Date(`${fecha}T${hora || '12:00'}:00`)
   const fin = new Date(inicio.getTime() + 3 * 60 * 60 * 1000) // 3 horas por default
@@ -160,7 +196,7 @@ function calendarLinks(
 
   const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(nombre)}&dates=${formatICSDate(inicio)}/${formatICSDate(fin)}&details=${encodeURIComponent(detalles)}&location=${encodeURIComponent(lugar || '')}`
 
-  const rrule = recurrencia ? construirRRULE(recurrencia.tipo, recurrencia.diaSemana, recurrencia.semanaMes) : null
+  const rrule = recurrencia ? construirRRULE(recurrencia) : null
   const lineasIcs = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -358,7 +394,17 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
           {fecha && <p style={{ fontSize: 14, color: txtSecundario, margin: '0 0 4px' }}>{fecha}</p>}
           {lugarNombre && <p style={{ fontSize: 14, color: txtTerciario, margin: 0 }}>{lugarNombre}</p>}
           {fechaEfectiva && (() => {
-            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarNombre, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarNombre, celebracion.recurrente ? {
+              tipo: celebracion.recurrencia_tipo,
+              intervalo: celebracion.recurrencia_intervalo,
+              diasSemana: celebracion.recurrencia_dias_semana,
+              diaMes: celebracion.recurrencia_dia_mes,
+              diaSemana: celebracion.recurrencia_dia_semana,
+              semanaMes: celebracion.recurrencia_semana_mes,
+              finTipo: celebracion.recurrencia_fin_tipo,
+              finFecha: celebracion.recurrencia_fin_fecha,
+              finConteo: celebracion.recurrencia_fin_conteo,
+            } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
                 <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: txtPrimario, background: pillBgInv, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
@@ -559,7 +605,17 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
           {fecha && <p style={{ fontSize: 14, color: txtSecundario, margin: '0 0 4px' }}>{fecha}</p>}
           {lugarEfectivo && <a href={`https://maps.google.com/?q=${encodeURIComponent(lugarEfectivo)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: txtTerciario, textDecoration: 'none', borderBottom: `1px solid ${claro ? 'rgba(255,255,255,.3)' : 'rgba(42,36,64,.25)'}` }}>{lugarEfectivo} →</a>}
           {fechaEfectiva && (() => {
-            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarEfectivo, celebracion.recurrente ? { tipo: celebracion.recurrencia_tipo, diaSemana: celebracion.recurrencia_dia_semana, semanaMes: celebracion.recurrencia_semana_mes } : null)
+            const { googleUrl, icsUrl } = calendarLinks(celebracion.nombre || 'Cheers', fechaEfectiva, horaEfectiva, lugarEfectivo, celebracion.recurrente ? {
+              tipo: celebracion.recurrencia_tipo,
+              intervalo: celebracion.recurrencia_intervalo,
+              diasSemana: celebracion.recurrencia_dias_semana,
+              diaMes: celebracion.recurrencia_dia_mes,
+              diaSemana: celebracion.recurrencia_dia_semana,
+              semanaMes: celebracion.recurrencia_semana_mes,
+              finTipo: celebracion.recurrencia_fin_tipo,
+              finFecha: celebracion.recurrencia_fin_fecha,
+              finConteo: celebracion.recurrencia_fin_conteo,
+            } : null)
             return (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
                 <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: txtPrimario, background: pillBgInv, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>
@@ -952,6 +1008,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [showWAPrompt, setShowWAPrompt] = useState(false)
   const [mostrarQR, setMostrarQR] = useState(false)
   const [mostrarRecordatorios, setMostrarRecordatorios] = useState(false)
+  // La tarjeta que contiene este campo tiene overflow:hidden (para las esquinas
+  // redondeadas), así que el dropdown de "Recordarme" se renderiza aparte con un
+  // portal a document.body — si no, la lista se corta apenas crece de 2-3 opciones.
+  const recordatorioBtnRef = useRef<HTMLButtonElement>(null)
+  const [posRecordatorios, setPosRecordatorios] = useState({ top: 0, left: 0, width: 190 })
   const [ocurrencias, setOcurrencias] = useState<{ id: string; fecha: string; hora: string | null; lugar: string | null }[]>([])
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
@@ -1095,7 +1156,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setTagline(cel.tagline || '')
       setFestejado(cel.festejado_nombre || '')
       setFecha(cel.fecha || '')
-      setRecordatorioDias(Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [7])
+      setRecordatorioDias(Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [2])
       setLugar(cel.paradas?.[0]?.lugar || '')
       setPortadaUrl(cel.portada_url || null)
       setImgPosition(cel.portada_posicion || 'center')
@@ -1219,7 +1280,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (error && campo === 'recordatorio_dias') {
       setBloqueoPro(tx.reminder_locked_title)
       const { data } = await supabase.from('celebraciones').select('recordatorio_dias').eq('slug', celebracion.slug).single()
-      setRecordatorioDias(Array.isArray(data?.recordatorio_dias) ? data.recordatorio_dias : [7])
+      setRecordatorioDias(Array.isArray(data?.recordatorio_dias) ? data.recordatorio_dias : [2])
     }
   }
 
@@ -2263,6 +2324,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   {(() => {
                     const RECORDATORIO_OPCIONES: { v: number; label: string }[] = [
                       { v: 1, label: lang === 'en' ? '1 day before' : '1 día antes' },
+                      { v: 2, label: lang === 'en' ? '2 days before' : '2 días antes' },
                       { v: 3, label: lang === 'en' ? '3 days before' : '3 días antes' },
                       { v: 7, label: lang === 'en' ? '1 week before' : '1 semana antes' },
                       { v: 14, label: lang === 'en' ? '2 weeks before' : '2 semanas antes' },
@@ -2273,12 +2335,26 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                       : `${recordatorioDias.length} ${lang === 'en' ? 'reminders' : 'recordatorios'}`
                     return (
                       <>
-                        <button type="button" onClick={() => setMostrarRecordatorios(v => !v)} style={{ ...fieldInput, fontSize: 14, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' as const }}>
+                        <button
+                          ref={recordatorioBtnRef}
+                          type="button"
+                          onClick={() => {
+                            if (!mostrarRecordatorios && recordatorioBtnRef.current) {
+                              const r = recordatorioBtnRef.current.getBoundingClientRect()
+                              setPosRecordatorios({ top: r.bottom + 4, left: r.left, width: Math.max(190, r.width) })
+                            }
+                            setMostrarRecordatorios(v => !v)
+                          }}
+                          style={{ ...fieldInput, fontSize: 14, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' as const }}
+                        >
                           <span>{resumen}</span>
                           <span style={{ fontSize: 10, color: '#a39ec0' }}>▾</span>
                         </button>
-                        {mostrarRecordatorios && (
-                          <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#fff', borderRadius: 12, boxShadow: '0 8px 24px rgba(20,10,40,.2)', padding: 10, zIndex: 50, minWidth: 190 }}>
+                        {mostrarRecordatorios && typeof document !== 'undefined' && createPortal(
+                          <>
+                            {/* Fondo invisible para cerrar el dropdown al picarle afuera */}
+                            <div onClick={() => setMostrarRecordatorios(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
+                            <div style={{ position: 'fixed', top: posRecordatorios.top, left: posRecordatorios.left, width: posRecordatorios.width, background: '#fff', borderRadius: 12, boxShadow: '0 8px 24px rgba(20,10,40,.25)', padding: 10, zIndex: 100, maxHeight: '60vh', overflowY: 'auto' as const }}>
                             {RECORDATORIO_OPCIONES.map(op => {
                               const activo = recordatorioDias.includes(op.v)
                               return (
@@ -2307,7 +2383,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                             <button type="button" onClick={() => setMostrarRecordatorios(false)} style={{ marginTop: 6, width: '100%', border: 'none', background: '#F5F4FB', color: '#534AB7', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>
                               {lang === 'en' ? 'Done' : 'Listo'}
                             </button>
-                          </div>
+                            </div>
+                          </>,
+                          document.body
                         )}
                       </>
                     )
@@ -2334,9 +2412,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             </div>
           </div>
 
-          {/* Fechas de la serie recurrente */}
+          {/* Fechas de la serie recurrente — id fijo para que el Calendario del
+              dashboard pueda mandar aquí directo con un link tipo #proximas-fechas */}
           {celebracion?.recurrente && (
-            <div style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', boxShadow: '0 12px 32px rgba(25,12,50,.18)', marginBottom: 14, padding: '16px 18px' }}>
+            <div id="proximas-fechas" style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', boxShadow: '0 12px 32px rgba(25,12,50,.18)', marginBottom: 14, padding: '16px 18px' }}>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, marginBottom: 10 }}>
                 {lang === 'en' ? 'Upcoming dates' : 'Próximas fechas'}
               </div>
