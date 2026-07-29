@@ -50,65 +50,91 @@ function quarterLabel(key: string, lang: string) {
   return `${labels[q] || q} ${year}`
 }
 
-function MiniCalendario({ eventos, lang, router }: { eventos: any[]; lang: string; router: any }) {
-  const [mesActual, setMesActual] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d })
-
-  const primerDiaSemana = mesActual.getDay()
-  const diasEnMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0).getDate()
-  const hoy = new Date()
-
+// Info de un solo mes (celdas del grid + qué eventos caen en cada día) — se
+// calcula igual para el mes actual y para el siguiente, por eso vive aparte.
+function construirMesInfo(mes: Date, eventos: any[]) {
+  const primerDiaSemana = mes.getDay()
+  const diasEnMes = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate()
   const eventosPorDia: Record<number, any[]> = {}
   eventos.forEach(e => {
     if (!e.fecha) return
     const f = new Date(e.fecha)
-    if (f.getFullYear() === mesActual.getFullYear() && f.getMonth() === mesActual.getMonth()) {
+    if (f.getFullYear() === mes.getFullYear() && f.getMonth() === mes.getMonth()) {
       const dia = f.getDate()
       if (!eventosPorDia[dia]) eventosPorDia[dia] = []
       eventosPorDia[dia].push(e)
     }
   })
-
-  const nombreMes = mesActual.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long', year: 'numeric' })
-  const diasSemana = lang === 'en' ? ['S','M','T','W','T','F','S'] : ['D','L','M','M','J','V','S']
-
   const celdas: (number | null)[] = []
   for (let i = 0; i < primerDiaSemana; i++) celdas.push(null)
   for (let d = 1; d <= diasEnMes; d++) celdas.push(d)
+  return { celdas, eventosPorDia }
+}
+
+function MiniCalendario({ eventos, lang, router }: { eventos: any[]; lang: string; router: any }) {
+  const [mesActual, setMesActual] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d })
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const hoy = new Date()
+  const mesSiguiente = (() => { const n = new Date(mesActual); n.setMonth(n.getMonth() + 1); return n })()
+  const infoActual = construirMesInfo(mesActual, eventos)
+  const infoSiguiente = construirMesInfo(mesSiguiente, eventos)
+  const diasSemana = lang === 'en' ? ['S','M','T','W','T','F','S'] : ['D','L','M','M','J','V','S']
+
+  // Dos meses lado a lado (izquierda = actual, derecha = el que sigue) — en
+  // mobile se apilan uno encima del otro porque no caben angostos.
+  const renderMes = (mes: Date, info: ReturnType<typeof construirMesInfo>) => {
+    const nombreMes = mes.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long', year: 'numeric' })
+    return (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ textAlign: 'center', color: '#EEEDFE', fontWeight: 800, fontSize: 13, textTransform: 'capitalize', marginBottom: 8 }}>{nombreMes}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
+          {diasSemana.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,.35)' }}>{d}</div>)}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+          {info.celdas.map((dia, i) => {
+            const esHoy = dia && dia === hoy.getDate() && mes.getMonth() === hoy.getMonth() && mes.getFullYear() === hoy.getFullYear()
+            return (
+              <div key={i} style={{ minHeight: 40, borderRadius: 7, background: dia ? (esHoy ? 'rgba(168,157,240,.18)' : 'rgba(255,255,255,.03)') : 'transparent', padding: 2, overflow: 'hidden' }}>
+                {dia && <div style={{ fontSize: 9, fontWeight: esHoy ? 800 : 600, color: esHoy ? '#a89df0' : 'rgba(255,255,255,.4)' }}>{dia}</div>}
+                {dia && info.eventosPorDia[dia]?.slice(0, 1).map((e, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => router.push(`/${e.slug}${e.recurrente ? '#proximas-fechas' : ''}`)}
+                    title={e.nombre}
+                    style={{ fontSize: 7, fontWeight: 700, background: e.esPropia ? '#534AB7' : '#D4537E', color: '#fff', borderRadius: 3, padding: '1px 2px', marginTop: 2, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+                  >
+                    {e.nombre}
+                  </div>
+                ))}
+                {dia && (info.eventosPorDia[dia]?.length || 0) > 1 && (
+                  <div style={{ fontSize: 7, color: 'rgba(255,255,255,.4)', marginTop: 1 }}>+{info.eventosPorDia[dia].length - 1}</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: 16, marginBottom: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() - 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>←</button>
-        <span style={{ color: '#EEEDFE', fontWeight: 800, fontSize: 15, textTransform: 'capitalize' }}>{nombreMes}</span>
-        <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() + 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>→</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16, marginBottom: 14 }}>
+        <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() - 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>←</button>
+        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 20 : 16 }}>
+          {renderMes(mesActual, infoActual)}
+          {renderMes(mesSiguiente, infoSiguiente)}
+        </div>
+        <button onClick={() => setMesActual(m => { const n = new Date(m); n.setMonth(n.getMonth() + 1); return n })} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>→</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 4 }}>
-        {diasSemana.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.35)' }}>{d}</div>)}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3 }}>
-        {celdas.map((dia, i) => {
-          const esHoy = dia && dia === hoy.getDate() && mesActual.getMonth() === hoy.getMonth() && mesActual.getFullYear() === hoy.getFullYear()
-          return (
-            <div key={i} style={{ minHeight: 48, borderRadius: 8, background: dia ? (esHoy ? 'rgba(168,157,240,.18)' : 'rgba(255,255,255,.03)') : 'transparent', padding: 3, overflow: 'hidden' }}>
-              {dia && <div style={{ fontSize: 10, fontWeight: esHoy ? 800 : 600, color: esHoy ? '#a89df0' : 'rgba(255,255,255,.4)' }}>{dia}</div>}
-              {dia && eventosPorDia[dia]?.slice(0, 2).map((e, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => router.push(`/${e.slug}${e.recurrente ? '#proximas-fechas' : ''}`)}
-                  title={e.nombre}
-                  style={{ fontSize: 8, fontWeight: 700, background: e.esPropia ? '#534AB7' : '#D4537E', color: '#fff', borderRadius: 4, padding: '1px 3px', marginTop: 2, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
-                >
-                  {e.nombre}
-                </div>
-              ))}
-              {dia && (eventosPorDia[dia]?.length || 0) > 2 && (
-                <div style={{ fontSize: 8, color: 'rgba(255,255,255,.4)', marginTop: 1 }}>+{eventosPorDia[dia].length - 2}</div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
         <span style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#534AB7', marginRight: 4 }} />{lang === 'en' ? 'You organize' : 'Organizas tú'}</span>
         <span style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#D4537E', marginRight: 4 }} />{lang === 'en' ? "You're invited" : 'Te invitaron'}</span>
       </div>
@@ -402,9 +428,11 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           </div>
         )}
 
-        {/* Calendario — más angosto que el resto del dashboard, centrado */}
+        {/* Calendario — más angosto que el resto del dashboard, centrado.
+            Ahora muestra dos meses lado a lado, así que necesita más ancho
+            que cuando era un solo mes (antes 420px). */}
         {esPropio && eventosCalendario.length > 0 && (
-          <div style={{ maxWidth:420, margin:'0 auto' }}>
+          <div style={{ maxWidth:680, margin:'0 auto' }}>
             <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
           </div>
         )}
