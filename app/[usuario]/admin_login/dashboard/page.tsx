@@ -6,7 +6,7 @@ import { supabase } from '../../../supabase'
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 
-type Vista = 'qa' | 'admin' | 'embudo'
+type Vista = 'qa' | 'admin' | 'embudo' | 'crecimiento'
 
 export default function Admin() {
   const router = useRouter()
@@ -17,6 +17,7 @@ export default function Admin() {
   const [rsvps, setRsvps] = useState<any[]>([])
   const [invitados, setInvitados] = useState<any[]>([])
   const [eventos, setEventos] = useState<any[]>([])
+  const [comprasReales, setComprasReales] = useState<any[]>([])
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date>(new Date())
   const [busqueda, setBusqueda] = useState('')
 
@@ -28,19 +29,22 @@ export default function Admin() {
   const [regaloOpciones, setRegaloOpciones] = useState<any[] | null>(null)
 
   const cargarDatos = useCallback(async () => {
-    const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }, { data: eventosData }] = await Promise.all([
+    const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }, { data: eventosData }, { data: comprasData }] = await Promise.all([
       supabase.from('celebraciones').select('*').order('created_at', { ascending: false }),
       supabase.from('perfiles').select('*').order('created_at', { ascending: false }),
       supabase.from('rsvps').select('*').order('created_at', { ascending: false }),
       supabase.from('invitados').select('*').order('created_at', { ascending: false }),
       // Últimos 90 días — suficiente para ver el embudo y las fuentes sin traer la tabla completa
       supabase.from('eventos_analytics').select('*').gte('created_at', new Date(Date.now() - 90*24*60*60*1000).toISOString()).order('created_at', { ascending: false }),
+      // Compras reales: sin límite de fecha, son pocas filas y es el ingreso real acumulado
+      supabase.from('eventos_analytics').select('metadata, created_at').eq('tipo', 'compra_completada'),
     ])
     setCelebraciones(cels || [])
     setUsuarios(users || [])
     setRsvps(rsvpData || [])
     setInvitados(invData || [])
     setEventos(eventosData || [])
+    setComprasReales(comprasData || [])
     setUltimaActualizacion(new Date())
   }, [])
 
@@ -180,6 +184,12 @@ export default function Admin() {
   const usuariosLifetime = usuarios.filter(u => u.plan === 'lifetime').length
   const ingresoEstimado = celsPro * 9 + usuariosLifetime * 49
 
+  // Ingreso real: solo cuenta lo que de verdad pasó por Stripe (evento compra_completada,
+  // que el webhook dispara nada más cuando el pago se confirma). El "estimado" de arriba
+  // cuenta planes activos sin importar si se pagaron o se regalaron (ej. cortesías, o el
+  // botón de "Regalar plan"), así que ya no son el mismo número — por diseño.
+  const ingresoReal = comprasReales.reduce((sum, c) => sum + (c.metadata?.tipo === 'lifetime' ? 49 : 9), 0)
+
   // Cuentas que se registraron y nunca crearon una celebración
   const usuariosSinCelebraciones = usuarios.filter(u => !celebraciones.some(c => c.organizador_id === u.user_id)).length
 
@@ -215,6 +225,46 @@ export default function Admin() {
   })
   const rutasOrdenadas = Object.entries(porRuta).sort((a, b) => b[1].vistas - a[1].vistas)
 
+  // Crecimiento — top usuarios y quiénes valen un mensaje personal tuyo
+  const celsPorUsuario: Record<string, number> = {}
+  celebraciones.forEach(c => { celsPorUsuario[c.organizador_id] = (celsPorUsuario[c.organizador_id] || 0) + 1 })
+  const topCreadores = Object.entries(celsPorUsuario)
+    .map(([uid, count]) => ({ usuario: usuarios.find(u => u.user_id === uid), count }))
+    .filter((x): x is { usuario: any; count: number } => !!x.usuario)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+
+  // Invitados CON cuenta real (user_id no nulo) — mide a quién le está funcionando
+  // esto como forma de traer gente nueva a Cheers, no solo mandar invitaciones
+  const invitadosConCuentaPorUsuario: Record<string, number> = {}
+  invitados.forEach(inv => {
+    if (!inv.user_id) return
+    const cel = celebraciones.find(c => c.slug === inv.celebracion_slug)
+    if (!cel) return
+    invitadosConCuentaPorUsuario[cel.organizador_id] = (invitadosConCuentaPorUsuario[cel.organizador_id] || 0) + 1
+  })
+  const topInvitadores = Object.entries(invitadosConCuentaPorUsuario)
+    .map(([uid, count]) => ({ usuario: usuarios.find(u => u.user_id === uid), count }))
+    .filter((x): x is { usuario: any; count: number } => !!x.usuario)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+
+  const usuariosNuncaUsaron = usuarios.filter(u => !celebraciones.some(c => c.organizador_id === u.user_id))
+
+  // Se enfriaron: crearon algo, pero su celebración más reciente ya tiene 30+ días —
+  // a diferencia de "nunca usaron", estos ya mostraron interés real, valen un mensaje directo
+  const ultimaActividadPorUsuario: Record<string, Date> = {}
+  celebraciones.forEach(c => {
+    const f = new Date(c.created_at)
+    if (!ultimaActividadPorUsuario[c.organizador_id] || f > ultimaActividadPorUsuario[c.organizador_id]) {
+      ultimaActividadPorUsuario[c.organizador_id] = f
+    }
+  })
+  const hace30d = new Date(Date.now() - 30*24*60*60*1000)
+  const usuariosEnfriados = usuarios
+    .filter(u => ultimaActividadPorUsuario[u.user_id] && ultimaActividadPorUsuario[u.user_id] < hace30d)
+    .sort((a, b) => ultimaActividadPorUsuario[b.user_id].getTime() - ultimaActividadPorUsuario[a.user_id].getTime())
+
   // Horas pico de actividad (registros + celebraciones creadas, agrupado por hora del día)
   const porHora = Array(24).fill(0)
   ;[...usuarios, ...celebraciones].forEach(it => { porHora[new Date(it.created_at).getHours()]++ })
@@ -246,9 +296,9 @@ export default function Admin() {
 
       {/* Tabs */}
       <div style={{ padding:'16px 24px 0', display:'flex', gap:8 }}>
-        {(['qa', 'admin', 'embudo'] as Vista[]).map(v => (
+        {(['qa', 'admin', 'embudo', 'crecimiento'] as Vista[]).map(v => (
           <button key={v} onClick={() => setVista(v)} style={{ border:'none', background:vista===v?'rgba(168,157,240,.2)':'transparent', color:vista===v?'#a89df0':'rgba(255,255,255,.4)', fontSize:14, fontWeight:700, padding:'8px 18px', borderRadius:10, cursor:'pointer', fontFamily:F, borderBottom:vista===v?'2px solid #a89df0':'2px solid transparent' }}>
-            {v === 'qa' ? '🧪 QA / Pruebas' : v === 'admin' ? '📊 Métricas' : '🔻 Embudo'}
+            {v === 'qa' ? '🧪 QA / Pruebas' : v === 'admin' ? '📊 Métricas' : v === 'embudo' ? '🔻 Embudo' : '🚀 Crecimiento'}
           </button>
         ))}
       </div>
@@ -351,7 +401,8 @@ export default function Admin() {
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
               {stat('Usuarios totales', totalUsuarios, `${usuariosEstaSemana} esta semana (${diffPct(usuariosEstaSemana, usuariosSemanaAnterior)} vs. anterior)`)}
               {stat('Celebraciones totales', totalCels, `${celsEstaSeamana} esta semana (${diffPct(celsEstaSeamana, celsSemanaAnterior)} vs. anterior)`, '#f08cb0')}
-              {stat('Ingreso estimado', `$${ingresoEstimado}`, `${celsPro} Super Cheer · ${usuariosLifetime} Extra Cheer`, '#4ade80')}
+              {stat('Ingreso real', `$${ingresoReal}`, `${comprasReales.length} compras confirmadas en Stripe`, '#4ade80')}
+              {stat('Ingreso estimado', `$${ingresoEstimado}`, `${celsPro} Super Cheer · ${usuariosLifetime} Extra Cheer (incluye regalados)`, '#a89df0')}
               {stat('Se registraron y no hicieron nada', usuariosSinCelebraciones, `de ${totalUsuarios} cuentas`, '#60a5fa')}
             </div>
 
@@ -503,6 +554,87 @@ export default function Admin() {
                 </div>
               )}
               <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:12 }}>"Visitas" cuenta cada carga de página (recargar cuenta de nuevo). "Sesiones" son personas/pestañas distintas — si una página tiene muchas visitas pero pocas sesiones, es la misma persona recargando, no tráfico nuevo.</div>
+            </div>
+          </div>
+        )}
+
+        {/* VISTA CRECIMIENTO */}
+        {vista === 'crecimiento' && (
+          <div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', marginBottom:20 }}>
+              Quién está usando Cheers de verdad, quién lo está trayendo a más gente, y a quién vale la pena escribirle tú misma.
+            </div>
+
+            {/* Top creadores */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Top 10 — más celebraciones creadas</div>
+              {topCreadores.length === 0 ? (
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Todavía no hay suficientes datos.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {topCreadores.map((x, i) => (
+                    <div key={x.usuario.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ width:20, fontSize:12, fontWeight:800, color:'rgba(255,255,255,.3)' }}>{i+1}</span>
+                      <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{x.usuario.username}</span>
+                      <span style={{ fontSize:14, fontWeight:800, color:'#a89df0' }}>{x.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Top invitadores */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Top 10 — más gente con cuenta traída a Cheers</div>
+              {topInvitadores.length === 0 ? (
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Todavía no hay suficientes datos.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {topInvitadores.map((x, i) => (
+                    <div key={x.usuario.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ width:20, fontSize:12, fontWeight:800, color:'rgba(255,255,255,.3)' }}>{i+1}</span>
+                      <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{x.usuario.username}</span>
+                      <span style={{ fontSize:14, fontWeight:800, color:'#f08cb0' }}>{x.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:12 }}>Cuenta invitados que ya tienen cuenta propia en Cheers (no solo invitaciones mandadas) — es la medida real de quién está trayendo gente nueva a la plataforma.</div>
+            </div>
+
+            {/* Se enfriaron */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Se enfriaron ({usuariosEnfriados.length})</div>
+              {usuariosEnfriados.length === 0 ? (
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Nadie en este caso todavía.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {usuariosEnfriados.slice(0, 20).map(u => (
+                    <div key={u.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{u.username}</span>
+                      <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>última celebración: {ultimaActividadPorUsuario[u.user_id].toLocaleDateString('es-MX')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:12 }}>Ya crearon algo, pero llevan 30+ días sin crear nada nuevo — a diferencia de los que nunca la usaron, estos ya mostraron interés real y son los más fáciles de recuperar con un mensaje tuyo.</div>
+            </div>
+
+            {/* Nunca usaron su cuenta */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Nunca han creado nada ({usuariosNuncaUsaron.length})</div>
+              {usuariosNuncaUsaron.length === 0 ? (
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Todos han creado al menos una celebración.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {usuariosNuncaUsaron.slice(0, 20).map(u => (
+                    <div key={u.user_id} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff' }}>@{u.username}</span>
+                      <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>se registró: {new Date(u.created_at).toLocaleDateString('es-MX')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
