@@ -900,7 +900,7 @@ function ResizableTile({
         borderRadius: 18,
         border: isDragOver && !isDragging ? '2.5px dashed rgba(83,74,183,.5)' : 'none',
         boxShadow: isDragOver && !isDragging ? 'none' : '0 6px 20px rgba(25,12,50,.1)',
-        opacity: isDragging ? 0.4 : visible ? 1 : 0.55,
+        opacity: isDragging ? 0.4 : 1,
         overflow: 'hidden',
         transition: 'opacity .2s, box-shadow .2s',
         color: te.tileText,
@@ -909,8 +909,9 @@ function ResizableTile({
         position: 'relative',
       }}
     >
-      {/* Header del tile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 8px', flexShrink: 0 }}>
+      {/* Header del tile — cuando está oculto, esto es TODO lo que se muestra:
+          qué tile es y el toggle para volver a activarlo, sin ocupar su tamaño real. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 8px', flexShrink: 0, opacity: visible ? 1 : 0.65 }}>
         <span onMouseDown={startDrag} onTouchStart={startDrag} style={{ cursor: 'grab', color: '#c8c2e0', fontSize: 14, userSelect: 'none', touchAction: 'none' }}>⠿</span>
         <div style={{ width: 26, height: 26, borderRadius: 7, background: te.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <span style={{ fontSize: 9, fontWeight: 800, color: te.accentText }}>{info.label}</span>
@@ -922,13 +923,17 @@ function ResizableTile({
         </div>
       </div>
 
-      {/* Contenido */}
-      <div style={{ flex: 1, padding: '0 14px 14px', overflowY: 'auto' }}>
-        {children}
-      </div>
+      {/* Contenido — se omite por completo cuando está oculto, es lo que permite
+          que el tile se comprima a solo su encabezado */}
+      {visible && (
+        <div style={{ flex: 1, padding: '0 14px 14px', overflowY: 'auto' }}>
+          {children}
+        </div>
+      )}
 
-      {/* Handle de resize — solo aplica en desktop, en móvil los tiles se apilan a ancho completo */}
-      {!isMobile && (
+      {/* Handle de resize — solo aplica en desktop y con el tile visible; un tile
+          oculto/comprimido no tiene tamaño propio que cambiar */}
+      {!isMobile && visible && (
         <div
           onMouseDown={startResize}
           onTouchStart={startResize}
@@ -2706,7 +2711,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             {lang === 'en' ? 'Drag to move · Drag corner to resize' : 'Arrastra para mover · Arrastra la esquina para cambiar el tamaño'}
           </div>
 
-          {/* GRID DE TILES - CSS Grid real */}
+          {/* GRID DE TILES - CSS Grid real. Los tiles ocultos se comprimen a solo
+              su encabezado (1 fila angosta) en vez de ocupar su tamaño real
+              atenuado — el tamaño real (colSpan/rowSpan) se queda intacto en
+              "layouts"/Supabase para cuando se vuelvan a activar; esto es
+              puramente para acomodar el resto del grid alrededor del espacio
+              que liberan. */}
           <div
             ref={gridRef}
             style={{
@@ -2718,7 +2728,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
               width: '100%',
             }}
           >
-            {layouts.map((layout, i) => {
+            {packLayouts(layouts.map(l => tilesVisibles[l.key] === false ? { ...l, colSpan: isMobile ? 12 : 3, rowSpan: 1 } : l)).map((layout, i) => {
               const info = TINFO[layout.key] || { label: '?', title_key: '' }
               // "Mensajes para el festejado" no tiene sentido cuando el evento no tiene
               // festejado (rol grupal/casual, o simplemente el campo vacío) — en ese caso
