@@ -998,6 +998,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   // grande) o el panel completo de edición — colapsado por default para que
   // el card se sienta como el encabezado de la celebración, no un formulario.
   const [mostrarEditarEvento, setMostrarEditarEvento] = useState(false)
+  // "Agregar al calendario" es un solo botón que despliega Google/Apple-Outlook
+  // hacia ABAJO (nunca position:absolute) porque el Hero card tiene
+  // overflow:hidden por las esquinas redondeadas — ya nos pasó una vez con el
+  // dropdown de recordatorios que un flotante se recortaba ahí.
+  const [mostrarMenuCalendario, setMostrarMenuCalendario] = useState(false)
   // Configuración de recurrencia — se puede activar aquí después de crear el
   // evento, no solo al momento de crearlo en el wizard.
   const [recTipo, setRecTipo] = useState<'diario' | 'semanal' | 'mensual_dia' | 'mensual_nesimo' | 'anual'>('semanal')
@@ -2518,9 +2523,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                     </div>
 
                     {linksCalendario && (
-                      <div style={{ display: 'flex', gap: 8, padding: '0 8px', marginBottom: 10, flexWrap: 'wrap' as const }}>
-                        <a href={linksCalendario.googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: te.accentText, background: te.accentBg, padding: '5px 10px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
-                        <a href={linksCalendario.icsUrl} download={`${celebracion?.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 11, fontWeight: 700, color: te.accentText, background: te.accentBg, padding: '5px 10px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
+                      <div style={{ padding: '0 8px', marginBottom: 10 }}>
+                        <button type="button" onClick={() => setMostrarMenuCalendario(v => !v)} style={{ border: 'none', background: te.accentBg, color: te.accentText, fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 99, cursor: 'pointer', fontFamily: FSYS, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          + {lang === 'en' ? 'Add to calendar' : 'Agregar al calendario'}
+                          <svg width="8" height="5" viewBox="0 0 10 6" style={{ transform: mostrarMenuCalendario ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+                            <path d="M1 1L5 5L9 1" stroke={te.accentText} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                          </svg>
+                        </button>
+                        {mostrarMenuCalendario && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                            <a href={linksCalendario.googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 600, color: te.tileText, background: 'rgba(0,0,0,.03)', padding: '7px 10px', borderRadius: 9, textDecoration: 'none' }}>Google Calendar</a>
+                            <a href={linksCalendario.icsUrl} download={`${celebracion?.slug?.replace('/', '-') || 'evento'}.ics`} style={{ fontSize: 12, fontWeight: 600, color: te.tileText, background: 'rgba(0,0,0,.03)', padding: '7px 10px', borderRadius: 9, textDecoration: 'none' }}>Apple / Outlook</a>
+                          </div>
+                        )}
                       </div>
                     )}
 
