@@ -66,6 +66,7 @@ export default function NuevaCelebracion() {
   const [titulo, setTitulo] = useState('')
   const [festejado, setFestejado] = useState('')
   const [fecha, setFecha] = useState('')
+  const [hora, setHora] = useState('')
   const [lugar, setLugar] = useState('')
   const [cenaSubTipo, setCenaSubTipo] = useState<'restaurante' | 'casa'>('casa')
   const [recurrente, setRecurrente] = useState(false)
@@ -208,7 +209,7 @@ export default function NuevaCelebracion() {
       recurrencia_fin_tipo: recurrente ? recurrenciaFinTipo : null,
       recurrencia_fin_fecha: recurrente && recurrenciaFinTipo === 'fecha' ? recurrenciaFinFecha : null,
       recurrencia_fin_conteo: recurrente && recurrenciaFinTipo === 'conteo' ? recurrenciaFinConteo : null,
-      paradas: lugar ? [{ lugar, hora: '', nota: '' }] : [],
+      paradas: (lugar || hora) ? [{ lugar, hora, nota: '' }] : [],
       gifts: [], created_at: new Date().toISOString(),
     })
     setSaving(false)
@@ -455,6 +456,9 @@ export default function NuevaCelebracion() {
 
                   <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_date_label}</label>
                   <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{lang === 'en' ? 'Time' : 'Hora'}</label>
+                  <input type="time" value={hora} onChange={e => setHora(e.target.value)} style={inputStyle} />
 
                   <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_place_label}</label>
                   <input ref={lugarRef} value={lugar} onChange={e => setLugar(e.target.value)} placeholder={tx.nueva_place_placeholder} style={{ ...inputStyle, marginBottom: recurrente ? 14 : 0 }} />

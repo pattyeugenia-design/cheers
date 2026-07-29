@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import Image from 'next/image'
@@ -84,11 +83,11 @@ function defaultLayouts(type: string, sub?: string): TileLayout[] {
   // visible para todos, limitado en cuentas gratis vía eventoEsPro), no por tipo de evento.
   const SETS: Record<string, string[]> = {
     cumple:  ['portada', 'invitados', 'regalos', 'mensajes', 'presupuesto'],
-    cena:    sub === 'restaurante' ? ['portada', 'invitados', 'reservacion', 'presupuesto'] : ['portada', 'invitados', 'menu', 'presupuesto'],
-    viaje:   ['portada', 'invitados', 'itinerario', 'presupuesto', 'quellevar'],
-    reunion: ['portada', 'invitados', 'menu', 'presupuesto'],
-    evento:  ['portada', 'invitados', 'regalos', 'presupuesto'],
-    otro:    ['portada', 'invitados', 'regalos', 'presupuesto'],
+    cena:    sub === 'restaurante' ? ['portada', 'invitados', 'reservacion', 'mensajes', 'presupuesto'] : ['portada', 'invitados', 'menu', 'mensajes', 'presupuesto'],
+    viaje:   ['portada', 'invitados', 'itinerario', 'mensajes', 'presupuesto', 'quellevar'],
+    reunion: ['portada', 'invitados', 'menu', 'mensajes', 'presupuesto'],
+    evento:  ['portada', 'invitados', 'regalos', 'mensajes', 'presupuesto'],
+    otro:    ['portada', 'invitados', 'regalos', 'mensajes', 'presupuesto'],
   }
   const keys = SETS[type] || ['portada', 'invitados', 'regalos']
 
@@ -980,6 +979,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [recordatorioDias, setRecordatorioDias] = useState<number[]>([7])
   const [miPlan, setMiPlan] = useState<string | null>(null)
   const [lugar, setLugar] = useState('')
+  const [horaPrincipal, setHoraPrincipal] = useState('')
   const [mapsListo, setMapsListo] = useState(false)
   const lugarRef = useRef<HTMLInputElement>(null)
   const nuevaParadaLugarRef = useRef<HTMLInputElement>(null)
@@ -1007,12 +1007,6 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [guardandoInvitado, setGuardandoInvitado] = useState(false)
   const [showWAPrompt, setShowWAPrompt] = useState(false)
   const [mostrarQR, setMostrarQR] = useState(false)
-  const [mostrarRecordatorios, setMostrarRecordatorios] = useState(false)
-  // La tarjeta que contiene este campo tiene overflow:hidden (para las esquinas
-  // redondeadas), así que el dropdown de "Recordarme" se renderiza aparte con un
-  // portal a document.body — si no, la lista se corta apenas crece de 2-3 opciones.
-  const recordatorioBtnRef = useRef<HTMLButtonElement>(null)
-  const [posRecordatorios, setPosRecordatorios] = useState({ top: 0, left: 0, width: 190 })
   const [ocurrencias, setOcurrencias] = useState<{ id: string; fecha: string; hora: string | null; lugar: string | null }[]>([])
   const [waPhone, setWaPhone] = useState('')
   const [invitadoPendienteWA, setInvitadoPendienteWA] = useState<any>(null)
@@ -1158,6 +1152,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setFecha(cel.fecha || '')
       setRecordatorioDias(Array.isArray(cel.recordatorio_dias) ? cel.recordatorio_dias : [2])
       setLugar(cel.paradas?.[0]?.lugar || '')
+      setHoraPrincipal(cel.paradas?.[0]?.hora || '')
       setPortadaUrl(cel.portada_url || null)
       setImgPosition(cel.portada_posicion || 'center')
       setParadas(cel.paradas || [])
@@ -1239,7 +1234,20 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     clearTimeout(layoutsSaveTimeout.current)
     layoutsSaveTimeout.current = setTimeout(() => {
       supabase.from('celebraciones').update({ tile_layouts: JSON.stringify(newLayouts) }).eq('slug', celebracion.slug)
+        .then(({ error }) => { if (error) console.error('Error guardando tile_layouts:', error) })
     }, 400)
+  }
+
+  // Mover un tile solo pasa UNA vez, al soltar — a diferencia de resize (que se
+  // llama en cada pixel), aquí no hace falta esperar y el debounce de 400ms era
+  // justo el hueco donde se perdía el cambio si alguien arrastraba y refrescaba
+  // la página casi de inmediato (el timeout nunca alcanzaba a correr).
+  function saveLayoutsImmediate(newLayouts: TileLayout[]) {
+    setLayouts(newLayouts)
+    if (!celebracion) return
+    clearTimeout(layoutsSaveTimeout.current)
+    supabase.from('celebraciones').update({ tile_layouts: JSON.stringify(newLayouts) }).eq('slug', celebracion.slug)
+      .then(({ error }) => { if (error) console.error('Error guardando tile_layouts:', error) })
   }
 
   function moveLayout(fromIdx: number, toIdx: number) {
@@ -1247,7 +1255,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const next = [...layouts]
     const [moved] = next.splice(fromIdx, 1)
     next.splice(toIdx, 0, moved)
-    saveLayouts(packLayouts(next))
+    saveLayoutsImmediate(packLayouts(next))
   }
 
   function resizeLayout(idx: number, colSpan: number, rowSpan: number) {
@@ -1258,7 +1266,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   async function toggleVisible(key: string) {
     const nuevo = { ...tilesVisibles, [key]: !tilesVisibles[key] }
     setTilesVisibles(nuevo)
-    if (celebracion) await supabase.from('celebraciones').update({ tiles_visibles: nuevo }).eq('slug', celebracion.slug)
+    if (!celebracion) return
+    const { error } = await supabase.from('celebraciones').update({ tiles_visibles: nuevo }).eq('slug', celebracion.slug)
+    if (error) console.error('Error guardando tiles_visibles:', error)
   }
 
   async function guardarCampo(campo: string, valor: any) {
@@ -1319,6 +1329,17 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (!celebracion) return
     const ps = [...paradas]
     if (ps.length > 0) ps[0].lugar = val; else ps.push({ lugar: val, hora: '', nota: '' })
+    setParadas(ps); await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
+  }
+
+  // La hora principal del evento se guarda en la primera parada del itinerario
+  // (paradas[0].hora) — es el mismo dato que ya usan el brief y los links de
+  // calendario, solo que antes solo se podía poner escondido dentro de
+  // "Itinerario". Este campo la deja visible arriba, junto a la fecha.
+  async function guardarHora(val: string) {
+    if (!celebracion) return
+    const ps = [...paradas]
+    if (ps.length > 0) ps[0].hora = val; else ps.push({ lugar: '', hora: val, nota: '' })
     setParadas(ps); await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
   }
 
@@ -2311,15 +2332,21 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             <div style={{ padding: '14px 16px 16px' }}>
               <input value={tagline} onChange={e => setTagline(e.target.value)} onBlur={e => guardarCampo('tagline', e.target.value)} placeholder={tx.tagline_placeholder} style={{ border: 'none', background: 'transparent', fontFamily: FSYS, fontSize: 13, color: '#7a7494', padding: '3px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' as const, marginBottom: 8 }} />
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '6px 14px', padding: '0 4px' }}>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.celebrated}</div>
-                  <input style={{ ...fieldInput, fontSize: 14 }} value={festejado} onChange={e => setFestejado(e.target.value)} onBlur={e => guardarCampo('festejado_nombre', e.target.value)} placeholder={tx.nueva_festejado_placeholder} />
-                </div>
+                {celebracion?.organizador_rol !== 'grupal' && (
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.celebrated}</div>
+                    <input style={{ ...fieldInput, fontSize: 14 }} value={festejado} onChange={e => setFestejado(e.target.value)} onBlur={e => guardarCampo('festejado_nombre', e.target.value)} placeholder={tx.nueva_festejado_placeholder} />
+                  </div>
+                )}
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.date}</div>
                   <input type="date" style={{ ...fieldInput, fontSize: 14 }} value={fecha} onChange={e => setFecha(e.target.value)} onBlur={e => guardarCampo('fecha', e.target.value)} />
                 </div>
-                <div style={{ position: 'relative' }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{lang === 'en' ? 'Time' : 'Hora'}</div>
+                  <input type="time" style={{ ...fieldInput, fontSize: 14 }} value={horaPrincipal} onChange={e => setHoraPrincipal(e.target.value)} onBlur={e => guardarHora(e.target.value)} />
+                </div>
+                <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{lang === 'en' ? 'Remind me' : 'Recordarme'}</div>
                   {(() => {
                     const RECORDATORIO_OPCIONES: { v: number; label: string }[] = [
@@ -2330,62 +2357,46 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                       { v: 14, label: lang === 'en' ? '2 weeks before' : '2 semanas antes' },
                       { v: 30, label: lang === 'en' ? '1 month before' : '1 mes antes' },
                     ]
-                    const resumen = recordatorioDias.length === 1
-                      ? (RECORDATORIO_OPCIONES.find(o => o.v === recordatorioDias[0])?.label || '')
-                      : `${recordatorioDias.length} ${lang === 'en' ? 'reminders' : 'recordatorios'}`
+                    // Estilo Google Calendar: cada recordatorio es su propia fila con su
+                    // propio selector — cambiarlo REEMPLAZA ese recordatorio (no suma uno
+                    // nuevo), y "+ Agregar recordatorio" es la única forma explícita de
+                    // tener más de uno a la vez.
+                    function cambiarRecordatorio(idx: number, valor: number) {
+                      const nuevo = recordatorioDias.map((d, i) => i === idx ? valor : d)
+                      setRecordatorioDias(nuevo)
+                      guardarCampo('recordatorio_dias', nuevo)
+                    }
+                    function quitarRecordatorio(idx: number) {
+                      const nuevo = recordatorioDias.filter((_, i) => i !== idx)
+                      setRecordatorioDias(nuevo)
+                      guardarCampo('recordatorio_dias', nuevo)
+                    }
+                    function agregarRecordatorio() {
+                      if (!eventoEsPro && recordatorioDias.length >= 1) { setBloqueoPro(tx.reminder_locked_title); return }
+                      if (recordatorioDias.length >= 4) return
+                      const usados = new Set(recordatorioDias)
+                      const siguiente = RECORDATORIO_OPCIONES.find(o => !usados.has(o.v))?.v ?? RECORDATORIO_OPCIONES[0].v
+                      const nuevo = [...recordatorioDias, siguiente]
+                      setRecordatorioDias(nuevo)
+                      guardarCampo('recordatorio_dias', nuevo)
+                    }
                     return (
                       <>
-                        <button
-                          ref={recordatorioBtnRef}
-                          type="button"
-                          onClick={() => {
-                            if (!mostrarRecordatorios && recordatorioBtnRef.current) {
-                              const r = recordatorioBtnRef.current.getBoundingClientRect()
-                              setPosRecordatorios({ top: r.bottom + 4, left: r.left, width: Math.max(190, r.width) })
-                            }
-                            setMostrarRecordatorios(v => !v)
-                          }}
-                          style={{ ...fieldInput, fontSize: 14, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' as const }}
-                        >
-                          <span>{resumen}</span>
-                          <span style={{ fontSize: 10, color: '#a39ec0' }}>▾</span>
-                        </button>
-                        {mostrarRecordatorios && typeof document !== 'undefined' && createPortal(
-                          <>
-                            {/* Fondo invisible para cerrar el dropdown al picarle afuera */}
-                            <div onClick={() => setMostrarRecordatorios(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
-                            <div style={{ position: 'fixed', top: posRecordatorios.top, left: posRecordatorios.left, width: posRecordatorios.width, background: '#fff', borderRadius: 12, boxShadow: '0 8px 24px rgba(20,10,40,.25)', padding: 10, zIndex: 100, maxHeight: '60vh', overflowY: 'auto' as const }}>
-                            {RECORDATORIO_OPCIONES.map(op => {
-                              const activo = recordatorioDias.includes(op.v)
-                              return (
-                                <label key={op.v} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', cursor: 'pointer', fontSize: 13, color: '#2a2440' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={activo}
-                                    onChange={() => {
-                                      let nuevo: number[]
-                                      if (activo) {
-                                        nuevo = recordatorioDias.filter(d => d !== op.v)
-                                        if (nuevo.length === 0) nuevo = [op.v]
-                                      } else {
-                                        if (!eventoEsPro && recordatorioDias.length >= 1) { setBloqueoPro(tx.reminder_locked_title); return }
-                                        if (recordatorioDias.length >= 4) return
-                                        nuevo = [...recordatorioDias, op.v].sort((a, b) => a - b)
-                                      }
-                                      setRecordatorioDias(nuevo)
-                                      guardarCampo('recordatorio_dias', nuevo)
-                                    }}
-                                  />
-                                  {op.label}
-                                </label>
-                              )
-                            })}
-                            <button type="button" onClick={() => setMostrarRecordatorios(false)} style={{ marginTop: 6, width: '100%', border: 'none', background: '#F5F4FB', color: '#534AB7', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS }}>
-                              {lang === 'en' ? 'Done' : 'Listo'}
-                            </button>
-                            </div>
-                          </>,
-                          document.body
+                        {recordatorioDias.length === 0 && (
+                          <p style={{ fontSize: 12, color: '#a39ec0', margin: '4px 0 8px' }}>{lang === 'en' ? 'No reminders' : 'Sin recordatorios'}</p>
+                        )}
+                        {recordatorioDias.map((dia, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                            <select value={dia} onChange={e => cambiarRecordatorio(idx, Number(e.target.value))} style={{ ...fieldInput, fontSize: 13, flex: 1, marginBottom: 0 }}>
+                              {RECORDATORIO_OPCIONES.map(op => <option key={op.v} value={op.v}>{op.label}</option>)}
+                            </select>
+                            <button type="button" onClick={() => quitarRecordatorio(idx)} style={{ border: 'none', background: 'none', color: '#a39ec0', fontSize: 16, cursor: 'pointer', padding: '0 4px', flexShrink: 0 }}>×</button>
+                          </div>
+                        ))}
+                        {recordatorioDias.length < 4 && (
+                          <button type="button" onClick={agregarRecordatorio} style={{ border: 'none', background: 'none', color: '#534AB7', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '2px 0', fontFamily: FSYS }}>
+                            + {lang === 'en' ? 'Add reminder' : 'Agregar recordatorio'}
+                          </button>
                         )}
                       </>
                     )
