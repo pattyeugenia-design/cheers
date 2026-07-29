@@ -662,7 +662,9 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
           {tiles.mensajes !== false && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>
-                {lang === 'en' ? `Message for ${celebracion.festejado_nombre || 'the guest of honor'}` : `Mensaje para ${celebracion.festejado_nombre || 'el festejado'}`}
+                {celebracion.festejado_nombre
+                  ? (lang === 'en' ? `Message for ${celebracion.festejado_nombre}` : `Mensaje para ${celebracion.festejado_nombre}`)
+                  : (lang === 'en' ? 'Leave a message' : 'Deja un mensaje')}
               </div>
               <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder={lang === 'en' ? 'Write something nice...' : 'Escribe algo bonito...'} rows={3} style={{ border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'none', lineHeight: 1.5 }} />
             </div>
@@ -765,7 +767,9 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
 
         {tiles.mensajes !== false && (mensajesRsvpOtros.length > 0 || mensajesMuro.length > 0 || user) && (
           <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>{tx.tile_mensajes}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>
+              {celebracion.festejado_nombre ? tx.tile_mensajes : (lang === 'en' ? 'Messages' : 'Mensajes')}
+            </div>
             {mensajesRsvpOtros.map((c: any, i: number) => (
               <div key={`rsvp-${i}`} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, marginBottom: 8, border: '1.5px solid #f0edf8' }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#534AB7' }}>{c.nombre}</div>
@@ -1032,6 +1036,8 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [reservacion, setReservacion] = useState<{ lugar: string; hora: string; personas: string; notas: string; link: string }>({ lugar: '', hora: '', personas: '', notas: '', link: '' })
   const [showEditReservacion, setShowEditReservacion] = useState(false)
   const [mensajesMuro, setMensajesMuro] = useState<any[]>([])
+  const [nuevoMensajeMuroOrg, setNuevoMensajeMuroOrg] = useState('')
+  const [publicandoMensajeOrg, setPublicandoMensajeOrg] = useState(false)
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l]); setLocale(l === 'en' ? 'en-US' : 'es-MX')
@@ -1617,6 +1623,20 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (error) setMensajesMuro(anterior)
   }
 
+  // El organizador también puede publicar en su propio muro (antes solo los
+  // invitados tenían el cuadro para escribir — el organizador solo veía la
+  // lista, sin forma de postear él mismo).
+  async function publicarMensajeMuroOrganizador() {
+    if (!user || !nuevoMensajeMuroOrg.trim() || !celebracion) return
+    setPublicandoMensajeOrg(true)
+    const nombre = user?.user_metadata?.name || user?.email || ''
+    const payload = { celebracion_slug: celebracion.slug, user_id: user.id, nombre, texto: nuevoMensajeMuroOrg.trim() }
+    const { data, error } = await supabase.from('mensajes').insert(payload).select().single()
+    if (!error && data) setMensajesMuro(prev => [data, ...prev])
+    setNuevoMensajeMuroOrg('')
+    setPublicandoMensajeOrg(false)
+  }
+
   if (cargando) return (
     <div style={{ minHeight: '100vh', background: TEMAS.morado.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ color: '#EEEDFE', fontSize: 16 }}>{t[lang as 'es' | 'en'].loading}</p>
@@ -1669,7 +1689,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const progressItems = [
     { label: lang === 'en' ? 'Cover photo' : 'Foto de portada', done: !!portadaUrl },
     { label: lang === 'en' ? 'Event title' : 'Título del evento', done: !!(titleRef.current?.innerText || celebracion?.nombre) },
-    { label: lang === 'en' ? 'Guest of honor' : 'Festejado/a', done: !!festejado },
+    // Eventos "grupales" (casuales, sin festejado) no deben quedarse atorados sin
+    // llegar al 100% por un campo que ni siquiera se les muestra.
+    ...(celebracion?.organizador_rol !== 'grupal' ? [{ label: lang === 'en' ? 'Guest of honor' : 'Festejado/a', done: !!festejado }] : []),
     { label: lang === 'en' ? 'Date' : 'Fecha', done: !!fecha },
     { label: lang === 'en' ? 'Place' : 'Lugar', done: !!lugar },
     { label: lang === 'en' ? 'Description' : 'Descripción', done: !!tagline },
@@ -2087,34 +2109,60 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       const mensajesRsvp = rsvps.filter(r => r.mensaje)
       return (
         <div>
+          {/* El organizador también puede publicar aquí, no solo ver/borrar */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }} onClick={e => e.stopPropagation()}>
+            <input
+              value={nuevoMensajeMuroOrg}
+              onChange={e => setNuevoMensajeMuroOrg(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && publicarMensajeMuroOrganizador()}
+              onFocus={e => e.stopPropagation()}
+              placeholder={tx.mensajes_placeholder}
+              style={{ flex: 1, border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 13, color: '#2a2440', padding: '9px 12px', borderRadius: 10, outline: 'none' }}
+            />
+            <button
+              onClick={publicarMensajeMuroOrganizador}
+              disabled={!nuevoMensajeMuroOrg.trim() || publicandoMensajeOrg}
+              style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0, opacity: !nuevoMensajeMuroOrg.trim() ? 0.5 : 1 }}
+            >
+              {publicandoMensajeOrg ? '...' : tx.mensajes_publicar}
+            </button>
+          </div>
+
           {mensajesRsvp.length === 0 && mensajesMuro.length === 0 && (
-            <p style={{ fontSize: 13, color: '#7a7494', margin: '0 0 10px' }}>{tx.messages_empty}</p>
+            <p style={{ fontSize: 13, color: '#7a7494', margin: '0 0 10px' }}>
+              {celebracion?.festejado_nombre ? tx.messages_empty : (lang === 'en' ? 'Messages from your guests will appear here.' : 'Aquí aparecerán los mensajes de tus invitados.')}
+            </p>
           )}
-          {mensajesRsvp.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>{tx.mensajes_rsvp_titulo}</div>
-              {mensajesRsvp.map((r: any) => (
-                <div key={r.id} style={{ padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#534AB7' }}>{r.nombre}</div>
-                  <div style={{ fontSize: 13, color: te.tileText }}>{r.mensaje}</div>
-                </div>
-              ))}
-            </div>
-          )}
-          {mensajesMuro.length > 0 && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>{tx.mensajes_muro_titulo}</div>
-              {mensajesMuro.map((m: any) => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#534AB7' }}>{m.nombre}</div>
-                    <div style={{ fontSize: 13, color: te.tileText }}>{m.texto}</div>
+
+          {/* Como muro real, esto puede crecer mucho — con scroll propio no empuja
+              el resto del layout ni obliga a agrandar el tile sin límite. */}
+          <div style={{ maxHeight: 340, overflowY: 'auto' as const }}>
+            {mensajesRsvp.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>{tx.mensajes_rsvp_titulo}</div>
+                {mensajesRsvp.map((r: any) => (
+                  <div key={r.id} style={{ padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#534AB7' }}>{r.nombre}</div>
+                    <div style={{ fontSize: 13, color: te.tileText }}>{r.mensaje}</div>
                   </div>
-                  <button onClick={() => borrarMensajeMuro(m.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11, flexShrink: 0 }}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+            {mensajesMuro.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>{tx.mensajes_muro_titulo}</div>
+                {mensajesMuro.map((m: any) => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: '#fafafa', borderRadius: 10, marginBottom: 6, border: '1.5px solid #f0edf8' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#534AB7' }}>{m.nombre}</div>
+                      <div style={{ fontSize: 13, color: te.tileText }}>{m.texto}</div>
+                    </div>
+                    <button onClick={() => borrarMensajeMuro(m.id)} style={{ ...deleteBtn, width: 22, height: 22, fontSize: 11, flexShrink: 0 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )
     }
@@ -2512,7 +2560,14 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
           >
             {layouts.map((layout, i) => {
               const info = TINFO[layout.key] || { label: '?', title_key: '' }
-              const tileLabel = layout.key === 'portada' ? (lang === 'en' ? 'Cover photo' : 'Foto de portada') : (tx as any)[info.title_key] || layout.key
+              // "Mensajes para el festejado" no tiene sentido cuando el evento no tiene
+              // festejado (rol grupal/casual, o simplemente el campo vacío) — en ese caso
+              // se usa un título genérico en vez del texto fijo de i18n.
+              const tileLabel = layout.key === 'portada'
+                ? (lang === 'en' ? 'Cover photo' : 'Foto de portada')
+                : layout.key === 'mensajes'
+                ? (celebracion?.festejado_nombre ? (tx as any)[info.title_key] : (lang === 'en' ? 'Messages' : 'Mensajes'))
+                : (tx as any)[info.title_key] || layout.key
               const visible = tilesVisibles[layout.key] !== false
               return (
                 <ResizableTile
