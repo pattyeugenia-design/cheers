@@ -326,9 +326,20 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'talvez' | ''>('')
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
+  const [errorRsvp, setErrorRsvp] = useState('')
 
   async function confirmarSinCuenta() {
-    if (!asistencia || !nombreInvitado.trim()) return
+    if (!asistencia || !nombreInvitado.trim()) {
+      setErrorRsvp(
+        !nombreInvitado.trim() && !asistencia
+          ? (lang === 'en' ? 'Add your name and pick an option to confirm' : 'Escribe tu nombre y elige una opción para confirmar')
+          : !nombreInvitado.trim()
+            ? (lang === 'en' ? 'Add your name to confirm' : 'Escribe tu nombre para confirmar')
+            : (lang === 'en' ? 'Pick an option to confirm' : 'Elige una opción para confirmar')
+      )
+      return
+    }
+    setErrorRsvp('')
     setGuardando(true)
     const { data: rsvpNuevo } = await supabase.from('rsvps').insert({
       celebracion_slug: celebracion.slug,
@@ -431,20 +442,23 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
             <>
               <input
                 value={nombreInvitado}
-                onChange={e => setNombreInvitado(e.target.value)}
+                onChange={e => { setNombreInvitado(e.target.value); if (errorRsvp) setErrorRsvp('') }}
                 placeholder={lang === 'en' ? 'Your name' : 'Tu nombre'}
-                style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 12 }}
+                style={{ width: '100%', boxSizing: 'border-box', border: errorRsvp && !nombreInvitado.trim() ? '1.5px solid #c0392b' : '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 12 }}
               />
               <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
                 {(['si', 'no', 'talvez'] as const).map(op => {
                   const c = rsvpColors[op]
                   const sel = asistencia === op
-                  return <button key={op} onClick={() => setAsistencia(op)} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>{c.label}</button>
+                  return <button key={op} onClick={() => { setAsistencia(op); if (errorRsvp) setErrorRsvp('') }} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>{c.label}</button>
                 })}
               </div>
-              <button onClick={confirmarSinCuenta} disabled={!asistencia || !nombreInvitado.trim() || guardando} style={{ width: '100%', padding: '14px', background: (asistencia && nombreInvitado.trim()) ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: (asistencia && nombreInvitado.trim()) ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: (asistencia && nombreInvitado.trim()) ? 'pointer' : 'default', fontFamily: FSYS }}>
+              <button onClick={confirmarSinCuenta} disabled={guardando} style={{ width: '100%', padding: '14px', background: (asistencia && nombreInvitado.trim()) ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: (asistencia && nombreInvitado.trim()) ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: guardando ? 'default' : 'pointer', fontFamily: FSYS }}>
                 {guardando ? '...' : (lang === 'en' ? 'Confirm attendance' : 'Confirmar asistencia')}
               </button>
+              {errorRsvp && (
+                <p style={{ fontSize: 12, color: '#c0392b', fontWeight: 600, margin: '8px 0 0', textAlign: 'center' }}>{errorRsvp}</p>
+              )}
             </>
           )}
         </div>
@@ -486,6 +500,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
   const [nuevoMensajeMuro, setNuevoMensajeMuro] = useState('')
   const [publicandoMensaje, setPublicandoMensaje] = useState(false)
   const [gastosDebo, setGastosDebo] = useState<any[]>([])
+  const [errorRsvp, setErrorRsvp] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -537,7 +552,17 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
 
   async function guardarRsvp() {
     const nombre = user ? (user?.user_metadata?.name || user?.email || '') : nombreManual.trim()
-    if (!asistencia || !nombre) return
+    if (!asistencia || !nombre) {
+      setErrorRsvp(
+        !nombre && !asistencia
+          ? (lang === 'en' ? 'Add your name and pick an option to confirm' : 'Escribe tu nombre y elige una opción para confirmar')
+          : !nombre
+            ? (lang === 'en' ? 'Add your name to confirm' : 'Escribe tu nombre para confirmar')
+            : (lang === 'en' ? 'Pick an option to confirm' : 'Elige una opción para confirmar')
+      )
+      return
+    }
+    setErrorRsvp('')
     setGuardando(true)
     const payload = { celebracion_slug: celebracion.slug, nombre, asistencia, mensaje: mensaje.trim() || null }
     let rsvpId = rsvpExistente?.id
@@ -647,16 +672,16 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
           {!user && (
             <input
               value={nombreManual}
-              onChange={e => setNombreManual(e.target.value)}
+              onChange={e => { setNombreManual(e.target.value); if (errorRsvp) setErrorRsvp('') }}
               placeholder={lang === 'en' ? 'Your name' : 'Tu nombre'}
-              style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 12 }}
+              style={{ width: '100%', boxSizing: 'border-box', border: errorRsvp && !nombreManual.trim() ? '1.5px solid #c0392b' : '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 12 }}
             />
           )}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             {(['si', 'no', 'talvez'] as const).map(op => {
               const c = rsvpColors[op]
               const sel = asistencia === op
-              return <button key={op} onClick={() => setAsistencia(op)} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>{c.label}</button>
+              return <button key={op} onClick={() => { setAsistencia(op); if (errorRsvp) setErrorRsvp('') }} style={{ flex: 1, padding: '13px 8px', borderRadius: 14, border: sel ? `2px solid ${c.border}` : '2px solid #e8e4f5', background: sel ? c.bg : '#fafafa', color: sel ? c.active : '#7a7494', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FSYS, transition: 'all .15s' }}>{c.label}</button>
             })}
           </div>
           {tiles.mensajes !== false && (
@@ -669,9 +694,12 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
               <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder={lang === 'en' ? 'Write something nice...' : 'Escribe algo bonito...'} rows={3} style={{ border: '1.5px solid #e2dff5', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'none', lineHeight: 1.5 }} />
             </div>
           )}
-          <button onClick={guardarRsvp} disabled={!asistencia || guardando || (!user && !nombreManual.trim())} style={{ width: '100%', padding: '14px', background: asistencia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: asistencia ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: asistencia ? 'pointer' : 'default', fontFamily: FSYS }}>
+          <button onClick={guardarRsvp} disabled={guardando} style={{ width: '100%', padding: '14px', background: (asistencia && (user || nombreManual.trim())) ? 'linear-gradient(135deg,#534AB7,#D4537E)' : '#e8e4f5', border: 'none', borderRadius: 14, color: (asistencia && (user || nombreManual.trim())) ? '#fff' : '#b3adcc', fontSize: 15, fontWeight: 800, cursor: guardando ? 'default' : 'pointer', fontFamily: FSYS }}>
             {guardando ? '...' : guardado ? (lang === 'en' ? '✓ Confirmed!' : '✓ ¡Confirmado!') : rsvpExistente ? (lang === 'en' ? 'Update RSVP' : 'Actualizar') : (lang === 'en' ? 'Confirm attendance' : 'Confirmar asistencia')}
           </button>
+          {errorRsvp && (
+            <p style={{ fontSize: 12, color: '#c0392b', fontWeight: 600, margin: '8px 0 0', textAlign: 'center' }}>{errorRsvp}</p>
+          )}
         </div>
 
         {confirmados.length > 0 && (
