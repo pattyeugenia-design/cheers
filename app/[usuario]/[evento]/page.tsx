@@ -2940,7 +2940,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                         type="time"
                         defaultValue={o.hora ? o.hora.slice(0, 5) : ''}
                         onBlur={e => actualizarOcurrencia(o.id, 'hora', e.target.value)}
-                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 90, flexShrink: 0 }}
+                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 130, flexShrink: 0 }}
                       />
                       <input
                         defaultValue={o.lugar || ''}
