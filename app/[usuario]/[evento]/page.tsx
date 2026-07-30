@@ -2632,7 +2632,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   </div>
                 )}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.date}</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>
+                    {celebracion?.recurrente
+                      ? (recTipo === 'anual' ? (lang === 'en' ? 'Anniversary date' : 'Fecha del aniversario') : (lang === 'en' ? 'Starts on' : 'Empieza el'))
+                      : tx.date}
+                  </div>
                   <input type="date" style={{ ...fieldInput, fontSize: 14 }} value={fecha} onChange={e => setFecha(e.target.value)} onBlur={e => guardarCampo('fecha', e.target.value)} />
                 </div>
                 <div>
@@ -2799,6 +2803,12 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                           </div>
                         )}
                       </>
+                    )}
+
+                    {recTipo === 'anual' && (
+                      <p style={{ fontSize: 12, color: '#6d668c', margin: 0 }}>
+                        {lang === 'en' ? 'Repeats every year on the date above.' : 'Se repite cada año en la fecha de arriba.'}
+                      </p>
                     )}
 
                     <div style={{ height: 1, background: 'rgba(0,0,0,.06)', margin: '14px 0 12px' }} />

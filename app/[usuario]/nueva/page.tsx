@@ -455,7 +455,11 @@ export default function NuevaCelebracion() {
                     </>
                   )}
 
-                  <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{tx.nueva_date_label}</label>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>
+                    {recurrente
+                      ? (recurrenciaTipo === 'anual' ? (lang === 'en' ? 'Anniversary date' : 'Fecha del aniversario') : (lang === 'en' ? 'Starts on' : 'Empieza el'))
+                      : tx.nueva_date_label}
+                  </label>
                   <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
 
                   <label style={{ fontSize: 11, fontWeight: 800, color: '#a39ec0', textTransform: 'uppercase', letterSpacing: '.4px', display: 'block', marginBottom: 6 }}>{lang === 'en' ? 'Time' : 'Hora'}</label>
