@@ -2679,6 +2679,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 // a "HH:MM" siempre para que calendarLinks (que le pega ":00" él solo)
                 // no arme una hora inválida como "20:00:00:00" y tumbe la página.
                 const horaMostrar = (proxima?.hora || horaPrincipal || '').slice(0, 5)
+                // Igual que fecha/hora: si esta fecha próxima ya tiene su propio lugar
+                // (editado abajo en "Próximas fechas"), mostrar ese — no el lugar por
+                // default de la serie, que puede estar vacío o ser de otra fecha.
+                const lugarMostrar = proxima?.lugar || lugar
                 const fechaLegible = fechaMostrar
                   ? new Date(fechaMostrar + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
                   : null
@@ -2716,9 +2720,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'rgba(0,0,0,.03)', borderRadius: 12, padding: '9px 12px', marginBottom: 10 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: te.tileText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                        {lugar || (lang === 'en' ? 'Add a place' : 'Agrega un lugar')}
+                        {lugarMostrar || (lang === 'en' ? 'Add a place' : 'Agrega un lugar')}
                       </span>
-                      {lugar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{tx.see_map}</a>}
+                      {lugarMostrar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugarMostrar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{tx.see_map}</a>}
                     </div>
 
                     {linksCalendario && (
@@ -2840,12 +2844,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   <RecordatoriosPersonales user={user} celebracionSlug={celebracion.slug} miPlan={miPlan} lang={lang} variant="panel" />
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.place}</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>
+                    {celebracion.recurrente ? (lang === 'en' ? 'Usual place' : 'Lugar habitual') : tx.place}
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ fontSize: 11, color: '#a39ec0' }}>{tx.location}</span>
                     <input ref={lugarRef} style={{ ...fieldInput, flex: 1, fontSize: 14 }} value={lugar} onChange={e => setLugar(e.target.value)} onBlur={e => guardarLugar(e.target.value)} placeholder="Google Maps" />
                     {lugar && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const }}>{tx.see_map}</a>}
                   </div>
+                  {celebracion.recurrente && (
+                    <a href="#proximas-fechas" style={{ display: 'block', fontSize: 11, color: '#a39ec0', margin: '4px 0 0 8px', textDecoration: 'none' }}>
+                      {lang === 'en' ? 'Changes by date? Set it per date below ↓' : '¿Cambia según la fecha? Ajústalo por fecha abajo ↓'}
+                    </a>
+                  )}
                 </div>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, margin: '0 0 1px 8px' }}>{tx.guest_link}</div>
@@ -2999,7 +3010,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   >
                     <span style={{ fontSize: 13, color: '#2a2440' }}>
                       <span style={{ color: '#a39ec0' }}>{lang === 'en' ? 'Next date:' : 'Próxima fecha:'}</span>{' '}
-                      {fechaResumen ? `${fechaResumen}${horaResumen ? `, ${horaResumen}` : ''}` : (lang === 'en' ? 'Generating soon' : 'Se genera pronto')}
+                      {fechaResumen ? `${fechaResumen}${horaResumen ? `, ${horaResumen}` : ''}${proximaResumen?.lugar ? ` · ${proximaResumen.lugar}` : ''}` : (lang === 'en' ? 'Generating soon' : 'Se genera pronto')}
                     </span>
                     <span style={{ fontSize: 13, fontWeight: 800, color: '#534AB7', flexShrink: 0, marginLeft: 10 }}>
                       {lang === 'en' ? 'See all dates ↓' : 'Ver todas las fechas ↓'}
