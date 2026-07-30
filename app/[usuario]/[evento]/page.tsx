@@ -3047,12 +3047,19 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                                 placeholder={lang === 'en' ? 'place (optional)' : 'lugar (opcional)'}
                                 style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', flex: 1 }}
                               />
+                              {o.lugar && (
+                                <a href={`https://maps.google.com/?q=${encodeURIComponent(o.lugar)}`} target="_blank" rel="noreferrer" title={lang === 'en' ? 'Open in Maps' : 'Abrir en Maps'} style={{ fontSize: 15, flexShrink: 0, textDecoration: 'none', lineHeight: 1 }}>📍</a>
+                              )}
                               <button onClick={() => cancelarOcurrencia(o.id)} style={{ border: 'none', background: 'none', color: '#D4537E', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>
                                 {lang === 'en' ? 'Cancel' : 'Cancelar'}
                               </button>
                             </>
                           ) : (
-                            o.lugar && <div style={{ fontSize: 13, color: '#6b6585' }}>{o.lugar}</div>
+                            o.lugar && (
+                              <a href={`https://maps.google.com/?q=${encodeURIComponent(o.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#1a73e8', fontWeight: 700, textDecoration: 'none' }}>
+                                {o.lugar} →
+                              </a>
+                            )
                           )}
                         </div>
                       ))}
