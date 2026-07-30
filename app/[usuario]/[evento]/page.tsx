@@ -11,6 +11,27 @@ import { track } from '../../track'
 declare global { interface Window { google: any } }
 
 const FSYS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+
+// El título del evento se edita con contentEditable (negrita/cursiva/subrayado/
+// tachado) y su innerHTML se guardaba tal cual, sin limpiar — cualquiera con
+// acceso a esa fila (o llamando la API directo) podía meter <script>/onerror=/
+// etc. y ejecutarlo en el navegador de cada invitado que abriera el link
+// público. Solo se permiten las etiquetas que el editor realmente ofrece, y
+// se les quita cualquier atributo (así no hay forma de meter un manejador de
+// evento). Se usa tanto al guardar como al renderizar, por si ya había algo
+// guardado de antes.
+const TAGS_TITULO_PERMITIDAS = new Set(['b', 'strong', 'i', 'em', 'u', 'strike', 's', 'span', 'br'])
+function sanitizarTituloHtml(html: string): string {
+  if (!html) return ''
+  return html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?([a-zA-Z0-9]+)[^>]*>/g, (match, tag) => {
+      const t = String(tag).toLowerCase()
+      if (!TAGS_TITULO_PERMITIDAS.has(t)) return ''
+      return match.startsWith('</') ? `</${t}>` : `<${t}>`
+    })
+}
+
 const COLS = 12 // columnas del grid
 const ROW_H = 60 // altura de cada fila en px
 const GAP = 12 // gap entre tiles
@@ -668,7 +689,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
             {lang === 'en' ? "You're invited" : 'Estás invitado'}
           </div>
           <h1 style={{ fontSize: celebracion.titulo_size || 32, fontWeight: 850, color: txtPrimario, margin: '0 0 10px', letterSpacing: alineacion === 'spaced' ? '3px' : '-.5px', lineHeight: 1.1, fontFamily: fInv, textAlign: alineacion === 'normal-left' ? 'left' : 'center' }}
-            dangerouslySetInnerHTML={{ __html: celebracion.nombre_html || celebracion.nombre }} />
+            dangerouslySetInnerHTML={{ __html: sanitizarTituloHtml(celebracion.nombre_html || celebracion.nombre || '') }} />
           {celebracion.tagline && <p style={{ fontSize: 15, color: txtSecundario, margin: '0 0 10px', fontStyle: 'italic' }}>{celebracion.tagline}</p>}
           {fecha && <p style={{ fontSize: 14, color: txtSecundario, margin: '0 0 4px' }}>{fecha}</p>}
           {lugarEfectivo && <a href={`https://maps.google.com/?q=${encodeURIComponent(lugarEfectivo)}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: txtTerciario, textDecoration: 'none', borderBottom: `1px solid ${claro ? 'rgba(255,255,255,.3)' : 'rgba(42,36,64,.25)'}` }}>{lugarEfectivo} →</a>}
@@ -1329,7 +1350,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setReservasRegalo(reservasData || [])
       setCargando(false)
 
-      setTimeout(() => { if (titleRef.current) titleRef.current.innerHTML = cel.nombre_html || cel.nombre || '' }, 100)
+      setTimeout(() => { if (titleRef.current) titleRef.current.innerHTML = sanitizarTituloHtml(cel.nombre_html || cel.nombre || '') }, 100)
     }).catch(async () => {
       // Sesión guardada inválida/corrupta (ej. cuenta borrada): sin esto la
       // página se queda cargando para siempre en vez de mostrar el contenido
@@ -1361,7 +1382,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
   const saveTitleHtml = useCallback(() => {
     if (!celebracion || !titleRef.current) return
-    supabase.from('celebraciones').update({ nombre_html: titleRef.current.innerHTML, nombre: titleRef.current.innerText }).eq('slug', celebracion.slug)
+    supabase.from('celebraciones').update({ nombre_html: sanitizarTituloHtml(titleRef.current.innerHTML), nombre: titleRef.current.innerText }).eq('slug', celebracion.slug)
   }, [celebracion])
 
   function applyFormat(cmd: string) { titleRef.current?.focus(); document.execCommand(cmd, false); setTimeout(saveTitleHtml, 100) }
