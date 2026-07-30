@@ -2608,7 +2608,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 // igual que ya se hace en la vista de invitados.
                 const proxima = celebracion?.recurrente ? proximaOcurrencia(celebracion, ocurrencias) : null
                 const fechaMostrar = proxima?.fecha || fecha
-                const horaMostrar = proxima?.hora || horaPrincipal
+                // ocurrencias.hora viene de la base como "HH:MM:SS" (con segundos);
+                // horaPrincipal viene de un input type="time" como "HH:MM". Se normaliza
+                // a "HH:MM" siempre para que calendarLinks (que le pega ":00" él solo)
+                // no arme una hora inválida como "20:00:00:00" y tumbe la página.
+                const horaMostrar = (proxima?.hora || horaPrincipal || '').slice(0, 5)
                 const fechaLegible = fechaMostrar
                   ? new Date(fechaMostrar + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
                   : null
