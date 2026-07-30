@@ -356,7 +356,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
   const lugarNombre = proxima?.lugar || (celebracion.paradas || []).find((p: any) => p.id)?.lugar
 
   const fecha = fechaEfectiva
-    ? new Date(fechaEfectiva).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(fechaEfectiva + 'T00:00:00').toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : null
 
   const rsvpColors = {
@@ -570,7 +570,7 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
   const horaEfectiva = proxima?.hora || paradas[0]?.hora
   const lugarEfectivo = proxima?.lugar || paradas[0]?.lugar
   const fecha = fechaEfectiva
-    ? new Date(fechaEfectiva).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(fechaEfectiva + 'T00:00:00').toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : null
 
   const rsvpColors = {
