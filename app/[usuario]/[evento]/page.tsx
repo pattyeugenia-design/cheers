@@ -1120,6 +1120,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [showCustomize, setShowCustomize] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
   const [lifetimeExpanded, setLifetimeExpanded] = useState(false)
+  const [fechasExpandidas, setFechasExpandidas] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -2956,53 +2957,90 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
           </div>
 
           {/* Fechas de la serie recurrente — id fijo para que el Calendario del
-              dashboard pueda mandar aquí directo con un link tipo #proximas-fechas */}
-          {celebracion?.recurrente && (
-            <div id="proximas-fechas" style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', boxShadow: '0 12px 32px rgba(25,12,50,.18)', marginBottom: 14, padding: '16px 18px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const, marginBottom: 10 }}>
-                {lang === 'en' ? 'Upcoming dates' : 'Próximas fechas'}
+              dashboard pueda mandar aquí directo con un link tipo #proximas-fechas.
+              Colapsada por default (solo la próxima fecha + "Ver todas") para que
+              no se sienta como un cuadro aparte enorme — Patty lo pidió compacto
+              porque no participa del grid de tiles arrastrables. */}
+          {celebracion?.recurrente && (() => {
+            const proximaResumen = proximaOcurrencia(celebracion, ocurrencias)
+            const fechaResumen = proximaResumen?.fecha
+              ? new Date(proximaResumen.fecha + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
+              : null
+            const horaResumen = proximaResumen?.hora
+              ? new Date(`2000-01-01T${proximaResumen.hora.slice(0, 5)}`).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-MX', { hour: 'numeric', minute: '2-digit' })
+              : null
+            return (
+              <div id="proximas-fechas" style={{ background: te.tileBg, borderRadius: 22, overflow: 'hidden', boxShadow: '0 12px 32px rgba(25,12,50,.18)', marginBottom: 14, padding: '16px 18px' }}>
+                {!fechasExpandidas ? (
+                  <button
+                    onClick={() => setFechasExpandidas(true)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', background: 'none', cursor: 'pointer', fontFamily: FSYS, padding: 0 }}
+                  >
+                    <span style={{ fontSize: 13, color: '#2a2440' }}>
+                      <span style={{ color: '#a39ec0' }}>{lang === 'en' ? 'Next date:' : 'Próxima fecha:'}</span>{' '}
+                      {fechaResumen ? `${fechaResumen}${horaResumen ? `, ${horaResumen}` : ''}` : (lang === 'en' ? 'Generating soon' : 'Se genera pronto')}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: '#534AB7', flexShrink: 0, marginLeft: 10 }}>
+                      {lang === 'en' ? 'See all dates ↓' : 'Ver todas las fechas ↓'}
+                    </span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setFechasExpandidas(false)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', background: 'none', cursor: 'pointer', fontFamily: FSYS, padding: 0, marginBottom: 10 }}
+                    >
+                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.4px', color: '#a39ec0', textTransform: 'uppercase' as const }}>
+                        {lang === 'en' ? 'Upcoming dates' : 'Próximas fechas'}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#534AB7' }}>{lang === 'en' ? 'Hide ↑' : 'Ocultar ↑'}</span>
+                    </button>
+
+                    {ocurrencias.length === 0 && (
+                      <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>
+                        {rol === 'organizador'
+                          ? (eventoEsPro
+                              ? (lang === 'en' ? 'Generating dates soon.' : 'Las fechas se generan pronto.')
+                              : (lang === 'en' ? 'Go Super Cheer or Extra Cheer so future dates get generated.' : 'Hazte Super Cheer o Extra Cheer para que se generen las fechas futuras.'))
+                          : (lang === 'en' ? 'No upcoming dates yet.' : 'Todavía no hay fechas próximas.')}
+                      </p>
+                    )}
+
+                    <div style={{ maxHeight: 132, overflowY: 'auto' as const }}>
+                      {ocurrencias.map(o => (
+                        <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,.05)' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#2a2440', minWidth: 92, flexShrink: 0 }}>
+                            {new Date(o.fecha + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          </div>
+                          {rol === 'organizador' ? (
+                            <>
+                              <input
+                                type="time"
+                                defaultValue={o.hora ? o.hora.slice(0, 5) : ''}
+                                onBlur={e => actualizarOcurrencia(o.id, 'hora', e.target.value)}
+                                style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 130, flexShrink: 0 }}
+                              />
+                              <input
+                                defaultValue={o.lugar || ''}
+                                onBlur={e => actualizarOcurrencia(o.id, 'lugar', e.target.value)}
+                                placeholder={lang === 'en' ? 'place (optional)' : 'lugar (opcional)'}
+                                style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', flex: 1 }}
+                              />
+                              <button onClick={() => cancelarOcurrencia(o.id)} style={{ border: 'none', background: 'none', color: '#D4537E', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>
+                                {lang === 'en' ? 'Cancel' : 'Cancelar'}
+                              </button>
+                            </>
+                          ) : (
+                            o.lugar && <div style={{ fontSize: 13, color: '#6b6585' }}>{o.lugar}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
-
-              {ocurrencias.length === 0 && (
-                <p style={{ fontSize: 13, color: '#7a7494', margin: 0 }}>
-                  {rol === 'organizador'
-                    ? (eventoEsPro
-                        ? (lang === 'en' ? 'Generating dates soon.' : 'Las fechas se generan pronto.')
-                        : (lang === 'en' ? 'Go Super Cheer or Extra Cheer so future dates get generated.' : 'Hazte Super Cheer o Extra Cheer para que se generen las fechas futuras.'))
-                    : (lang === 'en' ? 'No upcoming dates yet.' : 'Todavía no hay fechas próximas.')}
-                </p>
-              )}
-
-              {ocurrencias.map(o => (
-                <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,.05)' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#2a2440', minWidth: 92, flexShrink: 0 }}>
-                    {new Date(o.fecha + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
-                  </div>
-                  {rol === 'organizador' ? (
-                    <>
-                      <input
-                        type="time"
-                        defaultValue={o.hora ? o.hora.slice(0, 5) : ''}
-                        onBlur={e => actualizarOcurrencia(o.id, 'hora', e.target.value)}
-                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 130, flexShrink: 0 }}
-                      />
-                      <input
-                        defaultValue={o.lugar || ''}
-                        onBlur={e => actualizarOcurrencia(o.id, 'lugar', e.target.value)}
-                        placeholder={lang === 'en' ? 'place (optional)' : 'lugar (opcional)'}
-                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', flex: 1 }}
-                      />
-                      <button onClick={() => cancelarOcurrencia(o.id)} style={{ border: 'none', background: 'none', color: '#D4537E', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>
-                        {lang === 'en' ? 'Cancel' : 'Cancelar'}
-                      </button>
-                    </>
-                  ) : (
-                    o.lugar && <div style={{ fontSize: 13, color: '#6b6585' }}>{o.lugar}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+            )
+          })()}
 
           {/* Lifetime colapsable — solo tiene sentido ofrecerlo a quien todavía no lo tiene */}
           {!cuentaEsLifetime && (lifetimeExpanded ? (
