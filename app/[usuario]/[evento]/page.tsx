@@ -328,6 +328,50 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
   const [guardado, setGuardado] = useState(false)
   const [errorRsvp, setErrorRsvp] = useState('')
 
+  // Copy del brief por tipo de evento — antes era un texto genérico ("¿Quieres
+  // ver todos los detalles?") que sonaba a formulario. Definido con Patty:
+  // sin "te rajas" ni regionalismos, mismo espíritu casual por tipo.
+  const tipoBriefCopy: Record<string, { es: string; en: string; esDetalle: string; enDetalle: string }> = {
+    cena: {
+      es: '¿Te unes a la cena?',
+      en: 'Joining dinner?',
+      esDetalle: 'Dirección exacta, con quién vas a estar, y si hay que llevar algo.',
+      enDetalle: 'Exact address, who else is going, and what to bring.',
+    },
+    reunion: {
+      es: '¿Contamos contigo?',
+      en: 'Can we count you in?',
+      esDetalle: 'Dirección exacta y quién más cae.',
+      enDetalle: 'Exact address and who else is coming.',
+    },
+    viaje: {
+      es: '¿Te unes al viaje?',
+      en: 'Joining the trip?',
+      esDetalle: 'Vuelos, hospedaje y el itinerario completo.',
+      enDetalle: 'Flights, lodging, and the full itinerary.',
+    },
+    cumple: {
+      es: celebracion.festejado_nombre ? `¿Vienes a celebrar a ${celebracion.festejado_nombre}?` : '¿Vienes a la fiesta?',
+      en: celebracion.festejado_nombre ? `Coming to celebrate ${celebracion.festejado_nombre}?` : 'Coming to the party?',
+      esDetalle: 'Dirección, lista de regalos y quién más va.',
+      enDetalle: 'Address, gift list, and who else is going.',
+    },
+    evento: {
+      es: '¿Vienes?',
+      en: 'Coming?',
+      esDetalle: 'Dirección exacta, lista de regalos y quién más va.',
+      enDetalle: 'Exact address, gift list, and who else is going.',
+    },
+    otro: {
+      es: '¿Te unes al plan?',
+      en: 'In for the plan?',
+      esDetalle: 'Todos los detalles: dirección, quién va y qué llevar.',
+      enDetalle: 'All the details: address, who else is coming, and what to bring.',
+    },
+  }
+  const tipoBriefKey = (celebracion.tipo === 'cumple' && !celebracion.festejado_nombre) ? 'otro' : (celebracion.tipo || 'otro')
+  const briefCopy = tipoBriefCopy[tipoBriefKey] || tipoBriefCopy.otro
+
   async function confirmarSinCuenta() {
     if (!asistencia || !nombreInvitado.trim()) {
       setErrorRsvp(
@@ -436,7 +480,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
 
         <div style={{ background: '#fff', borderRadius: 24, padding: '24px 20px', marginBottom: 16, boxShadow: '0 12px 36px rgba(25,12,50,.22)' }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: '#2a2440', marginBottom: 16 }}>
-            {guardado ? (lang === 'en' ? 'Thanks for letting us know!' : '¡Gracias por avisar!') : (lang === 'en' ? 'Will you be there?' : '¿Vas a ir?')}
+            {guardado ? (lang === 'en' ? 'Thanks for letting us know!' : '¡Gracias por avisar!') : (lang === 'en' ? briefCopy.en : briefCopy.es)}
           </div>
           {!guardado && (
             <>
@@ -465,7 +509,7 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
 
         <div style={{ background: unlockBoxBg, borderRadius: 24, padding: '20px', textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 12px', fontWeight: 600 }}>
-            {lang === 'en' ? 'Want the full details? Address, gift list, and who else is going.' : '¿Quieres ver todos los detalles? Dirección exacta, lista de regalos y quién más va.'}
+            {lang === 'en' ? briefCopy.enDetalle : briefCopy.esDetalle}
           </p>
           <button onClick={irADesbloquear} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>
             {lang === 'en' ? 'Sign in to see more →' : 'Inicia sesión para ver más →'}
