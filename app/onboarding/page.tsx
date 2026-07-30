@@ -97,10 +97,11 @@ export default function Onboarding() {
       return
     }
 
+    const { data: { session } } = await supabase.auth.getSession()
     fetch('/api/bienvenida', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, nombre: user.user_metadata?.name?.split(' ')[0], username, lang: langDetectado }),
+      body: JSON.stringify({ accessToken: session?.access_token, nombre: user.user_metadata?.name?.split(' ')[0], username, lang: langDetectado }),
     }).catch(() => {})
 
     track('registro_completado', { userId: user.id })

@@ -15,7 +15,26 @@ const TIPOS_VALIDOS = new Set([
   'compra_completada',
 ])
 
+// Sin login de por medio (se llama también para visitas anónimas), así que no
+// se puede exigir un token aquí — el límite por IP frena que alguien use esto
+// para llenar la tabla de basura o inflar/ensuciar las métricas.
+const solicitudesPorIP = new Map<string, number[]>()
+const LIMITE_SOLICITUDES = 30
+const VENTANA_MS = 60_000
+
+function excedeLimite(ip: string): boolean {
+  const ahora = Date.now()
+  const previas = solicitudesPorIP.get(ip) || []
+  const recientes = previas.filter(t => ahora - t < VENTANA_MS)
+  recientes.push(ahora)
+  solicitudesPorIP.set(ip, recientes)
+  return recientes.length > LIMITE_SOLICITUDES
+}
+
 export async function POST(req: Request) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
+  if (excedeLimite(ip)) return NextResponse.json({ ok: true })
+
   try {
     const body = await req.json()
     const { tipo, userId, celebracionSlug, ruta, utmSource, utmMedium, utmCampaign, referrer, sessionId, metadata } = body

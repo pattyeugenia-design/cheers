@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, trackedLink } from '../../emailTemplate'
 
@@ -24,8 +25,17 @@ export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
   if (excedeLimite(ip)) return NextResponse.json({ success: true })
 
-  const { email, nombre, username, lang } = await req.json()
-  if (!email || !username) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+  const { accessToken, nombre, username, lang } = await req.json()
+  if (!accessToken || !username) return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+
+  // Antes este endpoint confiaba en el email que mandara quien llamara — cualquiera
+  // podía usarlo para mandar correos de "bienvenida" con la marca de Cheers a
+  // cualquier bandeja. Ahora se verifica el token real y se usa el email de esa
+  // sesión, nunca el que venga en el body.
+  const authClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  const { data: { user }, error: userError } = await authClient.auth.getUser(accessToken)
+  if (userError || !user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const email = user.email
 
   const idioma: 'es' | 'en' = lang === 'en' ? 'en' : 'es'
 
