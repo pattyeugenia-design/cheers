@@ -1986,6 +1986,30 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
           </div>
         )}
 
+        {/* Gente que confirmó sola por el link, sin que la hayas agregado tú —
+            antes esto solo subía el contador de arriba y quedaba sin nombre visible. */}
+        {(() => {
+          const extras = rsvps.filter((r: any) => !invitadosList.some((inv: any) => inv.nombre === r.nombre || inv.email === r.nombre))
+          if (!extras.length) return null
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+              {extras.map((r: any) => (
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: te.accentBg + '22', borderRadius: 10, border: `1px dashed ${te.accentBg}` }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: te.accentBg, color: te.accentText, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {initial(r.nombre)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: te.tileText, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.nombre}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: r.asistencia === 'si' ? '#1f8a5b' : r.asistencia === 'no' ? '#dc2626' : '#c98a1e', marginTop: 1 }}>
+                      {r.asistencia === 'si' ? tx.going : r.asistencia === 'no' ? tx.not_going : tx.maybe} · {lang === 'en' ? 'via link' : 'vía link'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
         {limiteAlcanzado ? (
           <div style={{ background: 'linear-gradient(135deg,#534AB7,#D4537E)', borderRadius: 12, padding: '10px 12px', color: '#fff' }}>
             <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 3 }}>{tx.free_limit_title(limiteInvitados)}</div>
