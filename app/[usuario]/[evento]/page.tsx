@@ -2602,11 +2602,18 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
               )}
 
               {(() => {
-                const fechaLegible = fecha
-                  ? new Date(fecha + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+                // Para eventos recurrentes, "fecha" es solo el ancla interna de la serie
+                // (puede ser hoy mismo, cualquier día) — lo que hay que mostrarle a la
+                // organizadora es la PRÓXIMA ocurrencia real (ej. el siguiente viernes),
+                // igual que ya se hace en la vista de invitados.
+                const proxima = celebracion?.recurrente ? proximaOcurrencia(celebracion, ocurrencias) : null
+                const fechaMostrar = proxima?.fecha || fecha
+                const horaMostrar = proxima?.hora || horaPrincipal
+                const fechaLegible = fechaMostrar
+                  ? new Date(fechaMostrar + 'T00:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
                   : null
-                const horaLegible = horaPrincipal
-                  ? new Date(`2000-01-01T${horaPrincipal}`).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-MX', { hour: 'numeric', minute: '2-digit' })
+                const horaLegible = horaMostrar
+                  ? new Date(`2000-01-01T${horaMostrar}`).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-MX', { hour: 'numeric', minute: '2-digit' })
                   : null
                 const recordatorioResumen = recordatorioDias.length === 0
                   ? (lang === 'en' ? 'No reminders' : 'Sin recordatorios')
@@ -2615,7 +2622,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                     : (lang === 'en' ? `${recordatorioDias.length} reminders` : `${recordatorioDias.length} recordatorios`)
                 // Para que la organizadora también pueda agregar su propio evento a
                 // su calendario (antes esto solo existía en la vista de invitados).
-                const linksCalendario = fecha ? calendarLinks(celebracion?.nombre || 'Cheers', fecha, horaPrincipal, lugar, celebracion?.recurrente ? {
+                const linksCalendario = fechaMostrar ? calendarLinks(celebracion?.nombre || 'Cheers', fechaMostrar, horaMostrar, lugar, celebracion?.recurrente ? {
                   tipo: celebracion.recurrencia_tipo,
                   intervalo: celebracion.recurrencia_intervalo,
                   diasSemana: celebracion.recurrencia_dias_semana,
@@ -2926,10 +2933,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   {rol === 'organizador' ? (
                     <>
                       <input
-                        defaultValue={o.hora || ''}
+                        type="time"
+                        defaultValue={o.hora ? o.hora.slice(0, 5) : ''}
                         onBlur={e => actualizarOcurrencia(o.id, 'hora', e.target.value)}
-                        placeholder={lang === 'en' ? 'time' : 'hora'}
-                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 70, flexShrink: 0 }}
+                        style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 90, flexShrink: 0 }}
                       />
                       <input
                         defaultValue={o.lugar || ''}
