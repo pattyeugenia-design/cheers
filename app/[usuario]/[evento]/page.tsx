@@ -1127,6 +1127,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [mapsListo, setMapsListo] = useState(false)
   const lugarRef = useRef<HTMLInputElement>(null)
   const nuevaParadaLugarRef = useRef<HTMLInputElement>(null)
+  const ocurrenciaLugarRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
   const [imgPosition, setImgPosition] = useState('center')
@@ -1571,6 +1572,23 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     })
     nuevaParadaLugarRef.current.dataset.init = 'true'
   }, [mapsListo, showAddParada])
+
+  // Autocompletado de Google Places en cada fecha de "Próximas fechas" — antes
+  // solo el campo de lugar principal lo tenía, así que aquí no salía ningún
+  // desplegable de sugerencias al escribir.
+  useEffect(() => {
+    if (!mapsListo || !fechasExpandidas) return
+    ocurrenciaLugarRefs.current.forEach((el, id) => {
+      if (!el || el.dataset.init) return
+      const ac = new window.google.maps.places.Autocomplete(el, { fields: ['name', 'formatted_address'] })
+      ac.addListener('place_changed', () => {
+        const p = ac.getPlace()
+        const nombre = el.value || p?.name || ''
+        actualizarOcurrencia(id, 'lugar', nombre)
+      })
+      el.dataset.init = 'true'
+    })
+  }, [mapsListo, fechasExpandidas, ocurrencias])
 
   async function subirPortada(file: File) {
     if (!file || !celebracion || !file.type.startsWith('image/')) return
@@ -3053,6 +3071,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                                 style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', width: 130, flexShrink: 0 }}
                               />
                               <input
+                                ref={el => { if (el) ocurrenciaLugarRefs.current.set(o.id, el); else ocurrenciaLugarRefs.current.delete(o.id) }}
                                 defaultValue={o.lugar || ''}
                                 onBlur={e => actualizarOcurrencia(o.id, 'lugar', e.target.value)}
                                 placeholder={lang === 'en' ? 'place (optional)' : 'lugar (opcional)'}
