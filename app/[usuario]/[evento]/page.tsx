@@ -3059,7 +3059,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                                 style={{ ...fieldInput, fontSize: 12, padding: '6px 8px', flex: 1 }}
                               />
                               {o.lugar && (
-                                <a href={`https://maps.google.com/?q=${encodeURIComponent(o.lugar)}`} target="_blank" rel="noreferrer" title={lang === 'en' ? 'Open in Maps' : 'Abrir en Maps'} style={{ fontSize: 15, flexShrink: 0, textDecoration: 'none', lineHeight: 1 }}>📍</a>
+                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.lugar)}`} target="_blank" rel="noreferrer" style={{ fontSize: 10, fontWeight: 800, color: '#1a73e8', background: '#E8F0FE', padding: '4px 8px', borderRadius: 99, textDecoration: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{tx.see_map}</a>
                               )}
                               <button onClick={() => cancelarOcurrencia(o.id)} style={{ border: 'none', background: 'none', color: '#D4537E', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0 }}>
                                 {lang === 'en' ? 'Cancel' : 'Cancelar'}
