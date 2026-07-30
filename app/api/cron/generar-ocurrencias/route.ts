@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   const { data: series } = await admin
     .from('celebraciones')
-    .select('slug, fecha, plan, organizador_id, recurrente, recurrencia_tipo, recurrencia_intervalo, recurrencia_dias_semana, recurrencia_dia_semana, recurrencia_dia_mes, recurrencia_semana_mes, recurrencia_fin_tipo, recurrencia_fin_fecha, recurrencia_fin_conteo')
+    .select('slug, fecha, plan, organizador_id, recurrente, recurrencia_tipo, recurrencia_intervalo, recurrencia_dias_semana, recurrencia_dia_semana, recurrencia_dia_mes, recurrencia_semana_mes, recurrencia_fin_tipo, recurrencia_fin_fecha, recurrencia_fin_conteo, paradas')
     .eq('recurrente', true)
     .eq('archivada', false)
 
@@ -81,8 +81,15 @@ export async function GET(req: Request) {
 
     if (nuevasFechas.length === 0) continue
 
+    // Cada ocurrencia nueva hereda la hora/lugar por default de la serie (la
+    // primera parada) — si no, cada fecha futura salía en blanco y había que
+    // volver a escribir la misma hora a mano, semana tras semana.
+    const primeraParada = (serie.paradas || []).find((p: any) => p?.hora || p?.lugar)
+    const horaDefault = primeraParada?.hora || null
+    const lugarDefault = primeraParada?.lugar || null
+
     const { error } = await admin.from('ocurrencias').insert(
-      nuevasFechas.map(fecha => ({ celebracion_slug: serie.slug, fecha }))
+      nuevasFechas.map(fecha => ({ celebracion_slug: serie.slug, fecha, hora: horaDefault, lugar: lugarDefault }))
     )
 
     if (!error) {

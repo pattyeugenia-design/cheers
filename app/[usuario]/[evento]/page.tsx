@@ -1449,7 +1449,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   }
 
   function activarRecurrencia() {
-    const patch = {
+    const patch: Record<string, any> = {
       recurrente: true,
       recurrencia_tipo: recTipo,
       recurrencia_intervalo: recIntervalo,
@@ -1460,6 +1460,16 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       recurrencia_fin_tipo: recFinTipo,
       recurrencia_fin_fecha: recFinTipo === 'fecha' ? recFinFecha : null,
       recurrencia_fin_conteo: recFinTipo === 'conteo' ? recFinConteo : null,
+    }
+    // Diario/semanal/mensual no necesitan que la organizadora escriba una fecha
+    // — el patrón ya la define (ej. "cada viernes") — así que si la dejó vacía
+    // se rellena sola con hoy en vez de quedarse en "dd/mm/yyyy" sin explicación.
+    // Anual sí la necesita de verdad: de ahí sale el mes/día del aniversario.
+    if (recTipo !== 'anual' && !fecha) {
+      const hoy = new Date()
+      const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+      patch.fecha = hoyStr
+      setFecha(hoyStr)
     }
     guardarRecurrencia(patch)
   }
