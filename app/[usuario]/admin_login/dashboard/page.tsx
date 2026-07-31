@@ -335,6 +335,13 @@ export default function Admin() {
   })
   const rutasOrdenadas = Object.entries(porRuta).sort((a, b) => b[1].vistas - a[1].vistas)
 
+  // Rango real de fechas cubierto por las visitas (puede ser menor a 90 días
+  // si el sitio es nuevo o si últimamente hay poco tráfico)
+  const fechasVisitas = visitas.map(v => v.created_at).filter(Boolean).sort()
+  const rangoFechas = fechasVisitas.length > 0
+    ? `${new Date(fechasVisitas[0]).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} – ${new Date(fechasVisitas[fechasVisitas.length - 1]).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}`
+    : null
+
   // Crecimiento — top usuarios y quiénes valen un mensaje personal tuyo
   const celsPorUsuario: Record<string, number> = {}
   celebraciones.forEach(c => { celsPorUsuario[c.organizador_id] = (celsPorUsuario[c.organizador_id] || 0) + 1 })
@@ -711,7 +718,8 @@ export default function Admin() {
 
             {/* Páginas más visitadas */}
             <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
-              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:16, textTransform:'uppercase', letterSpacing:'.5px' }}>Páginas más visitadas ({totalVisitas} visitas)</div>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:4, textTransform:'uppercase', letterSpacing:'.5px' }}>Páginas más visitadas ({totalVisitas} visitas)</div>
+              {rangoFechas && <div style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginBottom:12 }}>Del {rangoFechas}</div>}
               {rutasOrdenadas.length === 0 ? (
                 <div style={{ fontSize:13, color:'rgba(255,255,255,.35)' }}>Todavía no hay visitas registradas.</div>
               ) : (
