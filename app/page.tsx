@@ -34,6 +34,16 @@ const translations = {
       { n: '02', title: 'Comparte', desc: 'Un link. Tus personas ven todo y confirman en segundos.' },
       { n: '03', title: 'Disfruta', desc: 'Sigue confirmaciones en un solo lugar y enfócate en la fiesta.' },
     ],
+    features_label: 'TODO EN UN SOLO LUGAR',
+    features_title: 'Lo que necesita\ncada celebración.',
+    features: [
+      { icon: 'calendar', title: 'Itinerario completo', desc: 'Horarios, lugares y notas de cada momento del plan.' },
+      { icon: 'users', title: 'Invitados y RSVP', desc: 'Confirmaciones en segundos, sin preguntar uno por uno.' },
+      { icon: 'gift', title: 'Lista de regalos', desc: 'Cada quien ve qué falta y lo reserva al instante.' },
+      { icon: 'bell', title: 'Recordatorios', desc: 'Se mandan solos, para ti y para tus invitados.' },
+      { icon: 'repeat', title: 'Eventos que se repiten', desc: 'Cenas o juntadas semanales, sin recrear el link cada vez.' },
+      { icon: 'sparkle', title: 'Personalización', desc: 'Tema, tipografía y portada a tu gusto.' },
+    ],
     prices_label: 'PRECIOS',
     prices_title: 'Empieza gratis.\nMejora cuando quieras.',
     plans: [
@@ -76,6 +86,16 @@ const translations = {
       { n: '02', title: 'Share', desc: 'One link. Your people see everything and confirm in seconds.' },
       { n: '03', title: 'Enjoy', desc: 'Track confirmations in one place and focus on the party.' },
     ],
+    features_label: 'EVERYTHING IN ONE PLACE',
+    features_title: 'Everything a\ncelebration needs.',
+    features: [
+      { icon: 'calendar', title: 'Full itinerary', desc: 'Times, places, and notes for every part of the plan.' },
+      { icon: 'users', title: 'Guests and RSVP', desc: 'Confirmations in seconds, no need to ask one by one.' },
+      { icon: 'gift', title: 'Gift list', desc: 'Everyone sees what\'s left and reserves it instantly.' },
+      { icon: 'bell', title: 'Reminders', desc: 'Sent automatically, for you and for your guests.' },
+      { icon: 'repeat', title: 'Recurring events', desc: 'Weekly dinners or hangouts, without rebuilding the link.' },
+      { icon: 'sparkle', title: 'Personalization', desc: 'Theme, font, and cover photo, your way.' },
+    ],
     prices_label: 'PRICING',
     prices_title: 'Start free.\nUpgrade when you want.',
     plans: [
@@ -89,6 +109,21 @@ const translations = {
     no_cc2: 'Free to start · No card needed',
     footer_privacy: 'Privacy',
     footer_terms: 'Terms',
+  }
+}
+
+// Íconos de línea simples para la sección de features — mismo estilo en las 6,
+// sin depender de ninguna librería externa (evita otra dependencia para 6 SVGs).
+function FeatureIcon({ name }: { name: string }) {
+  const p = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  switch (name) {
+    case 'calendar': return <svg width="20" height="20" viewBox="0 0 24 24" {...p}><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    case 'users': return <svg width="20" height="20" viewBox="0 0 24 24" {...p}><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 8a3 3 0 1 1 0 6M21 20c0-2.6-1.7-4.8-4-5.6"/></svg>
+    case 'gift': return <svg width="20" height="20" viewBox="0 0 24 24" {...p}><rect x="3" y="9" width="18" height="4"/><rect x="5" y="13" width="14" height="8"/><path d="M12 9v12M12 9c-1.5-4-6-4-6-1.5S9 9 12 9zM12 9c1.5-4 6-4 6-1.5S15 9 12 9z"/></svg>
+    case 'bell': return <svg width="20" height="20" viewBox="0 0 24 24" {...p}><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+    case 'repeat': return <svg width="20" height="20" viewBox="0 0 24 24" {...p}><path d="M4 12a8 8 0 0 1 14-5.2M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-14 5.2M4 20v-4h4"/></svg>
+    case 'sparkle': return <svg width="20" height="20" viewBox="0 0 24 24" {...p}><path d="M12 3c.6 3.3 1.4 5.1 5 5.7-3.6.6-4.4 2.4-5 5.7-.6-3.3-1.4-5.1-5-5.7 3.6-.6 4.4-2.4 5-5.7zM19 15c.3 1.6.7 2.5 2.4 2.7-1.7.3-2.1 1.1-2.4 2.7-.3-1.6-.7-2.5-2.4-2.7 1.7-.2 2.1-1.1 2.4-2.7z"/></svg>
+    default: return null
   }
 }
 
@@ -273,6 +308,27 @@ export default function Home() {
               </div>
               <h3 style={{ fontSize:isMobile?20:22, fontWeight:800, color:'#fff', margin:'0 0 8px', letterSpacing:'-.5px' }}>{s.title}</h3>
               <p style={{ fontSize:15, color:'rgba(255,255,255,.4)', lineHeight:1.65, margin:0 }}>{s.desc}</p>
+            </div>)}
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section style={{ padding:isMobile?'64px 20px':`100px ${px}`, position:'relative', zIndex:1 }}>
+        <div style={{ maxWidth:1100, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:isMobile?40:64 }}>
+            <p style={{ fontSize:11, fontWeight:800, color:'#a89df0', letterSpacing:'2px', marginBottom:14 }}>{tx.features_label}</p>
+            <h2 style={{ fontSize:isMobile?34:52, fontWeight:900, letterSpacing:isMobile?'-1.5px':'-2px', color:'#fff', margin:0, lineHeight:1.05 }}>
+              {tx.features_title.split('\n').map((l,i) => <span key={i}>{l}{i===0&&<br/>}</span>)}
+            </h2>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)', gap:16 }}>
+            {tx.features.map((f,i) => <div key={f.title} className="card-h" style={{ padding:isMobile?'24px 20px':'28px 24px', background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:20 }}>
+              <div style={{ width:40, height:40, borderRadius:12, background:['rgba(83,74,183,.2)','rgba(212,83,126,.2)','rgba(168,157,240,.2)'][i%3], border:`1px solid ${['rgba(83,74,183,.4)','rgba(212,83,126,.4)','rgba(168,157,240,.4)'][i%3]}`, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, color:['#a89df0','#f08cb0','#c4bbf8'][i%3] }}>
+                <FeatureIcon name={f.icon} />
+              </div>
+              <h3 style={{ fontSize:17, fontWeight:800, color:'#fff', margin:'0 0 6px', letterSpacing:'-.3px' }}>{f.title}</h3>
+              <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', lineHeight:1.6, margin:0 }}>{f.desc}</p>
             </div>)}
           </div>
         </div>
