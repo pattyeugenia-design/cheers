@@ -96,10 +96,11 @@ function MiniCalendario({ eventos, lang, router }: { eventos: any[]; lang: strin
   // Dos meses lado a lado (izquierda = actual, derecha = el que sigue) — en
   // mobile se apilan uno encima del otro porque no caben angostos.
   const renderMes = (mes: Date, info: ReturnType<typeof construirMesInfo>) => {
-    const nombreMes = mes.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long', year: 'numeric' })
+    const nombreMesRaw = mes.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long', year: 'numeric' })
+    const nombreMes = nombreMesRaw.charAt(0).toUpperCase() + nombreMesRaw.slice(1)
     return (
       <div style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: 16 }}>
-        <div style={{ textAlign: 'center', color: '#EEEDFE', fontWeight: 800, fontSize: 13, textTransform: 'capitalize', marginBottom: 8 }}>{nombreMes}</div>
+        <div style={{ textAlign: 'center', color: '#EEEDFE', fontWeight: 800, fontSize: 13, marginBottom: 8 }}>{nombreMes}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
           {diasSemana.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,.35)' }}>{d}</div>)}
         </div>
