@@ -628,7 +628,7 @@ export default function Admin() {
                 {Object.entries(porTipo).sort((a,b) => b[1]-a[1]).map(([tipo, count]) => (
                   <div key={tipo} style={{ display:'flex', alignItems:'center', gap:12 }}>
                     <span style={{ width:60, fontSize:12, fontWeight:700, color:'rgba(255,255,255,.5)', textTransform:'uppercase' }}>{tipo}</span>
-                    <div style={{ flex:1, height:8, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
+                    <div style={{ flex:1, height:8, background:"repeating-linear-gradient(90deg, rgba(255,255,255,.15) 0px, rgba(255,255,255,.15) 1px, transparent 1px, transparent 25%), rgba(255,255,255,.06)", borderRadius:99, overflow:'hidden' }}>
                       <div style={{ width:`${(count/totalCels)*100}%`, height:'100%', background:'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius:99 }} />
                     </div>
                     <span style={{ fontSize:14, fontWeight:800, color:'#a89df0', minWidth:24, textAlign:'right' }}>{count}</span>
@@ -705,7 +705,7 @@ export default function Admin() {
                   {fuentesOrdenadas.map(([fuente, count]) => (
                     <div key={fuente} style={{ display:'flex', alignItems:'center', gap:12 }}>
                       <span style={{ width:100, fontSize:12, fontWeight:700, color:'rgba(255,255,255,.5)' }}>{fuente}</span>
-                      <div style={{ flex:1, height:8, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
+                      <div style={{ flex:1, height:8, background:"repeating-linear-gradient(90deg, rgba(255,255,255,.15) 0px, rgba(255,255,255,.15) 1px, transparent 1px, transparent 25%), rgba(255,255,255,.06)", borderRadius:99, overflow:'hidden' }}>
                         <div style={{ width:`${(count/totalVisitas)*100}%`, height:'100%', background:'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius:99 }} />
                       </div>
                       <span style={{ fontSize:14, fontWeight:800, color:'#a89df0', minWidth:24, textAlign:'right' }}>{count}</span>
@@ -727,7 +727,7 @@ export default function Admin() {
                   {rutasOrdenadas.map(([ruta, info]) => (
                     <div key={ruta} style={{ display:'flex', alignItems:'center', gap:12 }}>
                       <span style={{ width:180, fontSize:12, fontWeight:700, color:'rgba(255,255,255,.55)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={ruta}>{ruta}</span>
-                      <div style={{ flex:1, height:8, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
+                      <div style={{ flex:1, height:8, background:"repeating-linear-gradient(90deg, rgba(255,255,255,.15) 0px, rgba(255,255,255,.15) 1px, transparent 1px, transparent 25%), rgba(255,255,255,.06)", borderRadius:99, overflow:'hidden' }}>
                         <div style={{ width:`${(info.vistas/totalVisitas)*100}%`, height:'100%', background:'linear-gradient(90deg,#534AB7,#D4537E)', borderRadius:99 }} />
                       </div>
                       <span style={{ fontSize:14, fontWeight:800, color:'#a89df0', minWidth:24, textAlign:'right' }}>{info.vistas}</span>
