@@ -536,12 +536,25 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
         </div>
 
         <div style={{ background: unlockBoxBg, borderRadius: 24, padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 12px', fontWeight: 600 }}>
-            {lang === 'en' ? briefCopy.enDetalle : briefCopy.esDetalle}
-          </p>
-          <button onClick={irADesbloquear} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>
-            {lang === 'en' ? 'Sign in to see more →' : 'Inicia sesión para ver más →'}
-          </button>
+          {celebracion.link_cerrado ? (
+            // Links cerrados: tener cuenta ya no basta, así que no le ofrecemos el botón
+            // de "inicia sesión" — sería confuso si ya tiene cuenta y de todos modos
+            // se queda viendo esto. Solo explicamos por qué y qué puede hacer.
+            <p style={{ fontSize: 14, color: txtPrimario, margin: 0, fontWeight: 600 }}>
+              {lang === 'en'
+                ? "This celebration is private. Only invited guests can see the full plan — if you think you should be on the list, ask the organizer to add you."
+                : 'Esta celebración es privada. Solo quien fue invitado ve el plan completo — si crees que deberías estar en la lista, pídele a quien organiza que te agregue.'}
+            </p>
+          ) : (
+            <>
+              <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 12px', fontWeight: 600 }}>
+                {lang === 'en' ? briefCopy.enDetalle : briefCopy.esDetalle}
+              </p>
+              <button onClick={irADesbloquear} style={{ border: 'none', background: '#fff', color: '#534AB7', fontSize: 14, fontWeight: 800, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontFamily: FSYS }}>
+                {lang === 'en' ? 'Sign in to see more →' : 'Inicia sesión para ver más →'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -1276,24 +1289,34 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             inv = { ...invPorEmail, ...update }
             setRol('invitado')
           } else {
-            const planOrganizador = perfilOrgData?.plan || 'free'
+            // Si el link trae un código de invitación personal (?inv=token), intentar
+            // reclamarlo antes de decidir si cae a la vista breve — esto es lo que hace
+            // que una invitación 1 a 1 (email o WhatsApp a alguien de la lista) funcione
+            // aunque el evento tenga "links cerrados" activado.
+            let reclamado = false
+            const tokenInvitacion = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('inv') : null
+            if (tokenInvitacion) {
+              const { data: ok } = await supabase.rpc('reclamar_invitacion', { p_token: tokenInvitacion })
+              if (ok) {
+                const { data: invReclamado } = await supabase.from('invitados').select('*').eq('celebracion_slug', cel.slug).eq('user_id', authUser.id).single()
+                if (invReclamado) {
+                  inv = invReclamado
+                  setRol('invitado')
+                  reclamado = true
+                  track('invitado_agregado', { userId: authUser.id, celebracionSlug: cel.slug, metadata: { origen: 'link_personal' } })
+                }
+              }
+            }
 
-            if (planOrganizador !== 'lifetime') {
-              // Free/Pro: cualquiera con cuenta puede desbloquear detalles, sin tope (como ya funcionaba)
-              const { data: nuevoInv } = await supabase.from('invitados').insert({
-                celebracion_slug: cel.slug,
-                email: authUser.email || null,
-                nombre: authUser.user_metadata?.name || authUser.email || '',
-                user_id: authUser.id,
-                created_at: new Date().toISOString(),
-              }).select().single()
-              inv = nuevoInv
-              setRol(inv ? 'invitado' : 'brief')
-              if (inv) track('invitado_agregado', { userId: authUser.id, celebracionSlug: cel.slug, metadata: { origen: 'auto_desbloqueo' } })
-            } else {
-              // Lifetime: los primeros 10 que inicien sesión en este evento se desbloquean solos ("regalo" del organizador)
-              const { data: yaDesbloqueados } = await supabase.rpc('contar_desbloqueados', { p_slug: cel.slug })
-              if ((yaDesbloqueados ?? 0) < 10) {
+            if (!reclamado && cel.link_cerrado) {
+              // Links cerrados: tener cuenta ya no basta — hay que estar en la lista
+              // o traer un código de invitación válido. Sin eso, se queda en breve.
+              setRol('brief')
+            } else if (!reclamado) {
+              const planOrganizador = perfilOrgData?.plan || 'free'
+
+              if (planOrganizador !== 'lifetime') {
+                // Free/Pro: cualquiera con cuenta puede desbloquear detalles, sin tope (como ya funcionaba)
                 const { data: nuevoInv } = await supabase.from('invitados').insert({
                   celebracion_slug: cel.slug,
                   email: authUser.email || null,
@@ -1305,8 +1328,23 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                 setRol(inv ? 'invitado' : 'brief')
                 if (inv) track('invitado_agregado', { userId: authUser.id, celebracionSlug: cel.slug, metadata: { origen: 'auto_desbloqueo' } })
               } else {
-                // Cupo lleno: solo se desbloquea si SU PROPIA cuenta ya es Lifetime (no consume cupo del organizador, no se registra como invitado)
-                setRol(perfilMio?.plan === 'lifetime' ? 'invitado' : 'brief')
+                // Lifetime: los primeros 10 que inicien sesión en este evento se desbloquean solos ("regalo" del organizador)
+                const { data: yaDesbloqueados } = await supabase.rpc('contar_desbloqueados', { p_slug: cel.slug })
+                if ((yaDesbloqueados ?? 0) < 10) {
+                  const { data: nuevoInv } = await supabase.from('invitados').insert({
+                    celebracion_slug: cel.slug,
+                    email: authUser.email || null,
+                    nombre: authUser.user_metadata?.name || authUser.email || '',
+                    user_id: authUser.id,
+                    created_at: new Date().toISOString(),
+                  }).select().single()
+                  inv = nuevoInv
+                  setRol(inv ? 'invitado' : 'brief')
+                  if (inv) track('invitado_agregado', { userId: authUser.id, celebracionSlug: cel.slug, metadata: { origen: 'auto_desbloqueo' } })
+                } else {
+                  // Cupo lleno: solo se desbloquea si SU PROPIA cuenta ya es Lifetime (no consume cupo del organizador, no se registra como invitado)
+                  setRol(perfilMio?.plan === 'lifetime' ? 'invitado' : 'brief')
+                }
               }
             }
           }
@@ -1624,6 +1662,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     setPortadaUrl(publicUrl); setSubiendoPortada(false)
   }
 
+  async function toggleLinkCerrado() {
+    if (!celebracion || !cuentaEsLifetime) return
+    const nuevoValor = !celebracion.link_cerrado
+    setCelebracion((prev: any) => ({ ...prev, link_cerrado: nuevoValor }))
+    await supabase.from('celebraciones').update({ link_cerrado: nuevoValor }).eq('slug', celebracion.slug)
+  }
+
   async function agregarInvitado() {
     if (!nuevoInvitado.trim() || !celebracion || invitadosList.length >= limiteInvitados) return
     setGuardandoInvitado(true)
@@ -1644,7 +1689,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
           fetch('/api/invitar-por-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ celebracionSlug: celebracion.slug, invitadoEmail: emailNuevo, accessToken: session?.access_token }),
+            body: JSON.stringify({ celebracionSlug: celebracion.slug, invitadoEmail: emailNuevo, invitadoToken: data.token, accessToken: session?.access_token }),
           }).catch(() => {})
         })
       }
@@ -1676,8 +1721,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     }
   }
 
-  function enviarWA(nombre?: string, phone?: string) {
-    const shareUrl = `https://joincheers.app/${celebracion?.slug}`
+  function enviarWA(nombre?: string, phone?: string, token?: string) {
+    // Si es para un invitado específico de la lista, le mandamos su link personal
+    // (con su código) en vez del genérico — así, si algún día activas "links
+    // cerrados", su invitación ya queda amarrada a él/ella desde que la abre.
+    const shareUrl = token ? `https://joincheers.app/${celebracion?.slug}?inv=${token}` : `https://joincheers.app/${celebracion?.slug}`
     const greeting = nombre ? `¡Hola ${nombre}! ` : '¡Hola! '
     const msg = encodeURIComponent(`${greeting}Te invito a ${titleRef.current?.innerText || celebracion?.nombre || ''}. Aquí está todo el plan: ${shareUrl}`)
     const p = (phone || waPhone).replace(/[^\d+]/g, '')
@@ -2053,6 +2101,26 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
 
     if (tileKey === 'invitados') return (
       <div>
+        {rol === 'organizador' && (
+          <div style={{ background: te.accentBg + '22', borderRadius: 12, padding: '10px 12px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: te.tileText }}>{lang === 'en' ? 'Closed links' : 'Links cerrados'}</div>
+              <div style={{ fontSize: 11, color: te.tileText, opacity: 0.7, marginTop: 2 }}>
+                {lang === 'en' ? 'Only people on this list see the full plan — everyone else sees the quick preview.' : 'Solo quien está en esta lista ve el plan completo — los demás ven la vista breve.'}
+              </div>
+            </div>
+            {cuentaEsLifetime ? (
+              <button onClick={toggleLinkCerrado} aria-label="Links cerrados" style={{ border: 'none', width: 44, height: 26, borderRadius: 99, background: celebracion.link_cerrado ? '#534AB7' : '#d9d5ec', position: 'relative', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                <div style={{ position: 'absolute', top: 3, left: celebracion.link_cerrado ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
+              </button>
+            ) : (
+              <button onClick={() => router.push('/perfil')} style={{ border: 'none', background: '#534AB7', color: '#fff', fontSize: 10, fontWeight: 800, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: FSYS, flexShrink: 0, whiteSpace: 'nowrap' as const }}>
+                {lang === 'en' ? 'Extra Cheer only' : 'Solo Extra Cheer'}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Stats */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <div style={{ flex: 1, background: '#ECF7F0', borderRadius: 12, padding: '10px 12px' }}>
@@ -2081,7 +2149,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                       {rsvp.asistencia === 'si' ? tx.going : rsvp.asistencia === 'no' ? tx.not_going : tx.maybe}
                     </div>}
                   </div>
-                  <button onClick={() => enviarWA(esTelefono(inv.nombre) ? undefined : inv.nombre, esTelefono(inv.nombre) ? inv.nombre : undefined)} title={lang === 'en' ? 'Share event link via WhatsApp' : 'Compartir vínculo de evento por WhatsApp'} style={{ border: 'none', background: '#25D366', color: '#fff', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
+                  <button onClick={() => enviarWA(esTelefono(inv.nombre) ? undefined : inv.nombre, esTelefono(inv.nombre) ? inv.nombre : undefined, inv.token)} title={lang === 'en' ? 'Share event link via WhatsApp' : 'Compartir vínculo de evento por WhatsApp'} style={{ border: 'none', background: '#25D366', color: '#fff', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff">
                       <path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.87 1.22 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35z"/>
                       <path d="M12.02 2C6.5 2 2.02 6.48 2.02 12c0 1.86.51 3.6 1.4 5.09L2 22l5.05-1.36A9.94 9.94 0 0 0 12.02 22C17.53 22 22 17.52 22 12S17.53 2 12.02 2zm0 18.1c-1.65 0-3.19-.46-4.5-1.26l-.32-.19-3.13.84.84-3.06-.21-.32A8.1 8.1 0 0 1 3.92 12c0-4.48 3.64-8.1 8.1-8.1 4.47 0 8.1 3.63 8.1 8.1s-3.64 8.1-8.1 8.1z"/>
@@ -2602,7 +2670,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             <input value={waPhone} onChange={e => setWaPhone(e.target.value)} placeholder="+52 81 1234 5678" style={{ border: '1.5px solid #EEEDFE', background: '#fff', fontFamily: FSYS, fontSize: 15, color: '#2a2440', padding: '10px 14px', borderRadius: 12, outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 12 }} />
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { setShowWAPrompt(false); setWaPhone('') }} style={{ flex: 1, border: '1.5px solid #e0ddf5', background: 'none', color: '#7a7494', fontSize: 14, fontWeight: 700, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Skip' : 'Omitir'}</button>
-              <button onClick={() => enviarWA(invitadoPendienteWA?.nombre, waPhone)} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Send' : 'Enviar'}</button>
+              <button onClick={() => enviarWA(invitadoPendienteWA?.nombre, waPhone, invitadoPendienteWA?.token)} style={{ flex: 1, border: 'none', background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>{lang === 'en' ? 'Send' : 'Enviar'}</button>
             </div>
           </div>
         </div>

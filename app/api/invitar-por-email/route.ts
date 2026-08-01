@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
   if (excedeLimite(ip)) return NextResponse.json({ success: true })
 
-  const { celebracionSlug, invitadoEmail, accessToken } = await req.json()
+  const { celebracionSlug, invitadoEmail, invitadoToken, accessToken } = await req.json()
   if (!celebracionSlug || !invitadoEmail || !accessToken) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
   }
@@ -73,7 +73,11 @@ export async function POST(req: Request) {
     ? `You're invited: ${tituloEvento}`
     : `Estás invitado: ${tituloEvento}`
 
-  const link = trackedLink(`https://joincheers.app/${cel.slug}`, 'invitacion')
+  // Con el código de su invitación en el link, esta persona queda "amarrada" a su
+  // propio lugar en la lista desde que lo abre (ver reclamar_invitacion en Supabase)
+  // — necesario para que "links cerrados" funcione con invitaciones por email.
+  const urlBase = invitadoToken ? `https://joincheers.app/${cel.slug}?inv=${invitadoToken}` : `https://joincheers.app/${cel.slug}`
+  const link = trackedLink(urlBase, 'invitacion')
 
   const cuerpo = lang === 'en'
     ? `
