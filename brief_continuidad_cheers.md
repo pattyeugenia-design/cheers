@@ -1,6 +1,6 @@
 # Brief de continuidad — Cheers (joincheers.app)
 
-*Preparado el 23 de julio de 2026, para pegar al inicio de una conversación nueva con Claude y seguir exactamente donde se quedó.*
+*Preparado el 1 de agosto de 2026, para pegar al inicio de una conversación nueva con Claude y seguir exactamente donde se quedó. Reemplaza la versión del 23 de julio (varias cosas que ahí decían "pendiente" ya se resolvieron).*
 
 ## 1. Contexto del proyecto
 
@@ -8,17 +8,17 @@ Cheers (joincheers.app) es una app de Next.js 16 + Supabase + Vercel para organi
 
 **Reglas de trabajo que Claude debe seguir siempre en este proyecto** (ya configuradas en las instrucciones del proyecto, repetidas aquí por si se pierden):
 - Correr `npx tsc --noEmit` y `npx next build` antes de dar cualquier cambio por terminado, sin excepción.
-- Si el cambio toca una tabla de Supabase, revisar las policies de RLS reales (consulta a `pg_policies`) antes de asumir que están protegidas.
-- Si se crea o modifica una policy de RLS, mostrar el SQL exacto antes de correrlo, con explicación de una línea.
+- Si el cambio toca una tabla de Supabase, revisar las policies de RLS reales (consulta a `pg_policies`, o `get_advisors` con el MCP de Supabase) antes de asumir que están protegidas.
+- Si se crea o modifica una policy de RLS (o cualquier cambio de esquema en Supabase), mostrar el SQL exacto antes de correrlo, con explicación de una línea.
 - Cambios en pasos chicos, uno a la vez, esperando confirmación.
 - Preguntar antes de construir cuando sea una decisión de producto, no un fix obvio.
 - Avisar de huecos de seguridad o bugs reales encontrados de paso, aunque no sea lo que se buscaba.
 - Si algo es grande (varios archivos, cambia el modelo de datos, requiere configurar algo externo), avisar antes y dar los pasos de configuración uno a la vez.
-- Sin emojis en correos transaccionales (sí se permiten en redes sociales).
+- Sin emojis en correos transaccionales NI en la UI de la app (sí se permiten en redes sociales).
 - Sin dumps de código completos en el chat — Claude tiene acceso directo de escritura a la carpeta, aplica los cambios y resume.
 - Nunca usar nombres de competidores (ej. Splitwise) para describir features de Cheers.
 - Antes de dar comandos de git, revisar TODO lo pendiente en archivos relacionados (ej. componente + i18n.ts), no solo el que se acaba de tocar.
-- **Limitación del sandbox:** Claude no puede hacer `git push` desde su entorno — Patty lo corre ella misma desde su Terminal (la carpeta conectada es la real). Tampoco tiene salida de red libre por curl/fetch directo a dominios externos (Supabase, Resend, etc. están bloqueados por el proxy del sandbox) — pero SÍ tiene acceso directo vía MCP tools a Supabase (consultas SQL de solo lectura verificadas, proyecto `ykqlgogliwqgpxsmutvx`) y a Resend (mismo dominio verificado `joincheers.app`, puede mandar correos de prueba reales).
+- **Limitaciones del sandbox:** `git push` y `npx next build` fallan directo desde el sandbox por un problema del bind-mount (no puede desligar ciertos archivos temporales/lock) — Patty los corre ella misma desde su Terminal real. `npx tsc --noEmit` sí funciona bien en el sandbox. Tampoco hay salida de red libre por curl/fetch directo a dominios externos (Supabase, Resend, Vercel, Facebook, etc. bloqueados por el proxy) — pero SÍ hay MCPs conectados para varios de esos: **Supabase** (SQL real, incluye `apply_migration` para DDL — usar esa en vez de `execute_sql` para crear funciones/triggers, el clasificador bloquea DDL vía `execute_sql`), **Resend**, **Vercel**, y browser control vía Claude in Chrome (útil para pantallas que no tienen MCP, ej. Facebook Developers, o toggles del dashboard de Supabase que no están expuestos por su MCP).
 
 ## 2. Modelo de negocio (confirmado, no cambiar sin preguntar)
 
@@ -29,7 +29,7 @@ Tres planes, pago único (no suscripción):
 
 Los valores internos (`free`/`pro`/`lifetime`) no coinciden con los nombres visibles al usuario (Cheer/Super Cheer/Extra Cheer) — es decisión deliberada de Patty, no renombrar las columnas.
 
-**Stripe:** integración completa construida y funcionando en modo test/sandbox (checkout, webhook, gating de features, trigger de Postgres como defensa adicional). Pendiente y diferido a petición de Patty: activar cobros reales (verificación de negocio/banco), mover llaves de test a live en Vercel, registrar el webhook de producción con la URL real. Nota: la llave `STRIPE_SECRET_KEY` en `.env.local` ya es `sk_live_...`, pero la activación real del negocio en Stripe sigue pendiente — no asumir que ya se puede cobrar de verdad sin confirmarlo primero.
+**Stripe: EN VIVO en producción**, confirmado con `sk_live_` verificada el 21 de julio de 2026. Ya se puede cobrar de verdad. Nota: la cuenta de Stripe de Patty también maneja los payouts de su Substack — compartida, no es exclusiva de Cheers, tenerlo presente si se toca algo de Stripe.
 
 ## 3. Modelo de acceso a eventos (confirmado 2026-07-13)
 
@@ -40,61 +40,52 @@ Cualquiera que abre el link de una celebración, sin importar el plan del organi
 
 Implementado en `app/[usuario]/[evento]/page.tsx`. Si se pide cambiar el número "10" o la lógica de cascada, es decisión de producto — confirmar con Patty antes de tocar la constante.
 
-## 4. Lo que se hizo en la conversación anterior (22-23 de julio 2026)
+## 4. Features construidas desde el 23 de julio (resumen, sin el detalle de decisiones que se perdió)
 
-### 4.1 Redes sociales — Instagram
-- Se creó la cuenta **@joincheers** en Instagram (username @cheers ya estaba tomado por una cuenta sin relación con la marca — verificado navegando ambos perfiles).
-- Vinculada a **Meta Business** (Facebook + Instagram).
-- Gmail dedicado creado: **joincheers.app@gmail.com**. Nota importante: Google dio de baja este Gmail poco después de crearlo por sospecha de bot (falso positivo en el proceso de verificación de cuenta). Patty ya apeló — **estado de la apelación sin resolver**, revisar si hay actualización.
-- Estrategia de redes reescrita en **decisiones** (no sugerencias) y exportada a PDF: `Estrategia_Redes_Sociales_Cheers.pdf`, guardada en la carpeta de Cheers (reemplazó la versión `.md` anterior). Resumen de las decisiones:
-  - Instagram como plataforma principal; TikTok como repost secundario (mismo contenido, sin producir aparte). Pinterest se incorpora en el mes 3-4.
-  - Bio decidida: *"La celebración, en un link. ✦ / Cumples, posadas, XV, despedidas — sin grupos de chat, sin drama. / joincheers.app"*.
-  - Nombre visible de cuenta: "Cheers — La celebración en un link".
-  - Sí se usan emojis en redes (a diferencia de correos).
-  - 4 pilares de contenido: (1) el caos de WhatsApp/humor, (2) tipos de celebración real, (3) cómo funciona Cheers, (4) modelo de pago único.
-  - Cadencia: 3 posts/semana (lunes carrusel, miércoles reel sin rostro, viernes meme), producidos en un solo bloque de batch semanal.
-  - Calendario detallado de las primeras 4 semanas incluido en el PDF.
-- **Pendiente:** no hay logo/foto de perfil todavía — no existe ningún asset de marca en `/public` del repo (solo los SVG default de Next.js). Falta definir o diseñar uno.
-- **Pendiente:** actualizar el campo `sameAs` del schema.org en el código del sitio con la URL del perfil de Instagram — es un cambio de una línea, Claude lo ofreció pero **Patty no ha confirmado todavía si procede**.
+- **Eventos recurrentes** completos estilo Outlook (terminado el 30 de julio): tabla `ocurrencias`, cron `generar-ocurrencias` que mantiene 10 fechas futuras generadas, solo para eventos Pro/Lifetime.
+- **Gastos compartidos entre invitados** (`gastos`, `gasto_participantes`), con notificación a cada participante de cuánto le toca.
+- **Centro de notificaciones in-app** con preferencias configurables por tipo (rsvp, regalo, mensaje, gasto, recordatorio) y por nivel (todo/importante/leve), más un cron de resumen (`resumen-notificaciones`) que agrupa lo que no se manda al instante.
+- **Panel de "Crecimiento" en el admin** (analytics propio vía `eventos_analytics`, top creadores/invitadores, cuentas enfriadas), con selección múltiple para mandar mensaje masivo o regalar plan a varios usuarios de un jalón.
+- **Regalar Lifetime/Pro desde el admin** sin tocar SQL a mano (`/api/admin-regalar-plan`).
+- **Invitación por email** al agregar invitado — construida, verificada, y desplegada a producción (confirmado 2026-07-27).
+- **Login con Facebook** — construido y desplegado el 31 de julio (`app/login/page.tsx`, mismo patrón que Google vía `supabase.auth.signInWithOAuth`). App de Facebook (`967579169623123`) en modo Development — **solo funciona para Patty y quien agregue como tester en Facebook Developers**, hasta pasar App Review (falta: ícono, política de privacidad, flujo de eliminación de datos, categoría). Login con Apple se dejó pausado a propósito (Patty eligió empezar solo por Facebook, que es gratis; Apple cuesta $99/año de Apple Developer).
+- **Cortesías Lifetime otorgadas:** Valente/Tito (novio), Ximena Mondragón, prima González, prima Quiroga (Priscilla — confirmado por SQL que ya tiene cuenta `priscilla_quiroga` con plan lifetime aplicado), Martha, Marcela R. Treviño.
 
-### 4.2 Feature nueva: invitación por correo al agregar invitado
+## 5. Seguridad — auditoría completa del 31 de julio de 2026
 
-**Qué pedía Patty:** que al agregar a alguien por correo a cualquier tipo de evento (cumpleaños, viaje, cena, meet, lo que sea — no hay distinción por tipo), le llegue un correo de notificación con detalles MUY breves (lo mismo que ya ve un visitante anónimo: festejado, fecha, lugar), con un link al evento. Si esa persona no tiene cuenta, ve la vista breve existente y se le invita a crear cuenta para ver el dashboard completo.
+Se hizo una revisión de seguridad de punta a punta (rutas API, RLS reales vía `pg_advisors`/`pg_policies`, XSS, dependencias). Resultado: el código en general está bien cuidado (tokens siempre verificados server-side, RLS activo en las 12 tablas, service role key nunca expuesta al cliente, webhook de Stripe valida firma, crons piden su secret, único HTML dinámico pasa por un sanitizador allowlist propio).
 
-**Decisiones confirmadas con Patty:**
-- Se manda **inmediato** al agregar el email (no en lote).
-- **No se reenvía** si se agrega el mismo email dos veces al mismo evento — pero si otro organizador distinto lo invita a OTRO evento (otro slug), sí le llega, porque es un evento distinto (confirmado explícitamente por Patty con el ejemplo de "yo lo invito a un cumpleaños, mi hermana lo invita a una cena").
+**Hallazgos y su estado:**
+1. **RSVP flood — RESUELTO.** La policy de INSERT en `rsvps` era totalmente abierta (`WITH CHECK (true)`, sin rate-limit, `nombre`/`mensaje` sin límite de largo) — cualquiera podía llenar de RSVPs falsos cualquier evento (los slugs son adivinables, no son tokens secretos). Se agregaron `CHECK` de largo (nombre ≤100, mensaje ≤1000 caracteres) y un trigger `trg_limitar_rsvp_flood` que bloquea más de 50 inserts nuevos por celebración cada 10 minutos. El formulario de RSVP muestra un mensaje amigable si se choca con el límite.
+2. **Leaked Password Protection — NO resuelto, requiere plan Pro de Supabase ($25/mes).** Patty decidió explícitamente no subir de plan solo por esto. Si algún día sube de plan por otra razón, activarlo de una vez en Authentication → Attack Protection → "Configure in email provider".
+3. **Next.js con CVEs altos — RESUELTO.** Subido de `16.2.6` a `16.2.12` (parche, sin breaking changes).
 
-**Qué se construyó:**
-- Nueva ruta `app/api/invitar-por-email/route.ts`: rate limit por IP (10/60s, mismo patrón que las demás rutas de correo), busca la celebración y el perfil del organizador con `SUPABASE_SERVICE_ROLE_KEY`, arma un correo breve (festejado, fecha formateada, lugar si existe, badge de "es sorpresa" en texto plano SIN emoji si aplica y el organizador es Pro/Lifetime, nombre del organizador si lo tiene guardado, botón al link del evento con UTM), usa el helper compartido `envolverEmail`/`trackedLink` de `app/emailTemplate.ts`, envía con Resend desde `notificaciones@joincheers.app`.
-- Editado `agregarInvitado()` en `app/[usuario]/[evento]/page.tsx`: cuando se agrega por email (no por teléfono) y no es duplicado dentro de ese mismo evento, dispara `fetch('/api/invitar-por-email', ...)` en fire-and-forget (mismo patrón que `notificar-rsvp`).
-- No se tocó ninguna tabla ni policy de Supabase — solo la ruta nueva y el ajuste chico en la función existente.
+Detalle completo en la memoria de Claude (`cheers_security_review_2026_07_31.md`) si se necesita revisar de nuevo.
 
-**Bug real encontrado y corregido durante la verificación:** la ruta nueva usaba `perfiles.nombre` como nombre de columna, pero la columna real es `perfiles.nombre_completo` (se confirmó consultando el schema real vía Supabase MCP). Esto habría roto silenciosamente el nombre del organizador en el correo Y el cálculo de `esSorpresa` para organizadores Pro/Lifetime. Ya corregido en el código.
+Además, en una auditoría RLS anterior (27 de julio) ya se habían cerrado: bucket de `portadas` listable públicamente, `rsvps` legible por cualquiera, y `search_path` mutable en funciones. Y desde antes: XSS en el título del evento, lectura pública de `rsvps`/`regalo_reservas`, verificación real de sesión en varias rutas, y el hueco de lectura pública de `perfiles` (teléfonos) cerrado vía RPCs `SECURITY DEFINER` controladas.
 
-**Verificación hecha:**
-- `npx tsc --noEmit` — limpio, sin errores (dos veces, antes y después del fix del bug).
-- `npx next build` — build completo exitoso (tuvo que hacerse copiando el proyecto a `/tmp` fuera del punto de montaje FUSE, porque el build directo sobre la carpeta conectada falla con `EPERM` al hacer unlink de archivos temporales — es una limitación del entorno, no del código; si hay que repetir el build en el futuro, usar el mismo workaround de copiar a `/tmp`, copiar `node_modules` con `rsync`, y correr `next build` ahí).
-- Se mandó un correo de **prueba real** (marcado claramente como "[PRUEBA]" en el asunto) a patty.eugenia@gmail.com vía el MCP de Resend conectado, usando datos reales de un evento existente de la propia Patty (`patty_eugenia/puerto-escondido-me-caso`, consultado vía Supabase MCP) para confirmar que el diseño y el copy se ven bien. Confirmado visualmente.
+## 6. Pendientes actuales (agosto 2026)
 
-**Estado actual: el código NO está desplegado a producción.** Sigue solo en la carpeta local/conectada hasta que Patty haga `git push` desde su propia Terminal (limitación del sandbox). Una vez desplegado, se puede probar el flujo real agregando un invitado por email desde la app en producción.
+1. **Login con Apple** — pausado a propósito, retomar cuando Patty decida justificar el costo anual.
+2. **App móvil con Capacitor** — decisión de producto sin arrancar. Es grande: toca cuentas externas (Apple Developer $99/año, Google Play $25 único), varios archivos. Dar los pasos de configuración uno a la vez si se retoma.
+3. **Logo/foto de perfil para Instagram** — no existe ningún asset de marca en `/public` todavía.
+4. **`sameAs` de schema.org con el link de Instagram** — cambio de una línea, ofrecido antes, sin confirmar todavía si Patty quiere que se aplique.
+5. **RSVP flood** — el límite de 50 cada 10 min es una primera pasada; si en la práctica resulta muy bajo (evento muy popular) o muy alto (spam que igual se cuela), ajustar el número.
 
-**Follow-up pendiente:** Patty ya llenó el campo `nombre_completo` de su perfil con "Gonzalo" (no está claro si es su propio perfil bajo otro nombre, o si el evento de prueba pertenece a otra persona — no se indagó más, no era relevante para la tarea). Esto hará que la próxima prueba real muestre la línea "Organiza Gonzalo" en el correo.
+**Ya NO están pendientes** (estaban en la versión anterior de este brief, ya resueltos, no volver a preguntar):
+- Apelación de la cuenta de Google `joincheers.app@gmail.com` — resuelta (confirmado por Patty el 31 de julio).
+- Cuenta de Priscilla con plan Lifetime — confirmado que ya existe y está aplicado.
+- Verificación del dominio de Resend en DNS — confirmado verificado vía la API de Resend.
+- Activación de Stripe en modo live — ya está live desde el 21 de julio.
 
-## 5. Próximos pasos sugeridos (en orden, uno a la vez, según el estilo de trabajo de Patty)
+## 7. Dónde está todo
 
-1. Confirmar si Patty ya hizo `git push` / deploy — si sí, ofrecer probar el flujo real end-to-end agregando un invitado de prueba desde la app en producción.
-2. Resolver si se actualiza el `sameAs` del schema.org con el link de Instagram (pendiente de confirmación de Patty).
-3. Revisar estado de la apelación del Gmail joincheers.app@gmail.com dado de baja por Google.
-4. Definir/diseñar un logo o foto de perfil para Instagram (no existe ningún asset de marca todavía).
-5. Seguir el calendario de contenido de las primeras 4 semanas del PDF de estrategia de redes.
-6. Cuando Patty esté lista, retomar los pasos pendientes de Stripe en producción (activación real de cobros) — uno a la vez, según sus instrucciones.
-
-## 6. Dónde está todo
-
+- Proyecto de Supabase: `ykqlgogliwqgpxsmutvx` (nombre "Cheers", región us-east-1) — MCP de Supabase conectado, usar `apply_migration` para cualquier DDL.
+- Dominio de Resend verificado: `joincheers.app` — MCP de Resend conectado.
+- App de Facebook Developers: `967579169623123` (modo Development).
 - Estrategia de redes: `Estrategia_Redes_Sociales_Cheers.pdf` en la carpeta de Cheers.
-- Ruta nueva: `app/api/invitar-por-email/route.ts`.
-- Cambio en: `app/[usuario]/[evento]/page.tsx` (función `agregarInvitado`).
-- Helper de correos compartido: `app/emailTemplate.ts` (no tocado, solo reutilizado).
-- Proyecto de Supabase: `ykqlgogliwqgpxsmutvx` (nombre "Cheers", región us-east-1).
-- Dominio de Resend verificado: `joincheers.app`.
+- Lista de cortesías Lifetime: `cortesias_lifetime.md`.
+- Helper de correos compartido: `app/emailTemplate.ts`.
+- Login: `app/login/page.tsx` (Google + Facebook + email/password).
+- Página pública de evento (RSVP, mensajes, gastos, etc.): `app/[usuario]/[evento]/page.tsx`.
+- Admin de la plataforma (solo patty.eugenia@gmail.com): `app/[usuario]/admin_login/dashboard/page.tsx`.
