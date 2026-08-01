@@ -14,6 +14,7 @@ export default function Login() {
   const [cargandoEmail, setCargandoEmail] = useState(false)
   const [errorEmail, setErrorEmail] = useState('')
   const [avisoConfirmacion, setAvisoConfirmacion] = useState(false)
+  const [avisoReset, setAvisoReset] = useState(false)
   // Mientras no sepamos si ya hay sesión activa, mostramos una pantalla festiva
   // en vez del formulario de login (que se veía raro reapareciendo justo después
   // de haber entrado con Google).
@@ -53,6 +54,11 @@ export default function Login() {
 
     // Escuchar cambios de auth (después del OAuth redirect)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Viene de dar click al link de "restablecer contraseña" que se manda por email.
+      if (event === 'PASSWORD_RECOVERY') {
+        router.push('/reset-password')
+        return
+      }
       if (event === 'SIGNED_IN' && session?.user) {
         setVerificandoSesion(true)
         const { data: perfil } = await supabase
@@ -120,11 +126,32 @@ export default function Login() {
     })
   }
 
+  async function enviarResetPassword() {
+    if (!email.trim()) { setErrorEmail('Escribe tu email arriba y dale click de nuevo.'); return }
+    setCargandoEmail(true)
+    setErrorEmail('')
+    setAvisoConfirmacion(false)
+    setAvisoReset(false)
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/login`,
+    })
+    setCargandoEmail(false)
+    // No revelamos si el email existe o no en la base (evita que alguien use
+    // esto para descubrir qué correos ya tienen cuenta) — siempre mostramos
+    // el mismo mensaje de éxito, salvo que Supabase truene por otra razón.
+    if (error && !error.message?.toLowerCase().includes('user not found')) {
+      setErrorEmail('No se pudo enviar el correo, intenta de nuevo.')
+    } else {
+      setAvisoReset(true)
+    }
+  }
+
   async function enviarEmail() {
     if (!email.trim() || !password) return
     setCargandoEmail(true)
     setErrorEmail('')
     setAvisoConfirmacion(false)
+    setAvisoReset(false)
 
     if (modo === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
@@ -218,8 +245,17 @@ export default function Login() {
             style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #e8e4f5', background: '#fff', fontFamily: FONT, fontSize: 15, color: '#2a2440', padding: '12px 14px', borderRadius: 12, outline: 'none', marginBottom: 10 }}
           />
 
+          {modo === 'login' && (
+            <p style={{ textAlign: 'right', margin: '-2px 0 10px' }}>
+              <button onClick={enviarResetPassword} disabled={cargandoEmail} style={{ border: 'none', background: 'none', color: '#8b7fe8', fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 12.5, padding: 0 }}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </p>
+          )}
+
           {errorEmail && <p style={{ fontSize: 13, color: '#D4537E', margin: '0 0 10px', fontWeight: 600 }}>{errorEmail}</p>}
           {avisoConfirmacion && <p style={{ fontSize: 13, color: '#1f8a5b', margin: '0 0 10px', fontWeight: 600 }}>Te enviamos un email para confirmar tu cuenta. Revísalo y luego inicia sesión aquí.</p>}
+          {avisoReset && <p style={{ fontSize: 13, color: '#1f8a5b', margin: '0 0 10px', fontWeight: 600 }}>Si ese email tiene cuenta, te llegará un link para restablecer tu contraseña.</p>}
 
           <button
             onClick={enviarEmail}
@@ -231,7 +267,7 @@ export default function Login() {
 
           <p style={{ textAlign: 'center', fontSize: 13, color: '#6b6585', margin: 0 }}>
             {modo === 'login' ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
-            <button onClick={() => { setModo(modo === 'login' ? 'signup' : 'login'); setErrorEmail(''); setAvisoConfirmacion(false) }} style={{ border: 'none', background: 'none', color: '#534AB7', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, fontSize: 13, padding: 0 }}>
+            <button onClick={() => { setModo(modo === 'login' ? 'signup' : 'login'); setErrorEmail(''); setAvisoConfirmacion(false); setAvisoReset(false) }} style={{ border: 'none', background: 'none', color: '#534AB7', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, fontSize: 13, padding: 0 }}>
               {modo === 'login' ? 'Regístrate' : 'Inicia sesión'}
             </button>
           </p>
