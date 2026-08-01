@@ -39,7 +39,12 @@ export async function POST(req: Request) {
   const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
 
   const regalo = (cel.gifts || []).find((g: any) => g.id === regaloId)
-  const nombreRegalo = regalo?.nombre || (lang === 'en' ? 'A gift' : 'Un regalo')
+  if (!regalo) return NextResponse.json({ success: true })
+  const nombreRegalo = regalo.nombre || (lang === 'en' ? 'A gift' : 'Un regalo')
+
+  // Sella este regaloId como ya notificado (ver notificar-rsvp para el porqué).
+  const { error: yaNotificado } = await admin.from('notificaciones_enviadas').insert({ tipo: 'regalo', recurso_id: regaloId, celebracion_slug: celebracionSlug })
+  if (yaNotificado) return NextResponse.json({ success: true })
 
   // El historial in-app siempre se registra, sin importar el nivel de email elegido.
   await registrarNotificacionApp(admin, cel.organizador_id, 'regalo', cel.slug, lang === 'en'

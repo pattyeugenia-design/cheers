@@ -40,6 +40,10 @@ export async function POST(req: Request) {
   const { data: msg } = await admin.from('mensajes').select('nombre, texto, celebracion_slug').eq('id', mensajeId).single()
   if (!msg || msg.celebracion_slug !== celebracionSlug) return NextResponse.json({ success: true })
 
+  // Sella este mensajeId como ya notificado (ver notificar-rsvp para el porqué).
+  const { error: yaNotificado } = await admin.from('notificaciones_enviadas').insert({ tipo: 'mensaje', recurso_id: mensajeId, celebracion_slug: celebracionSlug })
+  if (yaNotificado) return NextResponse.json({ success: true })
+
   const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
   const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
   const autor = msg.nombre || (lang === 'en' ? 'Someone' : 'Alguien')

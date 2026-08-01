@@ -48,6 +48,14 @@ export async function POST(req: Request) {
   // haciéndose pasar por un invitado que nunca confirmó nada.
   const { data: rsvp } = await admin.from('rsvps').select('nombre, asistencia, mensaje, celebracion_slug').eq('id', rsvpId).single()
   if (!rsvp || rsvp.celebracion_slug !== celebracionSlug) return NextResponse.json({ success: true })
+
+  // Sella este rsvpId como ya notificado — si alguien vuelve a llamar esta
+  // ruta con el mismo id (ej. el mismo invitado, replicando la llamada para
+  // spamear al organizador), el insert choca con la llave primaria y no se
+  // manda nada de nuevo.
+  const { error: yaNotificado } = await admin.from('notificaciones_enviadas').insert({ tipo: 'rsvp', recurso_id: rsvpId, celebracion_slug: celebracionSlug })
+  if (yaNotificado) return NextResponse.json({ success: true })
+
   const nombreInvitado = rsvp.nombre
   const asistencia = rsvp.asistencia
   const mensaje = rsvp.mensaje

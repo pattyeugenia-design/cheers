@@ -43,6 +43,10 @@ export async function POST(req: Request) {
   const { data: gasto } = await admin.from('gastos').select('descripcion, monto').eq('id', gastoId).single()
   if (!gasto) return NextResponse.json({ success: true })
 
+  // Sella este gastoId como ya notificado (ver notificar-rsvp para el porqué).
+  const { error: yaNotificado } = await admin.from('notificaciones_enviadas').insert({ tipo: 'gasto', recurso_id: gastoId, celebracion_slug: celebracionSlug })
+  if (yaNotificado) return NextResponse.json({ success: true })
+
   const { data: participantes } = await admin
     .from('gasto_participantes')
     .select('invitado_id, monto_parte, es_organizador')
