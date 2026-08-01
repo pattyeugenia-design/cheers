@@ -42,7 +42,13 @@ export async function POST(req: Request) {
     priceId = process.env.STRIPE_PRICE_LIFETIME!
   }
 
-  const origin = req.headers.get('origin') || 'https://joincheers.app'
+  // El header "origin" lo manda el navegador, pero cualquiera puede llamar
+  // esta ruta directo (sin navegador) y ponerle el valor que quiera — sin
+  // esta lista, alguien podría hacer que, después de pagar, Stripe te mande
+  // a un sitio que no es joincheers.app.
+  const origenesValidos = new Set(['https://joincheers.app', 'https://www.joincheers.app', 'http://localhost:3000'])
+  const origenSolicitado = req.headers.get('origin') || ''
+  const origin = origenesValidos.has(origenSolicitado) ? origenSolicitado : 'https://joincheers.app'
   // Pro regresa al evento que se acaba de comprar; Lifetime regresa al perfil
   const rutaVuelta = tipo === 'pro' ? `/${slug}` : '/perfil'
 
