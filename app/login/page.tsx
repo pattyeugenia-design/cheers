@@ -113,6 +113,13 @@ export default function Login() {
     })
   }
 
+  async function loginConFacebook() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: { redirectTo: `${window.location.origin}/login` }
+    })
+  }
+
   async function enviarEmail() {
     if (!email.trim() || !password) return
     setCargandoEmail(true)
@@ -164,7 +171,7 @@ export default function Login() {
 
         <div style={{ background: 'rgba(255,255,255,.97)', borderRadius: 26, padding: '32px 28px', boxShadow: '0 24px 64px rgba(83,74,183,.3)' }}>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1c1830', margin: '0 0 8px', letterSpacing: '-.4px' }}>Entrar a Cheers</h2>
-          <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 24px' }}>Con Google o con tu email.</p>
+          <p style={{ fontSize: 14, color: '#6b6585', margin: '0 0 24px' }}>Con Google, Facebook o tu email.</p>
 
           <button
             onClick={loginConGoogle}
@@ -177,6 +184,16 @@ export default function Login() {
               <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
             </svg>
             Continuar con Google
+          </button>
+
+          <button
+            onClick={loginConFacebook}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '14px 20px', border: '1.5px solid #e8e4f5', borderRadius: 14, background: '#fff', cursor: 'pointer', fontFamily: FONT, fontSize: 15, fontWeight: 700, color: '#2a2440', boxShadow: '0 4px 14px rgba(0,0,0,.06)', transition: 'all .15s', marginTop: 10 }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            Continuar con Facebook
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
