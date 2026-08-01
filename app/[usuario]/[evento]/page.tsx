@@ -406,12 +406,19 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
     }
     setErrorRsvp('')
     setGuardando(true)
-    const { data: rsvpNuevo } = await supabase.from('rsvps').insert({
+    const { data: rsvpNuevo, error: errorInsert } = await supabase.from('rsvps').insert({
       celebracion_slug: celebracion.slug,
       nombre: nombreInvitado.trim(),
       asistencia,
       mensaje: null,
     }).select('id').single()
+    if (errorInsert) {
+      setGuardando(false)
+      setErrorRsvp(errorInsert.message?.includes('rsvp_flood_limit')
+        ? (lang === 'en' ? 'This event just got a lot of RSVPs at once — try again in a few minutes.' : 'Este evento acaba de recibir muchas confirmaciones de golpe — intenta de nuevo en unos minutos.')
+        : (lang === 'en' ? 'Something went wrong, try again' : 'Algo salió mal, intenta de nuevo'))
+      return
+    }
     fetch('/api/notificar-rsvp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -634,7 +641,14 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
     if (rsvpExistente) {
       await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
     } else {
-      const { data } = await supabase.from('rsvps').insert(payload).select('id').single()
+      const { data, error: errorInsert } = await supabase.from('rsvps').insert(payload).select('id').single()
+      if (errorInsert) {
+        setGuardando(false)
+        setErrorRsvp(errorInsert.message?.includes('rsvp_flood_limit')
+          ? (lang === 'en' ? 'This event just got a lot of RSVPs at once — try again in a few minutes.' : 'Este evento acaba de recibir muchas confirmaciones de golpe — intenta de nuevo en unos minutos.')
+          : (lang === 'en' ? 'Something went wrong, try again' : 'Algo salió mal, intenta de nuevo'))
+        return
+      }
       rsvpId = data?.id
     }
     fetch('/api/notificar-rsvp', {
