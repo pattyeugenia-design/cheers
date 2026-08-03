@@ -1304,6 +1304,14 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   setRol('invitado')
                   reclamado = true
                   track('invitado_agregado', { userId: authUser.id, celebracionSlug: cel.slug, metadata: { origen: 'link_personal' } })
+                  // Si el evento tiene links cerrados, la primera consulta de la celebración
+                  // (arriba, antes de saber que ya éramos invitado) vino con los campos
+                  // sensibles vacíos — ahora que ya quedamos amarrados como invitado, se
+                  // vuelve a pedir para traer el detalle completo de verdad.
+                  if (cel.link_cerrado) {
+                    const { data: celCompleta } = await supabase.rpc('get_celebracion_por_slug', { p_slug: cel.slug })
+                    if (celCompleta) cel = celCompleta
+                  }
                 }
               }
             }
