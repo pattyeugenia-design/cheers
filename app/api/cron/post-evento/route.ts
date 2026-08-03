@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail, trackedLink } from '../../../emailTemplate'
+import { envolverEmail, trackedLink, escapeHtml } from '../../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -64,7 +64,8 @@ export async function GET(req: Request) {
     const { data: perfilOrg } = await admin.from('perfiles').select('plan, lang').eq('user_id', cel.organizador_id).single()
     const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
     const yaEsLifetime = perfilOrg?.plan === 'lifetime'
-    const nombreEvento = cel.festejado_nombre || cel.nombre
+    const nombreEvento = escapeHtml(cel.festejado_nombre || cel.nombre)
+    const nombreEventoSubject = escapeHtml(cel.nombre)
 
     const lineaLifetime = yaEsLifetime
       ? ''
@@ -72,7 +73,7 @@ export async function GET(req: Request) {
         ? `<p style="font-size: 14px; color: #6b6585;">And if you're already thinking about your next celebration: Extra Cheer keeps your full history forever and takes the limits off. No pressure, just leaving it here.</p>`
         : `<p style="font-size: 14px; color: #6b6585;">Y si ya estás pensando en la próxima celebración: con Extra Cheer guardas todo tu historial para siempre y ya no te preocupas por límites. Sin presión, ahí queda.</p>`
 
-    const subject = lang === 'en' ? `How did ${cel.nombre} go?` : `¿Cómo estuvo ${cel.nombre}?`
+    const subject = lang === 'en' ? `How did ${nombreEventoSubject} go?` : `¿Cómo estuvo ${nombreEventoSubject}?`
     const cuerpo = lang === 'en'
       ? `
           <p style="font-size: 16px; color: #1c1830;">Hope ${nombreEvento} turned out amazing.</p>

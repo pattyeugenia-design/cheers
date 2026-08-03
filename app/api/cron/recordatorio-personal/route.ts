@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail, trackedLink } from '../../../emailTemplate'
+import { envolverEmail, trackedLink, escapeHtml } from '../../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -65,16 +65,17 @@ export async function GET(req: Request) {
       const lang: 'es' | 'en' = perfil?.lang === 'en' ? 'en' : 'es'
 
       const link = trackedLink(`https://joincheers.app/${cel.slug}`, 'recordatorio_personal')
-      const subject = lang === 'en' ? `Reminder: "${cel.nombre}" is coming up` : `Recordatorio: "${cel.nombre}" se acerca`
+      const nombreEvento = escapeHtml(cel.nombre)
+      const subject = lang === 'en' ? `Reminder: "${nombreEvento}" is coming up` : `Recordatorio: "${nombreEvento}" se acerca`
       const cuerpo = lang === 'en'
         ? `
-            <p style="font-size: 16px; color: #1c1830;">Friendly reminder you set up — <strong>${cel.nombre}</strong> is coming up.</p>
+            <p style="font-size: 16px; color: #1c1830;">Friendly reminder you set up — <strong>${nombreEvento}</strong> is coming up.</p>
             <p style="margin-top: 20px;">
               <a href="${link}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
             </p>
         `
         : `
-            <p style="font-size: 16px; color: #1c1830;">Friendly reminder que tú activaste — <strong>${cel.nombre}</strong> se acerca.</p>
+            <p style="font-size: 16px; color: #1c1830;">Friendly reminder que tú activaste — <strong>${nombreEvento}</strong> se acerca.</p>
             <p style="margin-top: 20px;">
               <a href="${link}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>
             </p>

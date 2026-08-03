@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail, trackedLink } from '../../emailTemplate'
+import { envolverEmail, trackedLink, escapeHtml } from '../../emailTemplate'
 import { obtenerPrefs, debeEnviarNuevaInstantaneo } from '../../notificacionesPrefs'
 import { registrarNotificacionApp } from '../../notificacionesApp'
 
@@ -46,8 +46,9 @@ export async function POST(req: Request) {
 
   const { data: perfilOrg } = await admin.from('perfiles').select('lang').eq('user_id', cel.organizador_id).single()
   const lang: 'es' | 'en' = perfilOrg?.lang === 'en' ? 'en' : 'es'
-  const autor = msg.nombre || (lang === 'en' ? 'Someone' : 'Alguien')
-  const texto = msg.texto
+  const autor = escapeHtml(msg.nombre) || (lang === 'en' ? 'Someone' : 'Alguien')
+  const texto = escapeHtml(msg.texto)
+  const nombreEvento = escapeHtml(cel.nombre)
 
   // El historial in-app siempre se registra, sin importar el nivel de email elegido.
   await registrarNotificacionApp(admin, cel.organizador_id, 'mensaje', cel.slug, lang === 'en'
@@ -61,19 +62,19 @@ export async function POST(req: Request) {
   if (!organizador?.email) return NextResponse.json({ success: true })
 
   const subject = lang === 'en'
-    ? `New message in "${cel.nombre}"`
-    : `Nuevo mensaje en "${cel.nombre}"`
+    ? `New message in "${nombreEvento}"`
+    : `Nuevo mensaje en "${nombreEvento}"`
 
   const cuerpo = lang === 'en'
     ? `
-        <p style="font-size: 16px; color: #1c1830;"><strong>${autor}</strong> left a message in <strong>${cel.nombre}</strong>:</p>
+        <p style="font-size: 16px; color: #1c1830;"><strong>${autor}</strong> left a message in <strong>${nombreEvento}</strong>:</p>
         <p style="font-size: 14px; color: #6b6585; font-style: italic;">"${texto}"</p>
         <p style="margin-top: 20px;">
           <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_mensaje')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
         </p>
     `
     : `
-        <p style="font-size: 16px; color: #1c1830;"><strong>${autor}</strong> dejó un mensaje en <strong>${cel.nombre}</strong>:</p>
+        <p style="font-size: 16px; color: #1c1830;"><strong>${autor}</strong> dejó un mensaje en <strong>${nombreEvento}</strong>:</p>
         <p style="font-size: 14px; color: #6b6585; font-style: italic;">"${texto}"</p>
         <p style="margin-top: 20px;">
           <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_mensaje')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail, trackedLink } from '../../emailTemplate'
+import { envolverEmail, trackedLink, escapeHtml } from '../../emailTemplate'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -56,7 +56,11 @@ export async function POST(req: Request) {
   const locale = lang === 'en' ? 'en-US' : 'es-MX'
 
   const primeraParada = (cel.paradas || []).find((p: any) => p?.lugar)
-  const lugarNombre: string | null = primeraParada?.lugar || null
+  // Escapados antes de meterlos en el HTML del correo — aunque casi siempre los
+  // escribe la organizadora, se saneam igual por consistencia con el resto.
+  const lugarNombre: string | null = primeraParada?.lugar ? escapeHtml(primeraParada.lugar) : null
+  const festejadoNombre = escapeHtml(cel.festejado_nombre)
+  const nombreCompletoOrg = escapeHtml(perfilOrg?.nombre_completo)
   // Este server corre en UTC, así que hoy no se nota el corrimiento, pero se
   // deja igual de blindado que el resto del código por si eso cambia.
   const fechaFmt = cel.fecha
@@ -64,8 +68,8 @@ export async function POST(req: Request) {
     : null
 
   const tituloEvento = cel.festejado_nombre
-    ? (lang === 'en' ? `${cel.festejado_nombre}'s celebration` : `Celebración de ${cel.festejado_nombre}`)
-    : cel.nombre
+    ? (lang === 'en' ? `${festejadoNombre}'s celebration` : `Celebración de ${festejadoNombre}`)
+    : escapeHtml(cel.nombre)
 
   const esSorpresa = cel.es_sorpresa && (perfilOrg?.plan === 'lifetime' || perfilOrg?.plan === 'pro' || cel.plan === 'pro')
 
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
         ${fechaFmt ? `<p style="font-size: 15px; color: #6b6585; margin: 0 0 2px;">${fechaFmt}</p>` : ''}
         ${lugarNombre ? `<p style="font-size: 15px; color: #a39ec0; margin: 0 0 14px;">${lugarNombre}</p>` : ''}
         ${esSorpresa ? `<p style="font-size: 13px; color: #D4537E; font-weight: 700; margin: 0 0 14px;">This is a surprise — don't tell the guest of honor.</p>` : ''}
-        ${perfilOrg?.nombre_completo ? `<p style="font-size: 14px; color: #6b6585; margin: 0 0 20px;">Organized by ${perfilOrg.nombre_completo}</p>` : ''}
+        ${nombreCompletoOrg ? `<p style="font-size: 14px; color: #6b6585; margin: 0 0 20px;">Organized by ${nombreCompletoOrg}</p>` : ''}
         <p style="margin-top: 10px;">
           <a href="${link}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 22px; border-radius: 10px; text-decoration: none; font-weight: 700;">View invitation →</a>
         </p>
@@ -98,7 +102,7 @@ export async function POST(req: Request) {
         ${fechaFmt ? `<p style="font-size: 15px; color: #6b6585; margin: 0 0 2px;">${fechaFmt}</p>` : ''}
         ${lugarNombre ? `<p style="font-size: 15px; color: #a39ec0; margin: 0 0 14px;">${lugarNombre}</p>` : ''}
         ${esSorpresa ? `<p style="font-size: 13px; color: #D4537E; font-weight: 700; margin: 0 0 14px;">Es sorpresa — no le digas al festejado/a.</p>` : ''}
-        ${perfilOrg?.nombre_completo ? `<p style="font-size: 14px; color: #6b6585; margin: 0 0 20px;">Organiza ${perfilOrg.nombre_completo}</p>` : ''}
+        ${nombreCompletoOrg ? `<p style="font-size: 14px; color: #6b6585; margin: 0 0 20px;">Organiza ${nombreCompletoOrg}</p>` : ''}
         <p style="margin-top: 10px;">
           <a href="${link}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 22px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver invitación →</a>
         </p>

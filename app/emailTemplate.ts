@@ -6,6 +6,20 @@
 
 export type Idioma = 'es' | 'en'
 
+// Cualquier texto que venga de un invitado/organizador (nombre, mensaje, título
+// del evento, etc.) y se vaya a meter dentro del HTML de un correo debe pasar
+// por aquí primero — si no, alguien podría poner un link o HTML disfrazado como
+// su "nombre" y que se renderice como si fuera parte del correo oficial de Cheers.
+export function escapeHtml(texto: string | null | undefined): string {
+  if (!texto) return ''
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // Agrega parámetros UTM a cualquier link de un correo, para poder ver en Vercel
 // Analytics (o donde sea que midas tráfico) cuánta gente entra desde cada tipo
 // de correo específico, no solo "vino de algún lado".

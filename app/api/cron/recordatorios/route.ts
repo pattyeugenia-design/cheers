@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail, trackedLink } from '../../../emailTemplate'
+import { envolverEmail, trackedLink, escapeHtml } from '../../../emailTemplate'
 import { DEFAULT_NOTIF_PREFS, NotificacionesPrefs } from '../../../notificacionesPrefs'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -191,13 +191,14 @@ export async function GET(req: Request) {
             : `<p style="font-size: 13px; color: #7a7494;">Si esperas más de 3 invitados, con Super Cheer caben hasta 10 en esta celebración.</p>`)
         : ''
 
+      const nombreEvento = escapeHtml(cel.nombre)
       const subject = lang === 'en'
-        ? `${diasConfigurados} day${diasConfigurados === 1 ? '' : 's'} left until "${cel.nombre}"`
-        : `Faltan ${diasConfigurados} día${diasConfigurados === 1 ? '' : 's'} para "${cel.nombre}"`
+        ? `${diasConfigurados} day${diasConfigurados === 1 ? '' : 's'} left until "${nombreEvento}"`
+        : `Faltan ${diasConfigurados} día${diasConfigurados === 1 ? '' : 's'} para "${nombreEvento}"`
 
       const cuerpo = lang === 'en'
         ? `
-            <p style="font-size: 16px; color: #1c1830;">Your celebration <strong>${cel.nombre}</strong> is in ${diasConfigurados} day${diasConfigurados === 1 ? '' : 's'}.</p>
+            <p style="font-size: 16px; color: #1c1830;">Your celebration <strong>${nombreEvento}</strong> is in ${diasConfigurados} day${diasConfigurados === 1 ? '' : 's'}.</p>
             <p style="font-size: 15px; color: #6b6585;">So far, <strong>${totalConfirmados}</strong> ${totalConfirmados === 1 ? 'person has' : 'people have'} confirmed they're going.</p>
             ${lineaLimite}
             <p style="margin-top: 20px;">
@@ -206,7 +207,7 @@ export async function GET(req: Request) {
             <p style="font-size: 12px; color: #a39ec0; margin-top: 16px;">Attached: an .ics file to add it to your personal calendar.</p>
         `
         : `
-            <p style="font-size: 16px; color: #1c1830;">Tu celebración <strong>${cel.nombre}</strong> es en ${diasConfigurados} día${diasConfigurados === 1 ? '' : 's'}.</p>
+            <p style="font-size: 16px; color: #1c1830;">Tu celebración <strong>${nombreEvento}</strong> es en ${diasConfigurados} día${diasConfigurados === 1 ? '' : 's'}.</p>
             <p style="font-size: 15px; color: #6b6585;">Hasta ahora, <strong>${totalConfirmados}</strong> persona${totalConfirmados === 1 ? '' : 's'} ha${totalConfirmados === 1 ? '' : 'n'} confirmado que va${totalConfirmados === 1 ? '' : 'n'}.</p>
             ${lineaLimite}
             <p style="margin-top: 20px;">

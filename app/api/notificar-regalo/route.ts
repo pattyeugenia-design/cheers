@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail, trackedLink } from '../../emailTemplate'
+import { envolverEmail, trackedLink, escapeHtml } from '../../emailTemplate'
 import { obtenerPrefs, debeEnviarNuevaInstantaneo } from '../../notificacionesPrefs'
 import { registrarNotificacionApp } from '../../notificacionesApp'
 
@@ -40,7 +40,8 @@ export async function POST(req: Request) {
 
   const regalo = (cel.gifts || []).find((g: any) => g.id === regaloId)
   if (!regalo) return NextResponse.json({ success: true })
-  const nombreRegalo = regalo.nombre || (lang === 'en' ? 'A gift' : 'Un regalo')
+  const nombreRegalo = escapeHtml(regalo.nombre) || (lang === 'en' ? 'A gift' : 'Un regalo')
+  const nombreEvento = escapeHtml(cel.nombre)
 
   // Sella este regaloId como ya notificado (ver notificar-rsvp para el porqué).
   const { error: yaNotificado } = await admin.from('notificaciones_enviadas').insert({ tipo: 'regalo', recurso_id: regaloId, celebracion_slug: celebracionSlug })
@@ -60,18 +61,18 @@ export async function POST(req: Request) {
   if (!organizador?.email) return NextResponse.json({ success: true })
 
   const subject = lang === 'en'
-    ? `Someone reserved "${nombreRegalo}" for "${cel.nombre}"`
-    : `Alguien reservó "${nombreRegalo}" en "${cel.nombre}"`
+    ? `Someone reserved "${nombreRegalo}" for "${nombreEvento}"`
+    : `Alguien reservó "${nombreRegalo}" en "${nombreEvento}"`
 
   const cuerpo = lang === 'en'
     ? `
-        <p style="font-size: 16px; color: #1c1830;">Someone just reserved <strong>${nombreRegalo}</strong> for <strong>${cel.nombre}</strong>.</p>
+        <p style="font-size: 16px; color: #1c1830;">Someone just reserved <strong>${nombreRegalo}</strong> for <strong>${nombreEvento}</strong>.</p>
         <p style="margin-top: 20px;">
           <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_regalo')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
         </p>
     `
     : `
-        <p style="font-size: 16px; color: #1c1830;">Alguien reservó <strong>${nombreRegalo}</strong> en <strong>${cel.nombre}</strong>.</p>
+        <p style="font-size: 16px; color: #1c1830;">Alguien reservó <strong>${nombreRegalo}</strong> en <strong>${nombreEvento}</strong>.</p>
         <p style="margin-top: 20px;">
           <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_regalo')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>
         </p>

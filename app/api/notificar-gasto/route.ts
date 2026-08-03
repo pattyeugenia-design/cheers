@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { envolverEmail, trackedLink } from '../../emailTemplate'
+import { envolverEmail, trackedLink, escapeHtml } from '../../emailTemplate'
 import { obtenerPrefs, debeEnviarNuevaInstantaneo } from '../../notificacionesPrefs'
 import { registrarNotificacionApp } from '../../notificacionesApp'
 
@@ -43,6 +43,11 @@ export async function POST(req: Request) {
   const { data: gasto } = await admin.from('gastos').select('descripcion, monto').eq('id', gastoId).single()
   if (!gasto) return NextResponse.json({ success: true })
 
+  // Escapados antes de meterlos en el HTML del correo — descripción la escribe
+  // la organizadora, pero igual se sanea por si acaso; nombre del evento igual.
+  const descripcionGasto = escapeHtml(gasto.descripcion)
+  const nombreEvento = escapeHtml(cel.nombre)
+
   // Sella este gastoId como ya notificado (ver notificar-rsvp para el porqué).
   const { error: yaNotificado } = await admin.from('notificaciones_enviadas').insert({ tipo: 'gasto', recurso_id: gastoId, celebracion_slug: celebracionSlug })
   if (yaNotificado) return NextResponse.json({ success: true })
@@ -78,19 +83,19 @@ export async function POST(req: Request) {
     }
 
     const subject = lang === 'en'
-      ? `You owe $${Number(p.monto_parte).toLocaleString()} in "${cel.nombre}"`
-      : `Te toca pagar $${Number(p.monto_parte).toLocaleString()} en "${cel.nombre}"`
+      ? `You owe $${Number(p.monto_parte).toLocaleString()} in "${nombreEvento}"`
+      : `Te toca pagar $${Number(p.monto_parte).toLocaleString()} en "${nombreEvento}"`
 
     const cuerpo = lang === 'en'
       ? `
-          <p style="font-size: 16px; color: #1c1830;">New expense in <strong>${cel.nombre}</strong>: <strong>${gasto.descripcion}</strong>.</p>
+          <p style="font-size: 16px; color: #1c1830;">New expense in <strong>${nombreEvento}</strong>: <strong>${descripcionGasto}</strong>.</p>
           <p style="font-size: 16px; color: #1c1830;">Your share: <strong>$${Number(p.monto_parte).toLocaleString()}</strong>.</p>
           <p style="margin-top: 20px;">
             <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_gasto')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">View event →</a>
           </p>
       `
       : `
-          <p style="font-size: 16px; color: #1c1830;">Nuevo gasto en <strong>${cel.nombre}</strong>: <strong>${gasto.descripcion}</strong>.</p>
+          <p style="font-size: 16px; color: #1c1830;">Nuevo gasto en <strong>${nombreEvento}</strong>: <strong>${descripcionGasto}</strong>.</p>
           <p style="font-size: 16px; color: #1c1830;">Tu parte: <strong>$${Number(p.monto_parte).toLocaleString()}</strong>.</p>
           <p style="margin-top: 20px;">
             <a href="${trackedLink(`https://joincheers.app/${cel.slug}`, 'notificar_gasto')}" style="background: linear-gradient(135deg,#534AB7,#D4537E); color: #fff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 700;">Ver evento →</a>
