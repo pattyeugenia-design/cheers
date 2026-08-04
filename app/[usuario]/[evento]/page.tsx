@@ -1068,7 +1068,7 @@ function ResizableTile({
       {/* Contenido — se omite por completo cuando está oculto, es lo que permite
           que el tile se comprima a solo su encabezado */}
       {visible && (
-        <div style={{ flex: 1, padding: '0 14px 14px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: isMobile ? '0 14px 14px' : '0 14px 38px', overflowY: 'auto' }}>
           {children}
         </div>
       )}
