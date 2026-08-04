@@ -1068,7 +1068,7 @@ function ResizableTile({
       {/* Contenido — se omite por completo cuando está oculto, es lo que permite
           que el tile se comprima a solo su encabezado */}
       {visible && (
-        <div style={{ flex: 1, padding: '0 14px 14px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: isMobile ? '0 14px 14px' : '0 40px 14px 14px', overflowY: 'auto' }}>
           {children}
         </div>
       )}
@@ -2213,7 +2213,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowAddInvitado(true)} style={{ ...dashedBtn, width: 'calc(100% - 26px)', textAlign: 'center' as const }}>
+          <button onClick={() => setShowAddInvitado(true)} style={{ ...dashedBtn, width: '100%', textAlign: 'center' as const }}>
             {limiteInvitados === Infinity ? (lang === 'en' ? '+ Add guest' : '+ Agregar invitado') : tx.add_guest(invitadosList.length, limiteInvitados)}
           </button>
         )}
