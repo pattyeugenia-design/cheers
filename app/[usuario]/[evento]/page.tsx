@@ -2110,11 +2110,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (tileKey === 'invitados') return (
       <div>
         {rol === 'organizador' && (
-          <div style={{ background: te.accentBg + '22', borderRadius: 12, padding: '10px 12px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ background: te.accentBg + '22', borderRadius: 10, padding: '8px 10px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: te.tileText }}>{lang === 'en' ? 'Closed links' : 'Links cerrados'}</div>
-              <div style={{ fontSize: 11, color: te.tileText, opacity: 0.7, marginTop: 2 }}>
-                {lang === 'en' ? 'Only people on this list see the full plan — everyone else sees the quick preview.' : 'Solo quien está en esta lista ve el plan completo — los demás ven la vista breve.'}
+              <div style={{ fontSize: 10, color: te.tileText, opacity: 0.65, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                {lang === 'en' ? 'Only invited guests see the full plan.' : 'Solo invitados en la lista ven el plan completo.'}
               </div>
             </div>
             {cuentaEsLifetime ? (
