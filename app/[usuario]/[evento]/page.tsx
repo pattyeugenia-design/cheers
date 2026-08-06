@@ -133,6 +133,15 @@ function defaultLayouts(type: string, sub?: string): TileLayout[] {
   return layouts
 }
 
+// El tile de "invitados" necesita más alto que el default original (4 filas)
+// desde que le agregamos el banner de "links cerrados" — celebraciones creadas
+// antes de eso se quedaron con un tamaño guardado que ya no alcanza y el botón
+// de "+ Agregar invitado" queda cortado o requiere scroll dentro del tile.
+// Esto solo lo agranda si está más chico que el mínimo, nunca lo achica.
+function conAlturaMinimaInvitados(ls: TileLayout[]): TileLayout[] {
+  return ls.map(l => (l.key === 'invitados' && l.rowSpan < 5) ? { ...l, rowSpan: 5 } : l)
+}
+
 function packLayouts(order: TileLayout[]): TileLayout[] {
   const heights = new Array(COLS).fill(0)
   return order.map(t => {
@@ -1384,9 +1393,9 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       setReservacion({ lugar: '', hora: '', personas: '', notas: '', link: '', ...(cel.reservacion || {}) })
 
       if (cel.tile_layouts) {
-        try { setLayouts(JSON.parse(cel.tile_layouts)) } catch { setLayouts(defaultLayouts(cel.tipo, cel.sub_tipo)) }
+        try { setLayouts(conAlturaMinimaInvitados(JSON.parse(cel.tile_layouts))) } catch { setLayouts(conAlturaMinimaInvitados(defaultLayouts(cel.tipo, cel.sub_tipo))) }
       } else {
-        setLayouts(defaultLayouts(cel.tipo, cel.sub_tipo))
+        setLayouts(conAlturaMinimaInvitados(defaultLayouts(cel.tipo, cel.sub_tipo)))
       }
 
       setTilesVisibles({ ...DEFAULT_TILES_VISIBLES, ...(cel.tiles_visibles || {}) })
