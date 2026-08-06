@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(req: Request) {
-  const { accessToken, tipo, slug } = await req.json()
+  const { accessToken, tipo, slug, returnTo } = await req.json()
   if (!accessToken) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (tipo !== 'pro' && tipo !== 'lifetime') return NextResponse.json({ error: 'Tipo de plan inválido' }, { status: 400 })
 
@@ -49,8 +49,11 @@ export async function POST(req: Request) {
   const origenesValidos = new Set(['https://joincheers.app', 'https://www.joincheers.app', 'http://localhost:3000'])
   const origenSolicitado = req.headers.get('origin') || ''
   const origin = origenesValidos.has(origenSolicitado) ? origenSolicitado : 'https://joincheers.app'
-  // Pro regresa al evento que se acaba de comprar; Lifetime regresa al perfil
-  const rutaVuelta = tipo === 'pro' ? `/${slug}` : '/perfil'
+  // Pro regresa al evento que se acaba de comprar; Lifetime regresa al perfil,
+  // salvo que venga de Bridal (returnTo es un valor fijo de una lista chica,
+  // nunca una URL libre del cliente — así no se puede usar para mandar a
+  // alguien a un sitio que no sea joincheers.app después de pagar).
+  const rutaVuelta = tipo === 'pro' ? `/${slug}` : (returnTo === 'bridal' ? '/bridal' : '/perfil')
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
