@@ -16,7 +16,7 @@ const CHIPS: Record<string, string> = {
 const NOMBRE_PLAN: Record<string, string> = { free: 'Cheer', pro: 'Super Cheer', lifetime: 'Extra Cheer' }
 const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 
-function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string) {
+function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string, ocurrenciasPorSlug: Record<string, string[]> = {}) {
   const ahora = new Date()
   const tresMesesAtras = new Date()
   tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3)
@@ -25,12 +25,29 @@ function agruparPorTrimestre(celebraciones: any[], lang: string, plan: string) {
   const pasadasBloqueadas: any[] = []
   const sinFecha: any[] = []
 
+  // Fecha de hoy en local (mismo cuidado de zona horaria que el resto del
+  // archivo), para saber si una serie recurrente todavía tiene fechas futuras.
+  const hoyLocal = new Date()
+  hoyLocal.setHours(0, 0, 0, 0)
+  const hoyStr = `${hoyLocal.getFullYear()}-${String(hoyLocal.getMonth() + 1).padStart(2, '0')}-${String(hoyLocal.getDate()).padStart(2, '0')}`
+
   celebraciones.forEach(cel => {
     if (cel.archivada) return
     if (!cel.fecha) { sinFecha.push(cel); return }
+
+    // Para series recurrentes, lo que importa es si tienen una fecha futura
+    // real (tabla "ocurrencias"), no la fecha ancla con la que se crearon —
+    // si no, un evento semanal que empezó hace meses siempre caía en
+    // "pasadas" aunque siguiera vigente cada semana.
+    let fechaRelevante = cel.fecha
+    if (cel.recurrente) {
+      const futuras = (ocurrenciasPorSlug[cel.slug] || []).filter(f => f >= hoyStr).sort()
+      if (futuras.length > 0) fechaRelevante = futuras[0]
+    }
+
     // Mismo bug de zona horaria que en el calendario: sin la hora local,
     // "new Date('2026-08-01')" se lee como UTC y en México cae un día antes.
-    const f = new Date(cel.fecha + 'T00:00:00')
+    const f = new Date(fechaRelevante + 'T00:00:00')
     if (f < ahora) {
       // Lifetime desbloquea todo el historial de la cuenta; Pro desbloquea solo esta celebración
       if (plan === 'free' && cel.plan !== 'pro' && f < tresMesesAtras) { pasadasBloqueadas.push(cel) } else { pasadas.push(cel) }
@@ -315,7 +332,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   const nombre = perfilAuth?.nombre_completo || user?.user_metadata?.name?.split(' ')[0] || username
   const avatar = user?.user_metadata?.avatar_url
   const plan = perfilOwner?.plan || 'free'
-  const { grupos, pasadas, pasadasBloqueadas, sinFecha } = agruparPorTrimestre(celebraciones, lang, plan)
+  const { grupos, pasadas, pasadasBloqueadas, sinFecha } = agruparPorTrimestre(celebraciones, lang, plan, ocurrenciasPorSlug)
   // Las series recurrentes se pintan en CADA una de sus fechas reales (tabla
   // "ocurrencias"), no solo en la fecha ancla con la que se crearon — si no,
   // un evento "cada viernes" solo aparecería una vez en todo el calendario.
