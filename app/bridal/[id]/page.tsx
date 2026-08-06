@@ -7,7 +7,13 @@ import { getLang } from '../../i18n'
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
 
-type Tab = 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'proveedores' | 'contratos' | 'pagos'
+type Tab = 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'proveedores' | 'contratos' | 'pagos'
+
+const ASISTENCIA_LABEL: Record<string, { es: string; en: string; color: string }> = {
+  si: { es: 'Va', en: 'Going', color: '#7CE0A8' },
+  no: { es: 'No va', en: 'Not going', color: '#f4a3a3' },
+  tal_vez: { es: 'Tal vez', en: 'Maybe', color: '#c98a1e' },
+}
 
 const ESTADOS_PROVEEDOR = ['contactado', 'cotizando', 'contratado', 'descartado'] as const
 const ESTADO_LABEL: Record<string, { es: string; en: string; color: string }> = {
@@ -34,7 +40,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [id, setId] = useState('')
   const [proyecto, setProyecto] = useState<any>(null)
   const [cargando, setCargando] = useState(true)
-  const [tab, setTab] = useState<Tab>('presupuesto')
+  const [tab, setTab] = useState<Tab>('invitados')
 
   const [presupuesto, setPresupuesto] = useState<any[]>([])
   const [timeline, setTimeline] = useState<any[]>([])
@@ -42,6 +48,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [proveedores, setProveedores] = useState<any[]>([])
   const [contratos, setContratos] = useState<any[]>([])
   const [pagos, setPagos] = useState<any[]>([])
+  const [invitadosBoda, setInvitadosBoda] = useState<any[]>([])
+  const [rsvpsBoda, setRsvpsBoda] = useState<any[]>([])
 
   // Formularios rápidos por sección
   const [nuevoNombre, setNuevoNombre] = useState('')
@@ -64,14 +72,21 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [nuevoPagoMonto, setNuevoPagoMonto] = useState('')
   const [nuevoPagoFecha, setNuevoPagoFecha] = useState('')
 
+  const [nuevoInvNombre, setNuevoInvNombre] = useState('')
+  const [nuevoInvContacto, setNuevoInvContacto] = useState('')
+  const [nuevoInvGrupo, setNuevoInvGrupo] = useState('')
+  const [nuevoInvAcompanantes, setNuevoInvAcompanantes] = useState('0')
+
   async function cargarTodo(bodaId: string) {
-    const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }] = await Promise.all([
       supabase.from('boda_presupuesto_items').select('*').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_timeline_items').select('*').eq('boda_id', bodaId).order('fecha_objetivo', { ascending: true, nullsFirst: false }),
       supabase.from('boda_tablero_items').select('*').eq('boda_id', bodaId).order('orden'),
       supabase.from('boda_proveedores').select('*').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_contratos').select('*').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_pagos').select('*').eq('boda_id', bodaId).order('fecha', { ascending: false, nullsFirst: false }),
+      supabase.from('boda_invitados').select('*').eq('boda_id', bodaId).order('created_at'),
+      supabase.from('boda_rsvps').select('*').eq('boda_id', bodaId),
     ])
     setPresupuesto(p || [])
     setTimeline(t || [])
@@ -79,6 +94,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setProveedores(pr || [])
     setContratos(ct || [])
     setPagos(pg || [])
+    setInvitadosBoda(inv || [])
+    setRsvpsBoda(rs || [])
   }
 
   useEffect(() => {
@@ -223,6 +240,39 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('boda_pagos').delete().eq('id', itemId)
   }
 
+  async function agregarInvitadoBoda() {
+    if (!nuevoInvNombre.trim()) return
+    setGuardando(true)
+    const esTelefono = /^\+?[\d\s\-()]{7,}$/.test(nuevoInvContacto.trim())
+    await supabase.from('boda_invitados').insert({
+      boda_id: id, nombre: nuevoInvNombre.trim(),
+      telefono: esTelefono ? nuevoInvContacto.trim() : null,
+      email: !esTelefono ? (nuevoInvContacto.trim() || null) : null,
+      grupo: nuevoInvGrupo.trim() || null,
+      acompanantes_permitidos: Number(nuevoInvAcompanantes) || 0,
+    })
+    setNuevoInvNombre(''); setNuevoInvContacto(''); setNuevoInvGrupo(''); setNuevoInvAcompanantes('0')
+    await cargarTodo(id)
+    setGuardando(false)
+  }
+
+  async function borrarInvitadoBoda(itemId: string) {
+    setInvitadosBoda(prev => prev.filter(x => x.id !== itemId))
+    await supabase.from('boda_invitados').delete().eq('id', itemId)
+  }
+
+  function enviarInvitacionWA(inv: any) {
+    const url = `https://joincheers.app/bridal/rsvp/${inv.token}`
+    const nombreBoda = [proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ')
+    const msg = encodeURIComponent(
+      lang === 'en'
+        ? `Hi ${inv.nombre}! You're invited to ${nombreBoda}'s wedding. Please RSVP here: ${url}`
+        : `¡Hola ${inv.nombre}! Estás invitad@ a la boda de ${nombreBoda}. Confirma tu asistencia aquí: ${url}`
+    )
+    const destino = inv.telefono ? inv.telefono.replace(/[^\d+]/g, '') : ''
+    window.open(`https://wa.me/${destino}?text=${msg}`, '_blank')
+  }
+
   if (cargando) return (
     <main style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F }}>
       <p style={{ color: '#EEC9DD' }}>{lang === 'en' ? 'Loading…' : 'Cargando…'}</p>
@@ -234,6 +284,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const totalPagado = presupuesto.filter(x => x.pagado).reduce((s, x) => s + (Number(x.costo_real ?? x.costo_estimado) || 0), 0)
 
   const TABS: { key: Tab; label: string }[] = [
+    { key: 'invitados', label: lang === 'en' ? 'Guests' : 'Invitados' },
     { key: 'presupuesto', label: lang === 'en' ? 'Budget' : 'Presupuesto' },
     { key: 'timeline', label: lang === 'en' ? 'Timeline' : 'Timeline' },
     { key: 'novia', label: lang === 'en' ? 'Bride' : 'Novia' },
@@ -267,6 +318,56 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             }}>{tb.label}</button>
           ))}
         </div>
+
+        {tab === 'invitados' && (
+          <div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Confirmed' : 'Confirmados'}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#7CE0A8' }}>{rsvpsBoda.filter(r => r.asistencia === 'si').length}</div>
+              </div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Pending' : 'Por confirmar'}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{invitadosBoda.length - rsvpsBoda.length}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
+              {invitadosBoda.map(inv => {
+                const rsvp = rsvpsBoda.find(r => r.invitado_id === inv.id)
+                return (
+                  <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{inv.nombre}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>
+                        {[inv.grupo, inv.acompanantes_permitidos > 0 ? `+${inv.acompanantes_permitidos}` : null].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                    {rsvp ? (
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: ASISTENCIA_LABEL[rsvp.asistencia].color, color: '#241c45' }}>
+                        {lang === 'en' ? ASISTENCIA_LABEL[rsvp.asistencia].en : ASISTENCIA_LABEL[rsvp.asistencia].es}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)' }}>
+                        {lang === 'en' ? 'Pending' : 'Sin responder'}
+                      </span>
+                    )}
+                    <button onClick={() => enviarInvitacionWA(inv)} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, fontSize: 13 }}>↗</button>
+                    <button onClick={() => borrarInvitadoBoda(inv.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+              <input value={nuevoInvNombre} onChange={e => setNuevoInvNombre(e.target.value)} placeholder={lang === 'en' ? 'Name' : 'Nombre'} style={{ ...inputStyle, flex: 2, minWidth: 120 }} />
+              <input value={nuevoInvContacto} onChange={e => setNuevoInvContacto(e.target.value)} placeholder={lang === 'en' ? 'Phone or email' : 'Teléfono o email'} style={{ ...inputStyle, flex: 1, minWidth: 130 }} />
+              <input value={nuevoInvGrupo} onChange={e => setNuevoInvGrupo(e.target.value)} placeholder={lang === 'en' ? 'Group' : 'Grupo'} style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
+              <input type="number" min={0} value={nuevoInvAcompanantes} onChange={e => setNuevoInvAcompanantes(e.target.value)} placeholder={lang === 'en' ? '+1s' : 'Acompañantes'} style={{ ...inputStyle, width: 80 }} />
+              <button onClick={agregarInvitadoBoda} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+            </div>
+          </div>
+        )}
 
         {tab === 'presupuesto' && (
           <div>
