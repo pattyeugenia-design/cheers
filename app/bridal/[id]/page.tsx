@@ -7,7 +7,8 @@ import { getLang } from '../../i18n'
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
 
-type Tab = 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'proveedores' | 'contratos' | 'pagos'
+type Tab = 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion'
+type TableroKey = 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo'
 
 const ASISTENCIA_LABEL: Record<string, { es: string; en: string; color: string }> = {
   si: { es: 'Va', en: 'Going', color: '#7CE0A8' },
@@ -77,6 +78,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [nuevoInvGrupo, setNuevoInvGrupo] = useState('')
   const [nuevoInvAcompanantes, setNuevoInvAcompanantes] = useState('0')
 
+  const [linkInspiracion, setLinkInspiracion] = useState('')
+  const [guardandoInspiracion, setGuardandoInspiracion] = useState(false)
+
   async function cargarTodo(bodaId: string) {
     const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }] = await Promise.all([
       supabase.from('boda_presupuesto_items').select('*').eq('boda_id', bodaId).order('created_at'),
@@ -108,6 +112,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       const { data: proy } = await supabase.from('proyectos_boda').select('*').eq('id', id).single()
       if (!proy) { router.push('/bridal'); return }
       setProyecto(proy)
+      setLinkInspiracion(proy.link_inspiracion || '')
       await cargarTodo(id)
       setCargando(false)
     })
@@ -154,7 +159,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('boda_timeline_items').delete().eq('id', itemId)
   }
 
-  async function agregarTablero(tableroKey: 'novia' | 'novio' | 'pareja') {
+  async function agregarTablero(tableroKey: TableroKey) {
     if (!nuevoItem.trim()) return
     setGuardando(true)
     const orden = tablero.filter(x => x.tablero === tableroKey).length
@@ -261,6 +266,13 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('boda_invitados').delete().eq('id', itemId)
   }
 
+  async function guardarLinkInspiracion() {
+    setGuardandoInspiracion(true)
+    await supabase.from('proyectos_boda').update({ link_inspiracion: linkInspiracion.trim() || null }).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, link_inspiracion: linkInspiracion.trim() || null }))
+    setGuardandoInspiracion(false)
+  }
+
   function enviarInvitacionWA(inv: any) {
     const url = `https://joincheers.app/bridal/rsvp/${inv.token}`
     const nombreBoda = [proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ')
@@ -290,9 +302,13 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     { key: 'novia', label: lang === 'en' ? 'Bride' : 'Novia' },
     { key: 'novio', label: lang === 'en' ? 'Groom' : 'Novio' },
     { key: 'pareja', label: lang === 'en' ? 'Couple' : 'Pareja' },
+    { key: 'luna_miel', label: lang === 'en' ? 'Honeymoon' : 'Luna de miel' },
+    { key: 'vida_despues', label: lang === 'en' ? 'Life after' : 'Vida después' },
+    { key: 'embarazo', label: lang === 'en' ? 'Pregnancy' : 'Embarazo' },
     { key: 'proveedores', label: lang === 'en' ? 'Vendors' : 'Proveedores' },
     { key: 'contratos', label: lang === 'en' ? 'Contracts' : 'Contratos' },
     { key: 'pagos', label: lang === 'en' ? 'Payments' : 'Pagos' },
+    { key: 'inspiracion', label: lang === 'en' ? 'Inspiration' : 'Inspiración' },
   ]
 
   const totalPagos = pagos.reduce((s, x) => s + (Number(x.monto) || 0), 0)
@@ -427,7 +443,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           </div>
         )}
 
-        {(tab === 'novia' || tab === 'novio' || tab === 'pareja') && (
+        {(tab === 'novia' || tab === 'novio' || tab === 'pareja' || tab === 'luna_miel' || tab === 'vida_despues' || tab === 'embarazo') && (
           <div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {tablero.filter(x => x.tablero === tab).map(item => (
@@ -440,7 +456,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarTablero(tab)} placeholder={lang === 'en' ? 'Add a to-do' : 'Agregar pendiente'} style={{ ...inputStyle, flex: 1 }} />
-              <button onClick={() => agregarTablero(tab)} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={() => agregarTablero(tab as TableroKey)} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
         )}
@@ -525,6 +541,25 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input type="number" value={nuevoPagoMonto} onChange={e => setNuevoPagoMonto(e.target.value)} placeholder={lang === 'en' ? 'Amount' : 'Monto'} style={{ ...inputStyle, width: 90 }} />
               <input type="date" value={nuevoPagoFecha} onChange={e => setNuevoPagoFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const }} />
               <button onClick={agregarPago} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'inspiracion' && (
+          <div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', marginBottom: 14 }}>
+              {lang === 'en' ? 'Save a link to your inspiration board (Pinterest, Canva, etc).' : 'Guarda un link a tu tablero de inspiración (Pinterest, Canva, etc).'}
+            </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+              <input value={linkInspiracion} onChange={e => setLinkInspiracion(e.target.value)} placeholder={lang === 'en' ? 'https://...' : 'https://...'} style={{ ...inputStyle, flex: 1, minWidth: 200 }} />
+              <button onClick={guardarLinkInspiracion} disabled={guardandoInspiracion} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                {lang === 'en' ? 'Save' : 'Guardar'}
+              </button>
+              {proyecto?.link_inspiracion && (
+                <button onClick={() => window.open(proyecto.link_inspiracion, '_blank')} style={{ border: '1px solid rgba(255,255,255,.15)', background: 'rgba(255,255,255,.06)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                  {lang === 'en' ? 'Open' : 'Abrir'}
+                </button>
+              )}
             </div>
           </div>
         )}
