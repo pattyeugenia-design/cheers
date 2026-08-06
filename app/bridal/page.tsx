@@ -196,13 +196,13 @@ export default function Bridal() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
             {proyectos.map(p => (
-              <div key={p.id} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 18, padding: '20px 22px' }}>
+              <div key={p.id} onClick={() => router.push(`/bridal/${p.id}`)} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 18, padding: '20px 22px', cursor: 'pointer' }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>
                   {[p.nombre_novia, p.nombre_novio].filter(Boolean).join(' & ') || (lang === 'en' ? 'Your wedding' : 'Tu boda')}
                 </div>
                 {p.fecha_boda && <div style={{ fontSize: 13, color: '#EEC9DD', marginTop: 4 }}>{p.fecha_boda}</div>}
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', marginTop: 14 }}>
-                  {lang === 'en' ? 'Dashboard, budget, timeline and more coming soon.' : 'Dashboard, presupuesto, timeline y más muy pronto.'}
+                <div style={{ fontSize: 12, color: '#AFA9EC', marginTop: 14, fontWeight: 700 }}>
+                  {lang === 'en' ? 'Open budget, timeline & boards →' : 'Abrir presupuesto, timeline y tableros →'}
                 </div>
               </div>
             ))}
