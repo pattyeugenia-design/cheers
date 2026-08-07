@@ -117,8 +117,13 @@ export default function Bridal() {
         fecha_boda: fechaBoda || null,
         presupuesto_total: presupuestoTotal ? Number(presupuestoTotal) : null,
         invitados_estimados: invitadosEstimados ? Number(invitadosEstimados) : null,
-        hay_iglesia: hayIglesia,
-        hay_civil: hayCivil,
+        modulos_activos: {
+          iglesia: hayIglesia, civil: hayCivil,
+          presupuesto: true, proveedores: true, invitados: true,
+          novia: true, novio: true, pareja: true,
+          luna_miel: true, vida_despues: true, embarazo: true,
+          contratos: true, pagos: true, inspiracion: true, wedding_planner: true,
+        },
       })
       .select('id')
       .single()
@@ -130,6 +135,18 @@ export default function Bridal() {
     }
 
     await supabase.from('proyectos_boda_miembros').insert({ boda_id: boda.id, user_id: user.id, rol: 'creador' })
+
+    // Checklist fijo de trámites, sin IA — solo prende/apaga bloques según los toggles.
+    const tareasCivil = lang === 'en'
+      ? ['Gather documents for the civil ceremony (birth certificates, IDs, witnesses)', 'Schedule appointment at the Civil Registry', 'Civil marriage procedure']
+      : ['Reunir documentos para el matrimonio civil (actas de nacimiento, identificaciones, testigos)', 'Agendar cita en el Registro Civil', 'Trámite del matrimonio civil']
+    const tareasIglesia = lang === 'en'
+      ? ['Schedule premarital counseling classes', 'Church presentation / meeting with the priest', 'Book the church and ceremony time']
+      : ['Agendar pláticas prematrimoniales', 'Presentación en la iglesia / entrevista con el sacerdote', 'Reservar la iglesia y horario de la ceremonia']
+    const tareas = [...(hayCivil ? tareasCivil : []), ...(hayIglesia ? tareasIglesia : [])]
+    if (tareas.length > 0) {
+      await supabase.from('boda_timeline_items').insert(tareas.map(titulo => ({ boda_id: boda.id, titulo })))
+    }
 
     setGuardando(false)
     setCreando(false)
