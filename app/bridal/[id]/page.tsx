@@ -118,6 +118,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [infoViajeInput, setInfoViajeInput] = useState('')
   const [faqInput, setFaqInput] = useState('')
 
+  const [recordando, setRecordando] = useState(false)
+  const [ultimoRecordatorio, setUltimoRecordatorio] = useState<string | null>(null)
+  const [waPendienteIdx, setWaPendienteIdx] = useState(0)
+
   const [capturandoManual, setCapturandoManual] = useState<string | null>(null)
   const [manualAsistencia, setManualAsistencia] = useState<'si' | 'no' | 'tal_vez' | ''>('')
   const [manualMenu, setManualMenu] = useState('')
@@ -406,6 +410,37 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setGuardando(false)
   }
 
+  async function recordarPorCorreo() {
+    setRecordando(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/bridal-recordar-rsvp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bodaId: id, accessToken: session?.access_token }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setUltimoRecordatorio(lang === 'en' ? `${data.enviados ?? 0} reminder emails sent` : `${data.enviados ?? 0} correos de recordatorio enviados`)
+    setRecordando(false)
+  }
+
+  // WhatsApp no se puede mandar solo desde el servidor sin la API de negocio de
+  // pago — así que en vez de "todo de un jalón", esto abre WhatsApp con el
+  // siguiente pendiente cada vez que le das clic, uno a la vez.
+  function recordarSiguientePorWA() {
+    const pendientesConTel = invitadosBoda.filter(inv => !rsvpsBoda.find(r => r.invitado_id === inv.id) && inv.telefono)
+    if (pendientesConTel.length === 0) return
+    const inv = pendientesConTel[waPendienteIdx % pendientesConTel.length]
+    const url = `https://joincheers.app/bridal/rsvp/${inv.token}`
+    const nombreBoda = [proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ')
+    const msg = encodeURIComponent(
+      lang === 'en'
+        ? `Hi ${inv.nombre}! Just checking — we haven't gotten your RSVP yet for ${nombreBoda}'s wedding. Can you confirm here? ${url}`
+        : `¡Hola ${inv.nombre}! Todavía no nos llega tu confirmación para la boda de ${nombreBoda}. ¿Nos confirmas aquí? ${url}`
+    )
+    const destino = inv.telefono.replace(/[^\d+]/g, '')
+    window.open(`https://wa.me/${destino}?text=${msg}`, '_blank')
+    setWaPendienteIdx(prev => prev + 1)
+  }
+
   function enviarInvitacionWA(inv: any) {
     const url = `https://joincheers.app/bridal/rsvp/${inv.token}`
     const nombreBoda = [proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ')
@@ -632,6 +667,23 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{invitadosBoda.length - rsvpsBoda.length}</div>
               </div>
             </div>
+
+            {invitadosBoda.length - rsvpsBoda.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                  {lang === 'en' ? 'Remind pending guests' : 'Recordar a pendientes'}
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                  <button onClick={recordarPorCorreo} disabled={recordando} style={{ border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                    {recordando ? '...' : (lang === 'en' ? 'By email' : 'Por correo')}
+                  </button>
+                  <button onClick={recordarSiguientePorWA} style={{ border: 'none', background: '#25D366', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                    {lang === 'en' ? 'By WhatsApp (next one)' : 'Por WhatsApp (el siguiente)'}
+                  </button>
+                </div>
+                {ultimoRecordatorio && <p style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginTop: 8 }}>{ultimoRecordatorio}</p>}
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {invitadosBoda.map(inv => {
