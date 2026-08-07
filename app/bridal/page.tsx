@@ -28,6 +28,9 @@ export default function Bridal() {
   const [nombreNovio, setNombreNovio] = useState('')
   const [fechaBoda, setFechaBoda] = useState('')
   const [presupuestoTotal, setPresupuestoTotal] = useState('')
+  const [invitadosEstimados, setInvitadosEstimados] = useState('')
+  const [hayIglesia, setHayIglesia] = useState(true)
+  const [hayCivil, setHayCivil] = useState(true)
   const [error, setError] = useState('')
 
   async function cargarProyectos(userId: string) {
@@ -113,6 +116,9 @@ export default function Bridal() {
         nombre_novio: nombreNovio.trim() || null,
         fecha_boda: fechaBoda || null,
         presupuesto_total: presupuestoTotal ? Number(presupuestoTotal) : null,
+        invitados_estimados: invitadosEstimados ? Number(invitadosEstimados) : null,
+        hay_iglesia: hayIglesia,
+        hay_civil: hayCivil,
       })
       .select('id')
       .single()
@@ -183,6 +189,26 @@ export default function Bridal() {
             <input value={nombreNovio} onChange={e => setNombreNovio(e.target.value)} placeholder={lang === 'en' ? "Groom's name" : 'Nombre del novio'} style={inputStyle} />
             <input type="date" value={fechaBoda} onChange={e => setFechaBoda(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const }} />
             <input type="number" value={presupuestoTotal} onChange={e => setPresupuestoTotal(e.target.value)} placeholder={lang === 'en' ? 'Total budget (optional)' : 'Presupuesto total (opcional)'} style={inputStyle} />
+            <input type="number" min={0} value={invitadosEstimados} onChange={e => setInvitadosEstimados(e.target.value)} placeholder={lang === 'en' ? 'Estimated guests (optional)' : 'Invitados estimados (opcional)'} style={inputStyle} />
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px' }}>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', fontWeight: 600 }}>{lang === 'en' ? 'Church ceremony' : 'Ceremonia religiosa'}</span>
+              <button type="button" onClick={() => setHayIglesia(v => !v)} style={{
+                border: 'none', cursor: 'pointer', width: 44, height: 26, borderRadius: 99, padding: 3,
+                background: hayIglesia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.15)', display: 'flex', justifyContent: hayIglesia ? 'flex-end' : 'flex-start',
+              }}>
+                <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff', display: 'block' }} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', fontWeight: 600 }}>{lang === 'en' ? 'Civil ceremony' : 'Ceremonia civil'}</span>
+              <button type="button" onClick={() => setHayCivil(v => !v)} style={{
+                border: 'none', cursor: 'pointer', width: 44, height: 26, borderRadius: 99, padding: 3,
+                background: hayCivil ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.15)', display: 'flex', justifyContent: hayCivil ? 'flex-end' : 'flex-start',
+              }}>
+                <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff', display: 'block' }} />
+              </button>
+            </div>
             {error && <p style={{ color: '#f4a3a3', fontSize: 12, marginBottom: 10 }}>{error}</p>}
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={crearProyecto} disabled={guardando} style={{ flex: 1, border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
