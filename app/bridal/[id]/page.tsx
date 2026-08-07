@@ -1,14 +1,37 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Script from 'next/script'
 import { supabase } from '../../supabase'
 import { getLang } from '../../i18n'
+
+declare global { interface Window { google: any } }
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
 
-type Tab = 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion'
-type TableroKey = 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo'
+type Tab = 'dashboard' | 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion'
+type TableroKey = 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner'
+
+const CATEGORIA_WEDDING_PLANNER = 'Wedding Planner'
+
+// Cada módulo se puede prender/apagar desde el Dashboard. Los que no tienen
+// tabKey (iglesia/civil) no son pestañas, solo afectan el checklist de trámites.
+const MODULOS: { key: string; tabKey?: Tab; es: string; en: string }[] = [
+  { key: 'invitados', tabKey: 'invitados', es: 'Invitados', en: 'Guests' },
+  { key: 'presupuesto', tabKey: 'presupuesto', es: 'Presupuesto', en: 'Budget' },
+  { key: 'novia', tabKey: 'novia', es: 'Novia', en: 'Bride' },
+  { key: 'novio', tabKey: 'novio', es: 'Novio', en: 'Groom' },
+  { key: 'pareja', tabKey: 'pareja', es: 'Pareja', en: 'Couple' },
+  { key: 'luna_miel', tabKey: 'luna_miel', es: 'Luna de miel', en: 'Honeymoon' },
+  { key: 'vida_despues', tabKey: 'vida_despues', es: 'Vida después', en: 'Life after' },
+  { key: 'embarazo', tabKey: 'embarazo', es: 'Embarazo', en: 'Pregnancy' },
+  { key: 'wedding_planner', tabKey: 'wedding_planner', es: 'Wedding Planner', en: 'Wedding Planner' },
+  { key: 'proveedores', tabKey: 'proveedores', es: 'Proveedores', en: 'Vendors' },
+  { key: 'contratos', tabKey: 'contratos', es: 'Contratos', en: 'Contracts' },
+  { key: 'pagos', tabKey: 'pagos', es: 'Pagos', en: 'Payments' },
+  { key: 'inspiracion', tabKey: 'inspiracion', es: 'Inspiración', en: 'Inspiration' },
+]
 
 const ASISTENCIA_LABEL: Record<string, { es: string; en: string; color: string }> = {
   si: { es: 'Va', en: 'Going', color: '#7CE0A8' },
@@ -41,7 +64,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [id, setId] = useState('')
   const [proyecto, setProyecto] = useState<any>(null)
   const [cargando, setCargando] = useState(true)
-  const [tab, setTab] = useState<Tab>('invitados')
+  const [tab, setTab] = useState<Tab>('dashboard')
 
   const [presupuesto, setPresupuesto] = useState<any[]>([])
   const [timeline, setTimeline] = useState<any[]>([])
@@ -56,6 +79,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevaCategoria, setNuevaCategoria] = useState('')
   const [nuevoCosto, setNuevoCosto] = useState('')
+  const [nuevaFechaLimite, setNuevaFechaLimite] = useState('')
   const [nuevoTitulo, setNuevoTitulo] = useState('')
   const [nuevaFecha, setNuevaFecha] = useState('')
   const [nuevoItem, setNuevoItem] = useState('')
@@ -80,6 +104,25 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
   const [linkInspiracion, setLinkInspiracion] = useState('')
   const [guardandoInspiracion, setGuardandoInspiracion] = useState(false)
+
+  const [nuevoWpNombre, setNuevoWpNombre] = useState('')
+  const [nuevoWpContacto, setNuevoWpContacto] = useState('')
+  const [nuevoWpCosto, setNuevoWpCosto] = useState('')
+
+  const [mapsListo, setMapsListo] = useState(false)
+  const [editandoLugar, setEditandoLugar] = useState(false)
+  const [lugarInput, setLugarInput] = useState('')
+  const lugarRef = useRef<HTMLInputElement>(null)
+
+  const [editandoInfo, setEditandoInfo] = useState(false)
+  const [infoViajeInput, setInfoViajeInput] = useState('')
+  const [faqInput, setFaqInput] = useState('')
+
+  const [capturandoManual, setCapturandoManual] = useState<string | null>(null)
+  const [manualAsistencia, setManualAsistencia] = useState<'si' | 'no' | 'tal_vez' | ''>('')
+  const [manualMenu, setManualMenu] = useState('')
+  const [manualAcompanantes, setManualAcompanantes] = useState('0')
+  const [manualNotas, setManualNotas] = useState('')
 
   async function cargarTodo(bodaId: string) {
     const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }] = await Promise.all([
@@ -113,10 +156,23 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       if (!proy) { router.push('/bridal'); return }
       setProyecto(proy)
       setLinkInspiracion(proy.link_inspiracion || '')
+      setLugarInput(proy.lugar_nombre || '')
+      setInfoViajeInput(proy.info_viaje || '')
+      setFaqInput(proy.faq || '')
       await cargarTodo(id)
       setCargando(false)
     })
   }, [])
+
+  useEffect(() => {
+    if (!mapsListo || !editandoLugar || !lugarRef.current || lugarRef.current.dataset.init) return
+    const ac = new window.google.maps.places.Autocomplete(lugarRef.current, { fields: ['name', 'formatted_address'] })
+    ac.addListener('place_changed', () => {
+      const p = ac.getPlace()
+      if (p) setLugarInput(lugarRef.current?.value || p.name || '')
+    })
+    lugarRef.current.dataset.init = 'true'
+  }, [mapsListo, editandoLugar])
 
   async function agregarPresupuesto() {
     if (!nuevoNombre.trim()) return
@@ -124,8 +180,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('boda_presupuesto_items').insert({
       boda_id: id, nombre: nuevoNombre.trim(), categoria: nuevaCategoria.trim() || null,
       costo_estimado: nuevoCosto ? Number(nuevoCosto) : null,
+      fecha_limite: nuevaFechaLimite || null,
     })
-    setNuevoNombre(''); setNuevaCategoria(''); setNuevoCosto('')
+    setNuevoNombre(''); setNuevaCategoria(''); setNuevoCosto(''); setNuevaFechaLimite('')
     await cargarTodo(id)
     setGuardando(false)
   }
@@ -229,6 +286,11 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('boda_contratos').delete().eq('id', item.id)
   }
 
+  async function toggleFirmado(item: any) {
+    setContratos(prev => prev.map(x => x.id === item.id ? { ...x, firmado: !x.firmado } : x))
+    await supabase.from('boda_contratos').update({ firmado: !item.firmado }).eq('id', item.id)
+  }
+
   async function agregarPago() {
     if (!nuevoPagoConcepto.trim() || !nuevoPagoMonto) return
     setGuardando(true)
@@ -273,6 +335,77 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setGuardandoInspiracion(false)
   }
 
+  async function guardarLugar() {
+    const valor = lugarInput.trim() || null
+    await supabase.from('proyectos_boda').update({ lugar_nombre: valor }).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, lugar_nombre: valor }))
+    setEditandoLugar(false)
+  }
+
+  async function guardarInfoRsvp() {
+    const info_viaje = infoViajeInput.trim() || null
+    const faq = faqInput.trim() || null
+    await supabase.from('proyectos_boda').update({ info_viaje, faq }).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, info_viaje, faq }))
+    setEditandoInfo(false)
+  }
+
+  // Captura manual: para cuando alguien (ej. el wedding planner) confirma la
+  // asistencia de un invitado por teléfono en vez de que el invitado use su
+  // link — mismo destino (boda_rsvps) que el RSVP digital, solo otra puerta.
+  function abrirCapturaManual(inv: any) {
+    const existente = rsvpsBoda.find(r => r.invitado_id === inv.id)
+    setManualAsistencia(existente?.asistencia || '')
+    setManualMenu(existente?.menu_principal || '')
+    setManualAcompanantes(String(existente?.num_acompanantes ?? 0))
+    setManualNotas(existente?.notas || '')
+    setCapturandoManual(inv.id)
+  }
+
+  async function guardarRsvpManual(invitadoId: string) {
+    if (!manualAsistencia) return
+    setGuardando(true)
+    const existente = rsvpsBoda.find(r => r.invitado_id === invitadoId)
+    const payload = {
+      boda_id: id, invitado_id: invitadoId, asistencia: manualAsistencia,
+      num_acompanantes: Number(manualAcompanantes) || 0,
+      menu_principal: manualMenu || null, notas: manualNotas.trim() || null,
+    }
+    if (existente) await supabase.from('boda_rsvps').update(payload).eq('id', existente.id)
+    else await supabase.from('boda_rsvps').insert(payload)
+    setCapturandoManual(null)
+    await cargarTodo(id)
+    setGuardando(false)
+  }
+
+  async function toggleModulo(key: string) {
+    const activos = { ...(proyecto?.modulos_activos || {}) }
+    activos[key] = !(activos[key] !== false) // default true si no existe la llave
+    setProyecto((prev: any) => ({ ...prev, modulos_activos: activos }))
+    await supabase.from('proyectos_boda').update({ modulos_activos: activos }).eq('id', id)
+  }
+
+  function moduloActivo(key: string) {
+    return proyecto?.modulos_activos?.[key] !== false
+  }
+
+  // Wedding Planner es una vista filtrada de Proveedores (categoría fija), no una
+  // tabla aparte — evita duplicar datos si algún día también cotizas ahí mismo.
+  const wpCandidatos = proveedores.filter(p => p.categoria === CATEGORIA_WEDDING_PLANNER)
+  const wpContratado = wpCandidatos.find(p => p.estado === 'contratado')
+
+  async function agregarWpCandidato() {
+    if (!nuevoWpNombre.trim()) return
+    setGuardando(true)
+    await supabase.from('boda_proveedores').insert({
+      boda_id: id, nombre: nuevoWpNombre.trim(), categoria: CATEGORIA_WEDDING_PLANNER,
+      contacto_nombre: nuevoWpContacto.trim() || null, costo_cotizado: nuevoWpCosto ? Number(nuevoWpCosto) : null,
+    })
+    setNuevoWpNombre(''); setNuevoWpContacto(''); setNuevoWpCosto('')
+    await cargarTodo(id)
+    setGuardando(false)
+  }
+
   function enviarInvitacionWA(inv: any) {
     const url = `https://joincheers.app/bridal/rsvp/${inv.token}`
     const nombreBoda = [proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ')
@@ -295,23 +428,32 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const totalReal = presupuesto.reduce((s, x) => s + (Number(x.costo_real) || 0), 0)
   const totalPagado = presupuesto.filter(x => x.pagado).reduce((s, x) => s + (Number(x.costo_real ?? x.costo_estimado) || 0), 0)
 
-  const TABS: { key: Tab; label: string }[] = [
-    { key: 'invitados', label: lang === 'en' ? 'Guests' : 'Invitados' },
-    { key: 'presupuesto', label: lang === 'en' ? 'Budget' : 'Presupuesto' },
+  const TABS_TODAS: { key: Tab; label: string; moduloKey?: string }[] = [
+    { key: 'dashboard', label: lang === 'en' ? 'Dashboard' : 'Dashboard' },
+    { key: 'invitados', label: lang === 'en' ? 'Guests' : 'Invitados', moduloKey: 'invitados' },
+    { key: 'presupuesto', label: lang === 'en' ? 'Budget' : 'Presupuesto', moduloKey: 'presupuesto' },
     { key: 'timeline', label: lang === 'en' ? 'Timeline' : 'Timeline' },
-    { key: 'novia', label: lang === 'en' ? 'Bride' : 'Novia' },
-    { key: 'novio', label: lang === 'en' ? 'Groom' : 'Novio' },
-    { key: 'pareja', label: lang === 'en' ? 'Couple' : 'Pareja' },
-    { key: 'luna_miel', label: lang === 'en' ? 'Honeymoon' : 'Luna de miel' },
-    { key: 'vida_despues', label: lang === 'en' ? 'Life after' : 'Vida después' },
-    { key: 'embarazo', label: lang === 'en' ? 'Pregnancy' : 'Embarazo' },
-    { key: 'proveedores', label: lang === 'en' ? 'Vendors' : 'Proveedores' },
-    { key: 'contratos', label: lang === 'en' ? 'Contracts' : 'Contratos' },
-    { key: 'pagos', label: lang === 'en' ? 'Payments' : 'Pagos' },
-    { key: 'inspiracion', label: lang === 'en' ? 'Inspiration' : 'Inspiración' },
+    { key: 'novia', label: lang === 'en' ? 'Bride' : 'Novia', moduloKey: 'novia' },
+    { key: 'novio', label: lang === 'en' ? 'Groom' : 'Novio', moduloKey: 'novio' },
+    { key: 'pareja', label: lang === 'en' ? 'Couple' : 'Pareja', moduloKey: 'pareja' },
+    { key: 'luna_miel', label: lang === 'en' ? 'Honeymoon' : 'Luna de miel', moduloKey: 'luna_miel' },
+    { key: 'vida_despues', label: lang === 'en' ? 'Life after' : 'Vida después', moduloKey: 'vida_despues' },
+    { key: 'embarazo', label: lang === 'en' ? 'Pregnancy' : 'Embarazo', moduloKey: 'embarazo' },
+    { key: 'wedding_planner', label: 'Wedding Planner', moduloKey: 'wedding_planner' },
+    { key: 'proveedores', label: lang === 'en' ? 'Vendors' : 'Proveedores', moduloKey: 'proveedores' },
+    { key: 'contratos', label: lang === 'en' ? 'Contracts' : 'Contratos', moduloKey: 'contratos' },
+    { key: 'pagos', label: lang === 'en' ? 'Payments' : 'Pagos', moduloKey: 'pagos' },
+    { key: 'inspiracion', label: lang === 'en' ? 'Inspiration' : 'Inspiración', moduloKey: 'inspiracion' },
   ]
+  const TABS = TABS_TODAS.filter(t => !t.moduloKey || moduloActivo(t.moduloKey))
 
   const totalPagos = pagos.reduce((s, x) => s + (Number(x.monto) || 0), 0)
+  const hoy = new Date().toISOString().slice(0, 10)
+  const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const pagosVencidos = presupuesto.filter(x => !x.pagado && x.fecha_limite && x.fecha_limite < hoy)
+  const pagosProximos = presupuesto.filter(x => !x.pagado && x.fecha_limite && x.fecha_limite >= hoy && x.fecha_limite <= en30dias)
+  const contratosFirmados = contratos.filter(c => c.firmado).length
+  const rsvpConfirmados = rsvpsBoda.filter(r => r.asistencia === 'si').length
 
   return (
     <main style={{ minHeight: '100vh', background: BG, fontFamily: F, padding: '50px 20px 80px' }}>
@@ -335,6 +477,149 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           ))}
         </div>
 
+        {tab === 'dashboard' && (
+          <div>
+            {/* Brief: mismo espíritu que el brief de Cheers normal — fecha, lugar, invitados, organizadores */}
+            <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '18px 20px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 14, marginBottom: editandoLugar ? 12 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Date' : 'Fecha'}</div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>
+                    {proyecto?.fecha_boda || (lang === 'en' ? 'Pending' : 'Pendiente')}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>
+                    {proyecto?.invitados_estimados ?? (lang === 'en' ? 'Pending' : 'Pendiente')}
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Venue' : 'Lugar'}</div>
+                  {editandoLugar ? null : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>{proyecto?.lugar_nombre || (lang === 'en' ? 'Pending' : 'Pendiente')}</div>
+                      {proyecto?.lugar_nombre && (
+                        <a href={`https://maps.google.com/?q=${encodeURIComponent(proyecto.lugar_nombre)}`} target="_blank" style={{ fontSize: 11, color: '#AFA9EC', fontWeight: 700 }}>Maps ↗</a>
+                      )}
+                      <button onClick={() => setEditandoLugar(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Wedding Planner' : 'Wedding Planner'}</div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>{wpContratado?.nombre || (lang === 'en' ? 'Not selected' : 'Sin elegir')}</div>
+                </div>
+              </div>
+              {editandoLugar && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input ref={lugarRef} value={lugarInput} onChange={e => setLugarInput(e.target.value)} placeholder={lang === 'en' ? 'Search venue…' : 'Buscar lugar…'} style={{ ...inputStyle, flex: 1 }} />
+                  <button onClick={guardarLugar} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+                </div>
+              )}
+            </div>
+
+            {/* Info que ven los invitados en su página de RSVP */}
+            <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editandoInfo ? 10 : 0 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
+                  {lang === 'en' ? 'Info for guests (travel & FAQ)' : 'Info para invitados (viaje y FAQ)'}
+                </div>
+                {!editandoInfo && (
+                  <button onClick={() => setEditandoInfo(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                )}
+              </div>
+              {editandoInfo ? (
+                <div>
+                  <textarea value={infoViajeInput} onChange={e => setInfoViajeInput(e.target.value)} rows={3} placeholder={lang === 'en' ? 'Travel & stay info' : 'Info de viaje y hospedaje'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+                  <textarea value={faqInput} onChange={e => setFaqInput(e.target.value)} rows={3} placeholder="FAQ" style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+                  <button onClick={guardarInfoRsvp} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+                </div>
+              ) : (
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', margin: 0 }}>
+                  {(proyecto?.info_viaje || proyecto?.faq) ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.') : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
+                </p>
+              )}
+            </div>
+
+            {/* Métricas por módulo */}
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
+              {moduloActivo('presupuesto') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Budget' : 'Presupuesto'}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{fmtMoney(totalPagado)} / {fmtMoney(totalEstimado)}</div>
+                  {pagosVencidos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#f4a3a3', color: '#241c45' }}>{pagosVencidos.length} {lang === 'en' ? 'overdue' : 'vencidos'}</span>}
+                  {pagosProximos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#c98a1e', color: '#241c45' }}>{pagosProximos.length} {lang === 'en' ? 'due soon' : 'próximos'}</span>}
+                </div>
+              )}
+              {moduloActivo('proveedores') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Vendors' : 'Proveedores'}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{proveedores.filter(p => p.estado === 'contratado').length}/{proveedores.length} {lang === 'en' ? 'booked' : 'contratados'}</div>
+                </div>
+              )}
+              {moduloActivo('invitados') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{rsvpConfirmados}/{invitadosBoda.length} {lang === 'en' ? 'confirmed' : 'confirmados'}</div>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>Timeline</div>
+                <div style={{ fontSize: 12, color: '#EEC9DD' }}>{timeline.filter(x => x.completado).length}/{timeline.length}</div>
+              </div>
+              {['novia', 'novio', 'pareja', 'luna_miel', 'vida_despues', 'embarazo', 'wedding_planner'].filter(moduloActivo).map(k => {
+                const items = tablero.filter(x => x.tablero === k)
+                const modulo = MODULOS.find(m => m.key === k)!
+                if (k === 'wedding_planner' && !wpContratado) return null
+                return (
+                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? modulo.en : modulo.es}</div>
+                    <div style={{ fontSize: 12, color: '#EEC9DD' }}>{items.filter(x => x.completado).length}/{items.length}</div>
+                  </div>
+                )
+              })}
+              {moduloActivo('contratos') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Contracts' : 'Contratos'}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{contratosFirmados}/{contratos.length} {lang === 'en' ? 'signed' : 'firmados'}</div>
+                </div>
+              )}
+              {moduloActivo('pagos') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Payments' : 'Pagos'}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{fmtMoney(totalPagos)}</div>
+                </div>
+              )}
+              {moduloActivo('inspiracion') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Inspiration' : 'Inspiración'}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{proyecto?.link_inspiracion ? (lang === 'en' ? 'Saved' : 'Guardado') : (lang === 'en' ? 'Pending' : 'Pendiente')}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Módulos: prender/apagar */}
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'Modules' : 'Módulos'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+              {MODULOS.map(m => {
+                const activo = moduloActivo(m.key)
+                return (
+                  <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,.04)', borderRadius: 10, opacity: activo ? 1 : .5 }}>
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', fontWeight: 600 }}>{lang === 'en' ? m.en : m.es}</span>
+                    <button onClick={() => toggleModulo(m.key)} style={{
+                      border: 'none', cursor: 'pointer', width: 40, height: 24, borderRadius: 99, padding: 3,
+                      background: activo ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.15)', display: 'flex', justifyContent: activo ? 'flex-end' : 'flex-start',
+                    }}>
+                      <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', display: 'block' }} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {tab === 'invitados' && (
           <div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
@@ -352,24 +637,55 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               {invitadosBoda.map(inv => {
                 const rsvp = rsvpsBoda.find(r => r.invitado_id === inv.id)
                 return (
-                  <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{inv.nombre}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>
-                        {[inv.grupo, inv.acompanantes_permitidos > 0 ? `+${inv.acompanantes_permitidos}` : null].filter(Boolean).join(' · ')}
+                  <div key={inv.id} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{inv.nombre}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>
+                          {[inv.grupo, inv.acompanantes_permitidos > 0 ? `+${inv.acompanantes_permitidos}` : null].filter(Boolean).join(' · ')}
+                        </div>
                       </div>
+                      {rsvp ? (
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: ASISTENCIA_LABEL[rsvp.asistencia].color, color: '#241c45' }}>
+                          {lang === 'en' ? ASISTENCIA_LABEL[rsvp.asistencia].en : ASISTENCIA_LABEL[rsvp.asistencia].es}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)' }}>
+                          {lang === 'en' ? 'Pending' : 'Sin responder'}
+                        </span>
+                      )}
+                      <button onClick={() => enviarInvitacionWA(inv)} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, fontSize: 13 }}>↗</button>
+                      <button onClick={() => capturandoManual === inv.id ? setCapturandoManual(null) : abrirCapturaManual(inv)} title={lang === 'en' ? 'Log a call' : 'Registrar llamada'} style={{ border: 'none', background: 'rgba(255,255,255,.12)', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, fontSize: 12 }}>☎</button>
+                      <button onClick={() => borrarInvitadoBoda(inv.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                     </div>
-                    {rsvp ? (
-                      <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: ASISTENCIA_LABEL[rsvp.asistencia].color, color: '#241c45' }}>
-                        {lang === 'en' ? ASISTENCIA_LABEL[rsvp.asistencia].en : ASISTENCIA_LABEL[rsvp.asistencia].es}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)' }}>
-                        {lang === 'en' ? 'Pending' : 'Sin responder'}
-                      </span>
+
+                    {capturandoManual === inv.id && (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.1)' }}>
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginBottom: 8 }}>
+                          {lang === 'en' ? 'Log what they confirmed by phone — same as a digital RSVP.' : 'Registra lo que confirmó por teléfono — cuenta igual que un RSVP digital.'}
+                        </p>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                          {(['si', 'tal_vez', 'no'] as const).map(op => (
+                            <button key={op} onClick={() => setManualAsistencia(op)} style={{
+                              flex: 1, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 800, padding: '8px', borderRadius: 8,
+                              background: manualAsistencia === op ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.08)',
+                              color: manualAsistencia === op ? '#fff' : 'rgba(255,255,255,.6)',
+                            }}>{op === 'si' ? (lang === 'en' ? 'Yes' : 'Sí') : op === 'no' ? 'No' : (lang === 'en' ? 'Maybe' : 'Tal vez')}</button>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 8 }}>
+                          <select value={manualMenu} onChange={e => setManualMenu(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 110, colorScheme: 'dark' as const }}>
+                            <option value="">{lang === 'en' ? 'Meal' : 'Platillo'}</option>
+                            {['res', 'pollo', 'vegetariano', 'vegano'].map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                          <input type="number" min={0} value={manualAcompanantes} onChange={e => setManualAcompanantes(e.target.value)} placeholder={lang === 'en' ? '+1s' : 'Acompañantes'} style={{ ...inputStyle, width: 90 }} />
+                        </div>
+                        <input value={manualNotas} onChange={e => setManualNotas(e.target.value)} placeholder={lang === 'en' ? 'Note (optional)' : 'Nota (opcional)'} style={{ ...inputStyle, width: '100%' }} />
+                        <button onClick={() => guardarRsvpManual(inv.id)} disabled={!manualAsistencia || guardando} style={{ border: 'none', background: !manualAsistencia ? 'rgba(255,255,255,.15)' : 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: manualAsistencia ? 'pointer' : 'default', fontFamily: F }}>
+                          {lang === 'en' ? 'Save' : 'Guardar'}
+                        </button>
+                      </div>
                     )}
-                    <button onClick={() => enviarInvitacionWA(inv)} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, fontSize: 13 }}>↗</button>
-                    <button onClick={() => borrarInvitadoBoda(inv.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                   </div>
                 )
               })}
@@ -404,7 +720,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   <input type="checkbox" checked={!!item.pagado} onChange={() => togglePagado(item)} style={{ width: 16, height: 16, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: item.pagado ? 'line-through' : 'none', opacity: item.pagado ? .6 : 1 }}>{item.nombre}</div>
-                    {item.categoria && <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{item.categoria}</div>}
+                    <div style={{ fontSize: 11, color: item.fecha_limite && !item.pagado && item.fecha_limite < hoy ? '#f4a3a3' : 'rgba(255,255,255,.4)' }}>
+                      {[item.categoria, item.fecha_limite ? (lang === 'en' ? `due ${item.fecha_limite}` : `vence ${item.fecha_limite}`) : null].filter(Boolean).join(' · ')}
+                    </div>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(item.costo_real ?? item.costo_estimado)}</div>
                   <button onClick={() => borrarPresupuesto(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
@@ -416,6 +734,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder={lang === 'en' ? 'Item' : 'Concepto'} style={{ ...inputStyle, flex: 2, minWidth: 120 }} />
               <input value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} placeholder={lang === 'en' ? 'Category' : 'Categoría'} style={{ ...inputStyle, flex: 1, minWidth: 100 }} />
               <input type="number" value={nuevoCosto} onChange={e => setNuevoCosto(e.target.value)} placeholder={lang === 'en' ? 'Cost' : 'Costo'} style={{ ...inputStyle, width: 90 }} />
+              <input type="date" value={nuevaFechaLimite} onChange={e => setNuevaFechaLimite(e.target.value)} title={lang === 'en' ? 'Payment due date (optional)' : 'Fecha límite de pago (opcional)'} style={{ ...inputStyle, colorScheme: 'dark' as const }} />
               <button onClick={agregarPresupuesto} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
@@ -461,6 +780,68 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           </div>
         )}
 
+        {tab === 'wedding_planner' && (
+          <div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+              {lang === 'en' ? 'Compare candidates' : 'Comparativa'}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
+              {wpCandidatos.map(item => (
+                <div key={item.id} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{item.nombre}</div>
+                      {item.contacto_nombre && <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{item.contacto_nombre}</div>}
+                    </div>
+                    {item.costo_cotizado != null && <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(item.costo_cotizado)}</div>}
+                    <button onClick={() => borrarProveedor(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' as const }}>
+                    {ESTADOS_PROVEEDOR.map(e => (
+                      <button key={e} onClick={() => cambiarEstadoProveedor(item, e)} style={{
+                        border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99,
+                        background: item.estado === e ? ESTADO_LABEL[e].color : 'rgba(255,255,255,.08)',
+                        color: item.estado === e ? '#241c45' : 'rgba(255,255,255,.5)',
+                      }}>{lang === 'en' ? ESTADO_LABEL[e].en : ESTADO_LABEL[e].es}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 24 }}>
+              <input value={nuevoWpNombre} onChange={e => setNuevoWpNombre(e.target.value)} placeholder={lang === 'en' ? 'Candidate name' : 'Nombre'} style={{ ...inputStyle, flex: 2, minWidth: 130 }} />
+              <input value={nuevoWpContacto} onChange={e => setNuevoWpContacto(e.target.value)} placeholder={lang === 'en' ? 'Contact' : 'Contacto'} style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
+              <input type="number" value={nuevoWpCosto} onChange={e => setNuevoWpCosto(e.target.value)} placeholder={lang === 'en' ? 'Quote' : 'Cotización'} style={{ ...inputStyle, width: 90 }} />
+              <button onClick={agregarWpCandidato} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+            </div>
+
+            {wpContratado ? (
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                  {lang === 'en' ? `What ${wpContratado.nombre} will do` : `Qué va a hacer ${wpContratado.nombre}`}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
+                  {tablero.filter(x => x.tablero === 'wedding_planner').map(item => (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                      <input type="checkbox" checked={!!item.completado} onChange={() => toggleCompletadoTablero(item)} style={{ width: 16, height: 16, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: item.completado ? 'line-through' : 'none', opacity: item.completado ? .6 : 1 }}>{item.titulo}</div>
+                      <button onClick={() => borrarTablero(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarTablero('wedding_planner')} placeholder={lang === 'en' ? 'Add a responsibility' : 'Agregar responsabilidad'} style={{ ...inputStyle, flex: 1 }} />
+                  <button onClick={() => agregarTablero('wedding_planner')} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)' }}>
+                {lang === 'en' ? 'Mark one candidate as "Booked" above to unlock their checklist.' : 'Marca a uno como "Contratado" arriba para desbloquear su checklist.'}
+              </p>
+            )}
+          </div>
+        )}
+
         {tab === 'proveedores' && (
           <div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
@@ -503,6 +884,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {contratos.map(item => (
                 <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'rgba(255,255,255,.5)', fontWeight: 700, flexShrink: 0 }}>
+                    <input type="checkbox" checked={!!item.firmado} onChange={() => toggleFirmado(item)} style={{ width: 16, height: 16 }} />
+                    {lang === 'en' ? 'Signed' : 'Firmado'}
+                  </label>
                   <div onClick={() => verContrato(item.archivo_url)} style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#EEC9DD', cursor: 'pointer', textDecoration: 'underline' }}>{item.nombre}</div>
                   <button onClick={() => borrarContrato(item)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                 </div>
@@ -564,6 +949,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           </div>
         )}
       </div>
+      <Script src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places`} strategy="afterInteractive" onLoad={() => setMapsListo(true)} />
     </main>
   )
 }

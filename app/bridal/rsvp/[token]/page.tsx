@@ -105,7 +105,15 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
           {lang === 'en' ? "You're invited to" : 'Estás invitad@ a la boda de'}
         </p>
         <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', margin: '0 0 6px', textAlign: 'center' as const, letterSpacing: '-.5px' }}>{nombreBoda}</h1>
-        {invitado.fecha_boda && <p style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', textAlign: 'center' as const, marginBottom: 28 }}>{invitado.fecha_boda}</p>}
+        {(invitado.fecha_boda || invitado.lugar_nombre) && (
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', textAlign: 'center' as const, marginBottom: 28 }}>
+            {invitado.fecha_boda}
+            {invitado.fecha_boda && invitado.lugar_nombre && ' · '}
+            {invitado.lugar_nombre && (
+              <a href={`https://maps.google.com/?q=${encodeURIComponent(invitado.lugar_nombre)}`} target="_blank" style={{ color: '#EEC9DD' }}>{invitado.lugar_nombre} ↗</a>
+            )}
+          </p>
+        )}
 
         <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: '24px 22px' }}>
           <p style={{ fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 16 }}>
@@ -168,6 +176,23 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
             {enviando ? '...' : (lang === 'en' ? 'Send RSVP' : 'Enviar respuesta')}
           </button>
         </div>
+
+        {(invitado.info_viaje || invitado.faq) && (
+          <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: '20px 22px', marginTop: 16 }}>
+            {invitado.info_viaje && (
+              <div style={{ marginBottom: invitado.faq ? 16 : 0 }}>
+                <div style={{ fontSize: 11, color: '#EEC9DD', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 6 }}>{lang === 'en' ? 'Travel & stay' : 'Viaje y hospedaje'}</div>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', whiteSpace: 'pre-wrap' as const, lineHeight: 1.5 }}>{invitado.info_viaje}</p>
+              </div>
+            )}
+            {invitado.faq && (
+              <div>
+                <div style={{ fontSize: 11, color: '#EEC9DD', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 6 }}>FAQ</div>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', whiteSpace: 'pre-wrap' as const, lineHeight: 1.5 }}>{invitado.faq}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
   )
