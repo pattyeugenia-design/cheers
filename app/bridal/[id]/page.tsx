@@ -34,8 +34,8 @@ const FUENTES: Record<string, { label: string; font: string }> = {
 }
 const FUENTE_ORDER = ['system', 'verdana', 'georgia', 'cursive']
 
-type Tab = 'dashboard' | 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion'
-type TableroKey = 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner'
+type Tab = 'dashboard' | 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion' | 'beauty_timeline' | 'dia_b' | 'calendario_pagos'
+type TableroKey = 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'beauty_timeline' | 'dia_b'
 
 const CATEGORIA_WEDDING_PLANNER = 'Wedding Planner'
 
@@ -51,9 +51,12 @@ const MODULOS: { key: string; tabKey?: Tab; es: string; en: string }[] = [
   { key: 'vida_despues', tabKey: 'vida_despues', es: 'Vida después', en: 'Life after' },
   { key: 'embarazo', tabKey: 'embarazo', es: 'Embarazo', en: 'Pregnancy' },
   { key: 'wedding_planner', tabKey: 'wedding_planner', es: 'Wedding Planner', en: 'Wedding Planner' },
+  { key: 'beauty_timeline', tabKey: 'beauty_timeline', es: 'Beauty Timeline', en: 'Beauty Timeline' },
+  { key: 'dia_b', tabKey: 'dia_b', es: 'Día B', en: 'Wedding Day' },
   { key: 'proveedores', tabKey: 'proveedores', es: 'Proveedores', en: 'Vendors' },
   { key: 'contratos', tabKey: 'contratos', es: 'Contratos', en: 'Contracts' },
   { key: 'pagos', tabKey: 'pagos', es: 'Pagos', en: 'Payments' },
+  { key: 'calendario_pagos', tabKey: 'calendario_pagos', es: 'Calendario de Pagos', en: 'Payment Calendar' },
   { key: 'inspiracion', tabKey: 'inspiracion', es: 'Inspiración', en: 'Inspiration' },
 ]
 
@@ -538,9 +541,12 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     { key: 'vida_despues', label: lang === 'en' ? 'Life after' : 'Vida después', moduloKey: 'vida_despues' },
     { key: 'embarazo', label: lang === 'en' ? 'Pregnancy' : 'Embarazo', moduloKey: 'embarazo' },
     { key: 'wedding_planner', label: 'Wedding Planner', moduloKey: 'wedding_planner' },
+    { key: 'beauty_timeline', label: 'Beauty Timeline', moduloKey: 'beauty_timeline' },
+    { key: 'dia_b', label: lang === 'en' ? 'Wedding Day' : 'Día B', moduloKey: 'dia_b' },
     { key: 'proveedores', label: lang === 'en' ? 'Vendors' : 'Proveedores', moduloKey: 'proveedores' },
     { key: 'contratos', label: lang === 'en' ? 'Contracts' : 'Contratos', moduloKey: 'contratos' },
     { key: 'pagos', label: lang === 'en' ? 'Payments' : 'Pagos', moduloKey: 'pagos' },
+    { key: 'calendario_pagos', label: lang === 'en' ? 'Payment Calendar' : 'Calendario de Pagos', moduloKey: 'calendario_pagos' },
     { key: 'inspiracion', label: lang === 'en' ? 'Inspiration' : 'Inspiración', moduloKey: 'inspiracion' },
   ]
   const TABS = TABS_TODAS.filter(t => !t.moduloKey || moduloActivo(t.moduloKey))
@@ -722,7 +728,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>Timeline</div>
                 <div style={{ fontSize: 12, color: '#EEC9DD' }}>{timeline.filter(x => x.completado).length}/{timeline.length}</div>
               </div>
-              {['novia', 'novio', 'pareja', 'luna_miel', 'vida_despues', 'embarazo', 'wedding_planner'].filter(moduloActivo).map(k => {
+              {['novia', 'novio', 'pareja', 'luna_miel', 'vida_despues', 'embarazo', 'wedding_planner', 'beauty_timeline', 'dia_b'].filter(moduloActivo).map(k => {
                 const items = tablero.filter(x => x.tablero === k)
                 const modulo = MODULOS.find(m => m.key === k)!
                 if (k === 'wedding_planner' && !wpContratado) return null
@@ -933,7 +939,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           </div>
         )}
 
-        {(tab === 'novia' || tab === 'novio' || tab === 'pareja' || tab === 'luna_miel' || tab === 'vida_despues' || tab === 'embarazo') && (
+        {(tab === 'novia' || tab === 'novio' || tab === 'pareja' || tab === 'luna_miel' || tab === 'vida_despues' || tab === 'embarazo' || tab === 'beauty_timeline' || tab === 'dia_b') && (
           <div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {tablero.filter(x => x.tablero === tab).map(item => (
@@ -1100,6 +1106,50 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             </div>
           </div>
         )}
+
+        {tab === 'calendario_pagos' && (() => {
+          // No es tabla nueva: junta lo que ya existe — pendientes de Presupuesto
+          // (fecha_limite) y abonos ya hechos de Pagos — en una sola línea de
+          // tiempo, como la pestaña de Calendario de Pagos del Excel de Patty.
+          type Fila = { id: string; concepto: string; monto: number | null; fecha: string; estado: 'vencido' | 'proximo' | 'programado' | 'pagado' }
+          const filas: Fila[] = [
+            ...presupuesto.filter(x => x.fecha_limite && !x.pagado).map(x => ({
+              id: 'p-' + x.id, concepto: x.nombre, monto: x.costo_real ?? x.costo_estimado, fecha: x.fecha_limite,
+              estado: (x.fecha_limite < hoy ? 'vencido' : x.fecha_limite <= en30dias ? 'proximo' : 'programado') as Fila['estado'],
+            })),
+            ...pagos.filter(x => x.fecha).map(x => ({ id: 'g-' + x.id, concepto: x.concepto, monto: x.monto, fecha: x.fecha, estado: 'pagado' as const })),
+          ].sort((a, b) => a.fecha.localeCompare(b.fecha))
+          const ESTADO_CAL: Record<string, { es: string; en: string; color: string }> = {
+            vencido: { es: 'Vencido', en: 'Overdue', color: '#f4a3a3' },
+            proximo: { es: 'Próximo', en: 'Due soon', color: '#c98a1e' },
+            programado: { es: 'Programado', en: 'Scheduled', color: '#a89df0' },
+            pagado: { es: 'Pagado', en: 'Paid', color: '#7CE0A8' },
+          }
+          return (
+            <div>
+              {filas.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,.4)' }}>
+                  {lang === 'en' ? 'Nothing yet — add due dates in Budget or payments in Payments.' : 'Todavía nada — agrega fechas límite en Presupuesto o pagos en Pagos.'}
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                  {filas.map(f => (
+                    <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{f.concepto}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{f.fecha}</div>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(f.monto)}</div>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: ESTADO_CAL[f.estado].color, color: '#241c45' }}>
+                        {lang === 'en' ? ESTADO_CAL[f.estado].en : ESTADO_CAL[f.estado].es}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {tab === 'inspiracion' && (
           <div>
