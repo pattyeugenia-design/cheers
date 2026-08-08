@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
+import Image from 'next/image'
 import { supabase } from '../../supabase'
 import { getLang } from '../../i18n'
 
@@ -9,6 +10,29 @@ declare global { interface Window { google: any } }
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
+
+// Mismos temas/fuentes que la invitación normal de Cheers (app/[usuario]/[evento])
+// — así la invitación de boda se ve consistente con el resto de la app en vez de
+// inventar un sistema de diseño aparte.
+const TEMAS: Record<string, { label_es: string; label_en: string; bg: string }> = {
+  morado:  { label_es: 'Morado',  label_en: 'Purple', bg: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)' },
+  rosa:    { label_es: 'Rosa',    label_en: 'Pink',   bg: 'linear-gradient(155deg,#D4537E,#a14b9c)' },
+  noche:   { label_es: 'Noche',   label_en: 'Night',  bg: 'linear-gradient(160deg,#0f0c29,#302b63,#24243e)' },
+  bosque:  { label_es: 'Bosque',  label_en: 'Forest', bg: 'linear-gradient(155deg,#1a3c2a,#2d6a4f,#40916c)' },
+  ambar:   { label_es: 'Ámbar',   label_en: 'Amber',  bg: 'linear-gradient(155deg,#b5451b,#e76f51,#f4a261)' },
+  carbon:  { label_es: 'Carbón',  label_en: 'Carbon', bg: 'linear-gradient(160deg,#1a1a1a,#2d2d2d,#3d3d3d)' },
+  lavanda: { label_es: 'Lavanda', label_en: 'Lavender', bg: '#B8B0F0' },
+  crema:   { label_es: 'Crema',   label_en: 'Cream',  bg: '#FBF4EC' },
+}
+const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
+
+const FUENTES: Record<string, { label: string; font: string }> = {
+  system:  { label: 'SF Pro',       font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' },
+  verdana: { label: 'Verdana',      font: 'Verdana, Geneva, sans-serif' },
+  georgia: { label: 'Georgia',      font: 'Georgia, serif' },
+  cursive: { label: 'Brush Script', font: '"Brush Script MT", "Segoe Script", cursive' },
+}
+const FUENTE_ORDER = ['system', 'verdana', 'georgia', 'cursive']
 
 type Tab = 'dashboard' | 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion'
 type TableroKey = 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner'
@@ -127,6 +151,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [manualMenu, setManualMenu] = useState('')
   const [manualAcompanantes, setManualAcompanantes] = useState('0')
   const [manualNotas, setManualNotas] = useState('')
+
+  const [subiendoPortada, setSubiendoPortada] = useState(false)
+  const portadaInputRef = useRef<HTMLInputElement>(null)
 
   async function cargarTodo(bodaId: string) {
     const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }] = await Promise.all([
@@ -354,6 +381,42 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setEditandoInfo(false)
   }
 
+  async function guardarTema(k: string) {
+    setProyecto((prev: any) => ({ ...prev, tema: k }))
+    await supabase.from('proyectos_boda').update({ tema: k }).eq('id', id)
+  }
+
+  async function guardarFuente(k: string) {
+    setProyecto((prev: any) => ({ ...prev, fuente: k }))
+    await supabase.from('proyectos_boda').update({ fuente: k }).eq('id', id)
+  }
+
+  async function guardarPortadaPosicion(pos: string) {
+    setProyecto((prev: any) => ({ ...prev, portada_posicion: pos }))
+    await supabase.from('proyectos_boda').update({ portada_posicion: pos }).eq('id', id)
+  }
+
+  async function subirPortada(file: File) {
+    if (!file || !file.type.startsWith('image/')) return
+    if (file.size > 8 * 1024 * 1024) {
+      alert(lang === 'en' ? 'Photo is too big (max 8MB). Try a smaller one.' : 'La foto pesa demasiado (máx. 8MB). Intenta con una más chica.')
+      return
+    }
+    setSubiendoPortada(true)
+    const ext = file.name.split('.').pop()
+    const path = `boda-${id}-portada.${ext}`
+    const { error } = await supabase.storage.from('portadas').upload(path, file, { upsert: true })
+    if (error) {
+      setSubiendoPortada(false)
+      alert(lang === 'en' ? "Couldn't upload the photo. Try a smaller file." : 'No se pudo subir la foto. Intenta con un archivo más chico.')
+      return
+    }
+    const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
+    await supabase.from('proyectos_boda').update({ portada_url: publicUrl }).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, portada_url: publicUrl }))
+    setSubiendoPortada(false)
+  }
+
   // Captura manual: para cuando alguien (ej. el wedding planner) confirma la
   // asistencia de un invitado por teléfono en vez de que el invitado use su
   // link — mismo destino (boda_rsvps) que el RSVP digital, solo otra puerta.
@@ -575,6 +638,62 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   {(proyecto?.info_viaje || proyecto?.faq) ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.') : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
                 </p>
               )}
+            </div>
+
+            {/* Diseño de la invitación digital que ven los invitados */}
+            <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
+                  {lang === 'en' ? 'Invitation design' : 'Diseño de la invitación'}
+                </div>
+                {invitadosBoda[0]?.token && (
+                  <a href={`/bridal/rsvp/${invitadosBoda[0].token}`} target="_blank" style={{ fontSize: 11, color: '#AFA9EC', fontWeight: 700 }}>
+                    {lang === 'en' ? 'Preview →' : 'Vista previa →'}
+                  </a>
+                )}
+              </div>
+
+              <input ref={portadaInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }} style={{ display: 'none' }} />
+              <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
+                <div onClick={() => portadaInputRef.current?.click()} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,.08)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {proyecto?.portada_url ? (
+                    <Image src={proyecto.portada_url} alt="portada" fill sizes="80px" style={{ objectFit: 'cover', objectPosition: proyecto.portada_posicion || 'center' }} />
+                  ) : (
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)', fontWeight: 700, textAlign: 'center' as const, padding: 4 }}>{subiendoPortada ? '...' : (lang === 'en' ? 'Add photo' : 'Agregar foto')}</span>
+                  )}
+                </div>
+                {proyecto?.portada_url && (
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                    <button onClick={() => portadaInputRef.current?.click()} style={{ border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: F, textAlign: 'left' as const }}>
+                      {lang === 'en' ? 'Change photo' : 'Cambiar foto'}
+                    </button>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[{ v: 'top', l: lang === 'en' ? 'Top' : 'Arriba' }, { v: 'center', l: lang === 'en' ? 'Center' : 'Centro' }, { v: 'bottom', l: lang === 'en' ? 'Bottom' : 'Abajo' }].map(p => (
+                        <button key={p.v} onClick={() => guardarPortadaPosicion(p.v)} style={{ border: 'none', background: (proyecto?.portada_posicion || 'center') === p.v ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.08)', color: (proyecto?.portada_posicion || 'center') === p.v ? '#2a2440' : 'rgba(255,255,255,.6)', fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: F }}>{p.l}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
+                {TEMA_ORDER.map(k => (
+                  <button key={k} onClick={() => guardarTema(k)} style={{
+                    border: (proyecto?.tema || 'morado') === k ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 9, padding: '7px 10px', cursor: 'pointer',
+                    background: TEMAS[k].bg, color: '#fff', fontSize: 11, fontWeight: 700, fontFamily: F,
+                  }}>{lang === 'en' ? TEMAS[k].label_en : TEMAS[k].label_es}</button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                {FUENTE_ORDER.map(k => (
+                  <button key={k} onClick={() => guardarFuente(k)} style={{
+                    border: (proyecto?.fuente || 'system') === k ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 9, padding: '7px 12px', cursor: 'pointer',
+                    background: (proyecto?.fuente || 'system') === k ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)',
+                    color: (proyecto?.fuente || 'system') === k ? '#2a2440' : '#fff', fontSize: 12, fontFamily: FUENTES[k].font, fontWeight: 700,
+                  }}>{FUENTES[k].label}</button>
+                ))}
+              </div>
             </div>
 
             {/* Métricas por módulo */}
