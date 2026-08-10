@@ -707,7 +707,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           <div>
             {/* Countdown: da sensación de avance, como el "faltan X días" de Zola/Aisle Planner */}
             {diasParaBoda !== null && (
-              <div style={{ background: 'linear-gradient(135deg,#C9A876,#C98A93)', borderRadius: 16, padding: '18px 20px', marginBottom: 16, color: '#fff' }}>
+              <div style={{ background: 'linear-gradient(135deg,#B76E79,#96525C)', borderRadius: 16, padding: '18px 20px', marginBottom: 16, color: '#fff' }}>
                 {diasParaBoda === 0 ? (
                   <div style={{ fontSize: 16, fontWeight: 900 }}>{lang === 'en' ? "It's the big day!" : '¡Hoy es el gran día!'}</div>
                 ) : (
