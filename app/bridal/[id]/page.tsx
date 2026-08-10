@@ -5,6 +5,7 @@ import Script from 'next/script'
 import Image from 'next/image'
 import { supabase } from '../../supabase'
 import { getLang } from '../../i18n'
+import * as XLSX from 'xlsx'
 
 declare global { interface Window { google: any } }
 
@@ -137,6 +138,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [nuevoInvContacto, setNuevoInvContacto] = useState('')
   const [nuevoInvGrupo, setNuevoInvGrupo] = useState('')
   const [nuevoInvAcompanantes, setNuevoInvAcompanantes] = useState('0')
+  const [previewImportInv, setPreviewImportInv] = useState<{ nombre: string; contacto: string; grupo: string; acompanantes: number }[] | null>(null)
+  const [importandoInv, setImportandoInv] = useState(false)
+  const [errorImportInv, setErrorImportInv] = useState('')
 
   const [linkInspiracion, setLinkInspiracion] = useState('')
   const [guardandoInspiracion, setGuardandoInspiracion] = useState(false)
@@ -167,6 +171,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [subiendoPortada, setSubiendoPortada] = useState(false)
   const portadaInputRef = useRef<HTMLInputElement>(null)
   const temaCarruselRef = useRef<HTMLDivElement>(null)
+  const excelInvitadosRef = useRef<HTMLInputElement>(null)
   const [primerosPasosCerrado, setPrimerosPasosCerrado] = useState(false)
 
   async function cargarTodo(bodaId: string) {
@@ -366,6 +371,64 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setNuevoInvNombre(''); setNuevoInvContacto(''); setNuevoInvGrupo(''); setNuevoInvAcompanantes('0')
     await cargarTodo(id)
     setGuardando(false)
+  }
+
+  // Lee un Excel/CSV que la pareja ya tenía armado y arma una vista previa antes
+  // de insertar nada — así no se cargan 150 filas mal leídas sin que las revise.
+  // Detecta columnas por nombre (nombre/teléfono/grupo/acompañantes) sin importar
+  // el orden ni mayúsculas/acentos; si no encuentra columna de nombre, usa la primera.
+  function normalizarClave(k: string) {
+    return k.toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '').trim()
+  }
+  async function onArchivoInvitados(file: File) {
+    setErrorImportInv('')
+    setPreviewImportInv(null)
+    try {
+      const buf = await file.arrayBuffer()
+      const wb = XLSX.read(buf, { type: 'array' })
+      const hoja = wb.Sheets[wb.SheetNames[0]]
+      const filas: Record<string, any>[] = XLSX.utils.sheet_to_json(hoja, { defval: '' })
+      if (!filas.length) { setErrorImportInv(lang === 'en' ? 'The file has no rows.' : 'El archivo no tiene filas.'); return }
+
+      const claves = Object.keys(filas[0])
+      const clave = (patron: RegExp) => claves.find(k => patron.test(normalizarClave(k)))
+      const kNombre = clave(/nombre|name|invitad/)
+      const kContacto = clave(/tel|phone|celular|correo|email|mail/)
+      const kGrupo = clave(/grupo|group|mesa|table|familia/)
+      const kAcomp = clave(/acompan|plus ?one|\+ ?1|invitados extra|guests/)
+
+      const filasProcesadas = filas.map(f => ({
+        nombre: String((kNombre ? f[kNombre] : Object.values(f)[0]) ?? '').trim(),
+        contacto: String((kContacto ? f[kContacto] : '') ?? '').trim(),
+        grupo: String((kGrupo ? f[kGrupo] : '') ?? '').trim(),
+        acompanantes: Math.max(0, parseInt(String((kAcomp ? f[kAcomp] : '0') ?? '0'), 10) || 0),
+      })).filter(f => f.nombre)
+
+      if (!filasProcesadas.length) { setErrorImportInv(lang === 'en' ? "Couldn't find a name column." : 'No encontré una columna de nombres.'); return }
+      setPreviewImportInv(filasProcesadas)
+    } catch (e) {
+      setErrorImportInv(lang === 'en' ? "Couldn't read that file. Try exporting it as .xlsx or .csv." : 'No pude leer ese archivo. Prueba exportándolo como .xlsx o .csv.')
+    }
+  }
+
+  async function confirmarImportacionInv() {
+    if (!previewImportInv?.length) return
+    setImportandoInv(true)
+    const filas = previewImportInv.map(r => {
+      const esTelefono = /^\+?[\d\s\-()]{7,}$/.test(r.contacto)
+      return {
+        boda_id: id, nombre: r.nombre,
+        telefono: esTelefono ? r.contacto : null,
+        email: !esTelefono ? (r.contacto || null) : null,
+        grupo: r.grupo || null,
+        acompanantes_permitidos: r.acompanantes,
+      }
+    })
+    await supabase.from('boda_invitados').insert(filas)
+    await cargarTodo(id)
+    setImportandoInv(false)
+    setPreviewImportInv(null)
+    if (excelInvitadosRef.current) excelInvitadosRef.current.value = ''
   }
 
   async function borrarInvitadoBoda(itemId: string) {
@@ -980,6 +1043,39 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               })}
             </div>
 
+            <div style={{ background: 'rgba(255,255,255,.05)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#fff', marginBottom: 4 }}>{lang === 'en' ? 'Import from Excel' : 'Importar desde Excel'}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', marginBottom: 10 }}>
+                {lang === 'en' ? "Upload your guest list (.xlsx, .xls or .csv) — we'll find the names automatically." : 'Sube tu lista de invitados (.xlsx, .xls o .csv) — detectamos los nombres solos, sin importar el orden de las columnas.'}
+              </div>
+              <input ref={excelInvitadosRef} type="file" accept=".xlsx,.xls,.csv" onChange={e => { const f = e.target.files?.[0]; if (f) onArchivoInvitados(f) }} style={{ display: 'none' }} />
+              <button onClick={() => excelInvitadosRef.current?.click()} style={{ border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                {lang === 'en' ? 'Choose file' : 'Elegir archivo'}
+              </button>
+              {errorImportInv && <div style={{ fontSize: 11, color: '#f4a3a3', marginTop: 8 }}>{errorImportInv}</div>}
+
+              {previewImportInv && (
+                <div style={{ marginTop: 12, background: 'rgba(0,0,0,.15)', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
+                    {lang === 'en' ? `Found ${previewImportInv.length} guests:` : `Encontré ${previewImportInv.length} invitados:`}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', maxHeight: 120, overflowY: 'auto' as const, marginBottom: 10, lineHeight: 1.6 }}>
+                    {previewImportInv.slice(0, 8).map((r, i) => <div key={i}>{r.nombre}{r.grupo ? ` · ${r.grupo}` : ''}</div>)}
+                    {previewImportInv.length > 8 && <div>{lang === 'en' ? `+ ${previewImportInv.length - 8} more` : `+ ${previewImportInv.length - 8} más`}</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={confirmarImportacionInv} disabled={importandoInv} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                      {importandoInv ? '...' : (lang === 'en' ? `Add ${previewImportInv.length} guests` : `Agregar ${previewImportInv.length} invitados`)}
+                    </button>
+                    <button onClick={() => { setPreviewImportInv(null); if (excelInvitadosRef.current) excelInvitadosRef.current.value = '' }} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.6)', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                      {lang === 'en' ? 'Cancel' : 'Cancelar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 700, marginBottom: 8 }}>{lang === 'en' ? 'Or add one at a time' : 'O agrega uno a la vez'}</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
               <input value={nuevoInvNombre} onChange={e => setNuevoInvNombre(e.target.value)} placeholder={lang === 'en' ? 'Name' : 'Nombre'} style={{ ...inputStyle, flex: 2, minWidth: 120 }} />
               <input value={nuevoInvContacto} onChange={e => setNuevoInvContacto(e.target.value)} placeholder={lang === 'en' ? 'Phone or email' : 'Teléfono o email'} style={{ ...inputStyle, flex: 1, minWidth: 130 }} />
