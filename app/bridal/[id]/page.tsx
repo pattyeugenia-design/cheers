@@ -654,6 +654,16 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const presupuestoMetaTile = totalEstimado > 0 ? totalEstimado : (Number(proyecto?.presupuesto_total) || 0)
   const invitadosMetaTile = invitadosBoda.length > 0 ? invitadosBoda.length : (Number(proyecto?.invitados_estimados) || 0)
 
+  // Countdown + progreso: días para la boda y % del checklist de Timeline
+  // completado — como Zola/Aisle Planner. Se basa en Timeline (la única lista
+  // de tareas real que ya existe) en vez de inventar un % combinado con
+  // dinero/invitados, que sería más confuso que útil.
+  const diasParaBoda = proyecto?.fecha_boda
+    ? Math.round((new Date(proyecto.fecha_boda + 'T00:00:00').getTime() - new Date(hoy + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const timelineActivo = timeline.length > 0
+  const timelinePct = timelineActivo ? Math.round((timeline.filter(x => x.completado).length / timeline.length) * 100) : 0
+
   return (
     <main style={{ minHeight: '100vh', background: BG, fontFamily: F, padding: '50px 20px 80px' }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -695,6 +705,32 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
         {tab === 'dashboard' && (
           <div>
+            {/* Countdown: da sensación de avance, como el "faltan X días" de Zola/Aisle Planner */}
+            {diasParaBoda !== null && (
+              <div style={{ background: 'linear-gradient(135deg,#C9A876,#C98A93)', borderRadius: 16, padding: '18px 20px', marginBottom: 16, color: '#fff' }}>
+                {diasParaBoda === 0 ? (
+                  <div style={{ fontSize: 16, fontWeight: 900 }}>{lang === 'en' ? "It's the big day!" : '¡Hoy es el gran día!'}</div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: timelineActivo ? 10 : 0 }}>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{Math.abs(diasParaBoda)}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, opacity: .85, textTransform: 'uppercase' as const, letterSpacing: '.5px' }}>
+                        {diasParaBoda > 0 ? (lang === 'en' ? 'days to go' : 'días para la boda') : (lang === 'en' ? 'days married' : 'días de casados')}
+                      </div>
+                    </div>
+                    {timelineActivo && (
+                      <div style={{ fontSize: 13, fontWeight: 800 }}>{timelinePct}% <span style={{ fontWeight: 600, opacity: .85, fontSize: 11 }}>{lang === 'en' ? 'checklist' : 'del checklist'}</span></div>
+                    )}
+                  </div>
+                )}
+                {timelineActivo && diasParaBoda !== 0 && (
+                  <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.3)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${timelinePct}%`, background: '#fff', borderRadius: 99 }} />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Primeros pasos: el primer día el dashboard es puros 0/0 en 17 módulos
                 prendidos por default — esto da 3 acciones concretas para arrancar
                 en vez de que se sienta una pared vacía. Se apaga sola en cuanto hay
