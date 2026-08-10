@@ -179,10 +179,28 @@ export default function Bridal() {
 
         {plan !== 'lifetime' ? (
           <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: '28px 24px' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 8 }}>
-              {lang === 'en' ? 'Included with Extra Cheer' : 'Incluido con Extra Cheer'}
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 14 }}>
+              {lang === 'en' ? "What's inside" : 'Qué incluye'}
             </div>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, marginBottom: 20 }}>
+            {/* Antes esto era una sola frase antes de pedir la tarjeta — sin decir
+                qué hay adentro. Mismo estilo que la sección de features de la
+                landing normal, agrupado por los mismos bloques que ve la pareja
+                una vez adentro (ver secciones del dashboard). */}
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12, marginBottom: 22 }}>
+              {[
+                { es: 'Logística', en: 'Logistics', esD: 'Presupuesto, timeline, proveedores, contratos, pagos y calendario de pagos.', enD: 'Budget, timeline, vendors, contracts, payments and payment calendar.' },
+                { es: 'Invitados y RSVP', en: 'Guests & RSVP', esD: 'Invitación digital con tu tema y foto, confirmaciones, menú y acompañantes.', enD: 'Digital invitation with your theme and photo, RSVPs, meal choice and plus-ones.' },
+                { es: 'Wedding Planner', en: 'Wedding Planner', esD: 'Compara candidatos, elige uno y da seguimiento a lo que va a hacer.', enD: 'Compare candidates, pick one, and track what they\'re handling.' },
+                { es: 'Para cada quien', en: 'For each of you', esD: 'Pendientes de novia, novio, pareja, y tu Beauty Timeline.', enD: 'To-dos for the bride, groom, the couple, and your beauty timeline.' },
+                { es: 'El gran día y después', en: 'The big day & after', esD: 'Timeline del día B, luna de miel y vida después de la boda.', enD: 'Wedding-day timeline, honeymoon, and life after the wedding.' },
+              ].map((f, i) => (
+                <div key={i}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 2 }}>{lang === 'en' ? f.en : f.es}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', lineHeight: 1.5 }}>{lang === 'en' ? f.enD : f.esD}</div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, marginBottom: 16 }}>
               {lang === 'en'
                 ? 'Cheers Bridal is not a separate purchase — buying Extra Cheer ($49, one time) unlocks it, plus everything Extra Cheer already includes for the rest of your celebrations, forever.'
                 : 'Cheers Bridal no se compra aparte — con Extra Cheer ($49, pago único) lo desbloqueas, además de todo lo que Extra Cheer ya incluye para el resto de tus celebraciones, para siempre.'}

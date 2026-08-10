@@ -157,6 +157,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
   const [subiendoPortada, setSubiendoPortada] = useState(false)
   const portadaInputRef = useRef<HTMLInputElement>(null)
+  const [primerosPasosCerrado, setPrimerosPasosCerrado] = useState(false)
 
   async function cargarTodo(bodaId: string) {
     const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }] = await Promise.all([
@@ -529,27 +530,44 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const totalReal = presupuesto.reduce((s, x) => s + (Number(x.costo_real) || 0), 0)
   const totalPagado = presupuesto.filter(x => x.pagado).reduce((s, x) => s + (Number(x.costo_real ?? x.costo_estimado) || 0), 0)
 
-  const TABS_TODAS: { key: Tab; label: string; moduloKey?: string }[] = [
-    { key: 'dashboard', label: lang === 'en' ? 'Dashboard' : 'Dashboard' },
-    { key: 'invitados', label: lang === 'en' ? 'Guests' : 'Invitados', moduloKey: 'invitados' },
-    { key: 'presupuesto', label: lang === 'en' ? 'Budget' : 'Presupuesto', moduloKey: 'presupuesto' },
-    { key: 'timeline', label: lang === 'en' ? 'Timeline' : 'Timeline' },
-    { key: 'novia', label: lang === 'en' ? 'Bride' : 'Novia', moduloKey: 'novia' },
-    { key: 'novio', label: lang === 'en' ? 'Groom' : 'Novio', moduloKey: 'novio' },
-    { key: 'pareja', label: lang === 'en' ? 'Couple' : 'Pareja', moduloKey: 'pareja' },
-    { key: 'luna_miel', label: lang === 'en' ? 'Honeymoon' : 'Luna de miel', moduloKey: 'luna_miel' },
-    { key: 'vida_despues', label: lang === 'en' ? 'Life after' : 'Vida después', moduloKey: 'vida_despues' },
-    { key: 'embarazo', label: lang === 'en' ? 'Pregnancy' : 'Embarazo', moduloKey: 'embarazo' },
-    { key: 'wedding_planner', label: 'Wedding Planner', moduloKey: 'wedding_planner' },
-    { key: 'beauty_timeline', label: 'Beauty Timeline', moduloKey: 'beauty_timeline' },
-    { key: 'dia_b', label: lang === 'en' ? 'Wedding Day' : 'Día B', moduloKey: 'dia_b' },
-    { key: 'proveedores', label: lang === 'en' ? 'Vendors' : 'Proveedores', moduloKey: 'proveedores' },
-    { key: 'contratos', label: lang === 'en' ? 'Contracts' : 'Contratos', moduloKey: 'contratos' },
-    { key: 'pagos', label: lang === 'en' ? 'Payments' : 'Pagos', moduloKey: 'pagos' },
-    { key: 'calendario_pagos', label: lang === 'en' ? 'Payment Calendar' : 'Calendario de Pagos', moduloKey: 'calendario_pagos' },
-    { key: 'inspiracion', label: lang === 'en' ? 'Inspiration' : 'Inspiración', moduloKey: 'inspiracion' },
+  // Con 17 pestañas posibles, una sola fila que se envuelve es difícil de escanear
+  // (sobre todo en celular) y no comunica que "Beauty Timeline" y "Timeline" son
+  // cosas distintas de "Contratos". Se agrupan en secciones (mismo espíritu que
+  // los "groups" de un board de gestión de proyectos) — primero eliges la
+  // sección, y solo entonces ves sus pestañas.
+  const SECCIONES: { id: string; es: string; en: string }[] = [
+    { id: 'resumen', es: 'Resumen', en: 'Overview' },
+    { id: 'logistica', es: 'Logística', en: 'Logistics' },
+    { id: 'invitados', es: 'Invitados', en: 'Guests' },
+    { id: 'nosotros', es: 'Nosotros', en: 'Us' },
+    { id: 'dia_b_sec', es: 'El gran día', en: 'The big day' },
+    { id: 'despues', es: 'Después', en: 'After' },
+    { id: 'inspiracion_sec', es: 'Inspiración', en: 'Inspiration' },
+  ]
+  const TABS_TODAS: { key: Tab; label: string; moduloKey?: string; seccion: string }[] = [
+    { key: 'dashboard', label: lang === 'en' ? 'Dashboard' : 'Dashboard', seccion: 'resumen' },
+    { key: 'invitados', label: lang === 'en' ? 'Guests' : 'Invitados', moduloKey: 'invitados', seccion: 'invitados' },
+    { key: 'presupuesto', label: lang === 'en' ? 'Budget' : 'Presupuesto', moduloKey: 'presupuesto', seccion: 'logistica' },
+    { key: 'timeline', label: lang === 'en' ? 'Timeline' : 'Timeline', seccion: 'logistica' },
+    { key: 'proveedores', label: lang === 'en' ? 'Vendors' : 'Proveedores', moduloKey: 'proveedores', seccion: 'logistica' },
+    { key: 'wedding_planner', label: 'Wedding Planner', moduloKey: 'wedding_planner', seccion: 'logistica' },
+    { key: 'contratos', label: lang === 'en' ? 'Contracts' : 'Contratos', moduloKey: 'contratos', seccion: 'logistica' },
+    { key: 'pagos', label: lang === 'en' ? 'Payments' : 'Pagos', moduloKey: 'pagos', seccion: 'logistica' },
+    { key: 'calendario_pagos', label: lang === 'en' ? 'Payment Calendar' : 'Calendario de Pagos', moduloKey: 'calendario_pagos', seccion: 'logistica' },
+    { key: 'novia', label: lang === 'en' ? 'Bride' : 'Novia', moduloKey: 'novia', seccion: 'nosotros' },
+    { key: 'novio', label: lang === 'en' ? 'Groom' : 'Novio', moduloKey: 'novio', seccion: 'nosotros' },
+    { key: 'pareja', label: lang === 'en' ? 'Couple' : 'Pareja', moduloKey: 'pareja', seccion: 'nosotros' },
+    { key: 'beauty_timeline', label: 'Beauty Timeline', moduloKey: 'beauty_timeline', seccion: 'nosotros' },
+    { key: 'dia_b', label: lang === 'en' ? 'Wedding Day' : 'Día B', moduloKey: 'dia_b', seccion: 'dia_b_sec' },
+    { key: 'luna_miel', label: lang === 'en' ? 'Honeymoon' : 'Luna de miel', moduloKey: 'luna_miel', seccion: 'despues' },
+    { key: 'vida_despues', label: lang === 'en' ? 'Life after' : 'Vida después', moduloKey: 'vida_despues', seccion: 'despues' },
+    { key: 'embarazo', label: lang === 'en' ? 'Pregnancy' : 'Embarazo', moduloKey: 'embarazo', seccion: 'despues' },
+    { key: 'inspiracion', label: lang === 'en' ? 'Inspiration' : 'Inspiración', moduloKey: 'inspiracion', seccion: 'inspiracion_sec' },
   ]
   const TABS = TABS_TODAS.filter(t => !t.moduloKey || moduloActivo(t.moduloKey))
+  const seccionesConTabs = SECCIONES.filter(s => TABS.some(t => t.seccion === s.id))
+  const seccionActiva = TABS.find(t => t.key === tab)?.seccion || seccionesConTabs[0]?.id
+  const tabsDeSeccion = TABS.filter(t => t.seccion === seccionActiva)
 
   const totalPagos = pagos.reduce((s, x) => s + (Number(x.monto) || 0), 0)
   const hoy = new Date().toISOString().slice(0, 10)
@@ -570,19 +588,65 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           {[proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ') || (lang === 'en' ? 'Your wedding' : 'Tu boda')}
         </h1>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' as const }}>
-          {TABS.map(tb => (
-            <button key={tb.key} onClick={() => setTab(tb.key)} style={{
+        {/* Secciones — primer nivel, agrupa las pestañas en vez de una fila de 17 */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
+          {seccionesConTabs.map(sec => (
+            <button key={sec.id} onClick={() => {
+              const primerTab = TABS.find(t => t.seccion === sec.id)
+              if (primerTab) setTab(primerTab.key)
+            }} style={{
               border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 800, padding: '8px 14px', borderRadius: 99,
-              background: tab === tb.key ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.08)',
-              color: tab === tb.key ? '#fff' : 'rgba(255,255,255,.6)',
-            }}>{tb.label}</button>
+              background: seccionActiva === sec.id ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.08)',
+              color: seccionActiva === sec.id ? '#fff' : 'rgba(255,255,255,.6)',
+            }}>{lang === 'en' ? sec.en : sec.es}</button>
           ))}
         </div>
 
+        {/* Sub-tabs — solo de la sección activa */}
+        {tabsDeSeccion.length > 1 && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' as const }}>
+            {tabsDeSeccion.map(tb => (
+              <button key={tb.key} onClick={() => setTab(tb.key)} style={{
+                border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99,
+                background: tab === tb.key ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.05)',
+                color: tab === tb.key ? '#2a2440' : 'rgba(255,255,255,.5)',
+              }}>{tb.label}</button>
+            ))}
+          </div>
+        )}
+        {tabsDeSeccion.length <= 1 && <div style={{ marginBottom: 20 }} />}
+
         {tab === 'dashboard' && (
           <div>
+            {/* Primeros pasos: el primer día el dashboard es puros 0/0 en 17 módulos
+                prendidos por default — esto da 3 acciones concretas para arrancar
+                en vez de que se sienta una pared vacía. Se apaga sola en cuanto hay
+                algo de contenido real, o si la cierran a mano. */}
+            {!primerosPasosCerrado && invitadosBoda.length === 0 && presupuesto.length === 0 && !proyecto?.lugar_nombre && (
+              <div style={{ background: 'rgba(255,255,255,.06)', border: '1px dashed rgba(255,255,255,.2)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{lang === 'en' ? 'Getting started' : 'Primeros pasos'}</div>
+                  <button onClick={() => setPrimerosPasosCerrado(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>
+                </div>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', marginBottom: 10, lineHeight: 1.5 }}>
+                  {lang === 'en'
+                    ? 'All modules are on by default — turn off the ones you don\'t need at the bottom of this page. To start, try:'
+                    : 'Todos los módulos están prendidos por default — apaga los que no necesites al final de esta página. Para empezar, prueba:'}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                  <button onClick={() => setEditandoLugar(true)} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(255,255,255,.06)', color: '#EEC9DD', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                    {lang === 'en' ? '→ Add your venue' : '→ Agrega tu lugar'}
+                  </button>
+                  <button onClick={() => setTab('invitados')} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(255,255,255,.06)', color: '#EEC9DD', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                    {lang === 'en' ? '→ Add your first guests' : '→ Agrega tus primeros invitados'}
+                  </button>
+                  <button onClick={() => setTab('presupuesto')} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(255,255,255,.06)', color: '#EEC9DD', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                    {lang === 'en' ? '→ Start your budget' : '→ Arranca tu presupuesto'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Brief: mismo espíritu que el brief de Cheers normal — fecha, lugar, invitados, organizadores */}
             <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '18px 20px', marginBottom: 16 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 14, marginBottom: editandoLugar ? 12 : 0 }}>
