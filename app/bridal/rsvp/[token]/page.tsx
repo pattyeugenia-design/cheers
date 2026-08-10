@@ -28,6 +28,15 @@ const FUENTES: Record<string, string> = {
   cursive: '"Brush Script MT", "Segoe Script", cursive',
 }
 
+// Mismo criterio que el dashboard y la vista previa: se acerca la foto un 15%
+// extra para que "arriba/centro/abajo" siempre tenga margen real que mover,
+// sin importar la relación de aspecto de la foto original.
+const ORIGEN_POR_POSICION: Record<string, string> = { top: '50% 0%', center: '50% 50%', bottom: '50% 100%' }
+function estiloFotoConPosicion(pos: string | null | undefined) {
+  const p = pos || 'center'
+  return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
+}
+
 const MENU_OPCIONES = ['res', 'pollo', 'vegetariano', 'vegano'] as const
 const MENU_LABEL: Record<string, { es: string; en: string }> = {
   res: { es: 'Res', en: 'Beef' },
@@ -135,8 +144,8 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
     <main style={{ minHeight: '100vh', background: te.bg, fontFamily: F, padding: invitado.portada_url ? '0 0 60px' : '60px 20px' }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         {invitado.portada_url && (
-          <div style={{ position: 'relative', width: '100%', height: 260, marginBottom: 24 }}>
-            <Image src={invitado.portada_url} alt="" fill sizes="480px" style={{ objectFit: 'cover', objectPosition: invitado.portada_posicion || 'center' }} priority />
+          <div style={{ position: 'relative', width: '100%', height: 260, marginBottom: 24, overflow: 'hidden' }}>
+            <Image src={invitado.portada_url} alt="" fill sizes="480px" style={estiloFotoConPosicion(invitado.portada_posicion)} priority />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.35) 100%)' }} />
           </div>
         )}

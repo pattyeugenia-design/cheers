@@ -42,6 +42,15 @@ function fmtFechaBonita(fecha: string | null | undefined, lang: string) {
   return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+// Mismo criterio que el dashboard: se acerca la foto un 15% extra para que
+// "arriba/centro/abajo" siempre tenga margen real que mover, sin importar la
+// relación de aspecto de la foto original.
+const ORIGEN_POR_POSICION: Record<string, string> = { top: '50% 0%', center: '50% 50%', bottom: '50% 100%' }
+function estiloFotoConPosicion(pos: string | null | undefined) {
+  const p = pos || 'center'
+  return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
+}
+
 export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const [lang, setLang] = useState('es')
@@ -111,8 +120,8 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
         </div>
 
         {proyecto?.portada_url && (
-          <div style={{ position: 'relative', width: '100%', height: 260, marginBottom: 24 }}>
-            <Image src={proyecto.portada_url} alt="" fill sizes="480px" style={{ objectFit: 'cover', objectPosition: proyecto.portada_posicion || 'center' }} priority />
+          <div style={{ position: 'relative', width: '100%', height: 260, marginBottom: 24, overflow: 'hidden' }}>
+            <Image src={proyecto.portada_url} alt="" fill sizes="480px" style={estiloFotoConPosicion(proyecto.portada_posicion)} priority />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.35) 100%)' }} />
           </div>
         )}

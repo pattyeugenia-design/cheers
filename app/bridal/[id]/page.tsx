@@ -94,6 +94,16 @@ function fmtFechaBonita(fecha: string | null | undefined, lang: string) {
   return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+// Con solo object-fit:cover + object-position, muchas fotos (sobre todo horizontales
+// en marcos casi cuadrados) no tienen margen real que mover — el "arriba/centro/abajo"
+// se ve como que no hace nada. Se acerca la foto un 15% extra (zoom) y el origen del
+// zoom se ancla al lado elegido, así siempre hay de dónde recortar en cualquier marco.
+const ORIGEN_POR_POSICION: Record<string, string> = { top: '50% 0%', center: '50% 50%', bottom: '50% 100%' }
+function estiloFotoConPosicion(pos: string | null | undefined) {
+  const p = pos || 'center'
+  return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
+}
+
 export default function ProyectoBoda({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const [lang, setLang] = useState('es')
@@ -838,7 +848,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
                 <div onClick={() => portadaInputRef.current?.click()} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', background: 'rgba(183,110,121,.08)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {proyecto?.portada_url ? (
-                    <Image src={proyecto.portada_url} alt="portada" fill sizes="80px" style={{ objectFit: 'cover', objectPosition: proyecto.portada_posicion || 'center' }} />
+                    <Image src={proyecto.portada_url} alt="portada" fill sizes="80px" style={estiloFotoConPosicion(proyecto.portada_posicion)} />
                   ) : (
                     <span style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, textAlign: 'center' as const, padding: 4 }}>{subiendoPortada ? '...' : (lang === 'en' ? 'Add photo' : 'Agregar foto')}</span>
                   )}
@@ -883,7 +893,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                       <div onClick={() => guardarTema(k)} style={{ position: 'relative', width: 138, height: 172, borderRadius: 16, overflow: 'hidden', cursor: 'pointer', background: t.bg, outline: seleccionado ? '3px solid #B76E79' : '3px solid transparent', outlineOffset: 2 }}>
                         {proyecto?.portada_url && (
                           <>
-                            <Image src={proyecto.portada_url} alt="" fill sizes="138px" style={{ objectFit: 'cover', objectPosition: proyecto.portada_posicion || 'center', opacity: .5 }} />
+                            <Image src={proyecto.portada_url} alt="" fill sizes="138px" style={{ ...estiloFotoConPosicion(proyecto.portada_posicion), opacity: .5 }} />
                             <div style={{ position: 'absolute', inset: 0, background: t.bg, opacity: .55 }} />
                           </>
                         )}
