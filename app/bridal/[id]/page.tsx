@@ -166,6 +166,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
   const [subiendoPortada, setSubiendoPortada] = useState(false)
   const portadaInputRef = useRef<HTMLInputElement>(null)
+  const temaCarruselRef = useRef<HTMLDivElement>(null)
   const [primerosPasosCerrado, setPrimerosPasosCerrado] = useState(false)
 
   async function cargarTodo(bodaId: string) {
@@ -729,11 +730,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
                   {lang === 'en' ? 'Invitation design' : 'Diseño de la invitación'}
                 </div>
-                {invitadosBoda[0]?.token && (
-                  <a href={`/bridal/rsvp/${invitadosBoda[0].token}`} target="_blank" style={{ fontSize: 11, color: '#AFA9EC', fontWeight: 700 }}>
-                    {lang === 'en' ? 'Preview →' : 'Vista previa →'}
-                  </a>
-                )}
+                <a href={`/bridal/preview/${id}`} target="_blank" style={{ fontSize: 11, color: '#AFA9EC', fontWeight: 700 }}>
+                  {lang === 'en' ? 'Full-size preview →' : 'Vista previa a tamaño real →'}
+                </a>
               </div>
 
               <input ref={portadaInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }} style={{ display: 'none' }} />
@@ -762,7 +761,18 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               {/* Vista previa real por tema — como Zola/Joy/Bliss & Bone: cada tarjeta
                   ya muestra tu foto, tus nombres y tu fecha con ese tema puesto, no
                   solo un color suelto. Toca una para elegirla. */}
-              <div style={{ display: 'flex', gap: 10, marginBottom: 12, overflowX: 'auto' as const, paddingBottom: 4, WebkitOverflowScrolling: 'touch' as const }}>
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <button aria-label={lang === 'en' ? 'Previous' : 'Anterior'} onClick={() => temaCarruselRef.current?.scrollBy({ left: -160, behavior: 'smooth' })} style={{
+                  position: 'absolute', left: -6, top: 76, zIndex: 2, width: 30, height: 30, borderRadius: '50%', border: 'none',
+                  background: 'rgba(0,0,0,.55)', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 900,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.3)',
+                }}>‹</button>
+                <button aria-label={lang === 'en' ? 'Next' : 'Siguiente'} onClick={() => temaCarruselRef.current?.scrollBy({ left: 160, behavior: 'smooth' })} style={{
+                  position: 'absolute', right: -6, top: 76, zIndex: 2, width: 30, height: 30, borderRadius: '50%', border: 'none',
+                  background: 'rgba(0,0,0,.55)', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 900,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.3)',
+                }}>›</button>
+                <div ref={temaCarruselRef} style={{ display: 'flex', gap: 10, overflowX: 'auto' as const, paddingBottom: 4, WebkitOverflowScrolling: 'touch' as const, scrollBehavior: 'smooth' as const }}>
                 {TEMA_ORDER.map(k => {
                   const t = TEMAS[k]
                   const seleccionado = (proyecto?.tema || 'morado') === k
@@ -790,6 +800,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                     </div>
                   )
                 })}
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
