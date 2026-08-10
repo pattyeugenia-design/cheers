@@ -10,7 +10,7 @@ import * as XLSX from 'xlsx'
 declare global { interface Window { google: any } }
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
-const BG = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
+const BG = 'linear-gradient(160deg,#FFFDFB,#FBF1E7 55%,#F6E4DC)'
 
 // Mismos temas/fuentes que la invitación normal de Cheers (app/[usuario]/[evento])
 // — así la invitación de boda se ve consistente con el resto de la app en vez de
@@ -76,8 +76,8 @@ const ESTADO_LABEL: Record<string, { es: string; en: string; color: string }> = 
 }
 
 const inputStyle: React.CSSProperties = {
-  border: '1px solid rgba(255,255,255,.15)', background: 'rgba(255,255,255,.06)',
-  color: '#fff', fontSize: 13, padding: '9px 12px', borderRadius: 9, fontFamily: F,
+  border: '1px solid rgba(183,110,121,.15)', background: 'rgba(183,110,121,.06)',
+  color: '#3D2B2E', fontSize: 13, padding: '9px 12px', borderRadius: 9, fontFamily: F,
 }
 
 function fmtMoney(n: number | null | undefined) {
@@ -595,7 +595,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
   if (cargando) return (
     <main style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F }}>
-      <p style={{ color: '#EEC9DD' }}>{lang === 'en' ? 'Loading…' : 'Cargando…'}</p>
+      <p style={{ color: '#B76E79' }}>{lang === 'en' ? 'Loading…' : 'Cargando…'}</p>
     </main>
   )
 
@@ -657,11 +657,11 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   return (
     <main style={{ minHeight: '100vh', background: BG, fontFamily: F, padding: '50px 20px 80px' }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
-        <button onClick={() => router.push('/bridal')} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: F, marginBottom: 20 }}>
+        <button onClick={() => router.push('/bridal')} style={{ border: 'none', background: 'rgba(183,110,121,.08)', color: 'rgba(61,43,46,.7)', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: F, marginBottom: 20 }}>
           {lang === 'en' ? '← Back' : '← Atrás'}
         </button>
 
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: '#fff', margin: '0 0 24px', letterSpacing: '-.5px' }}>
+        <h1 style={{ fontSize: 26, fontWeight: 900, color: '#3D2B2E', margin: '0 0 24px', letterSpacing: '-.5px' }}>
           {[proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ') || (lang === 'en' ? 'Your wedding' : 'Tu boda')}
         </h1>
 
@@ -673,8 +673,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               if (primerTab) setTab(primerTab.key)
             }} style={{
               border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 800, padding: '8px 14px', borderRadius: 99,
-              background: seccionActiva === sec.id ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.08)',
-              color: seccionActiva === sec.id ? '#fff' : 'rgba(255,255,255,.6)',
+              background: seccionActiva === sec.id ? 'linear-gradient(135deg,#C9A876,#C98A93)' : 'rgba(183,110,121,.08)',
+              color: seccionActiva === sec.id ? '#fff' : 'rgba(61,43,46,.6)',
             }}>{lang === 'en' ? sec.en : sec.es}</button>
           ))}
         </div>
@@ -685,8 +685,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             {tabsDeSeccion.map(tb => (
               <button key={tb.key} onClick={() => setTab(tb.key)} style={{
                 border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 99,
-                background: tab === tb.key ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.05)',
-                color: tab === tb.key ? '#2a2440' : 'rgba(255,255,255,.5)',
+                background: tab === tb.key ? 'rgba(183,110,121,.9)' : 'rgba(183,110,121,.05)',
+                color: tab === tb.key ? '#3D2B2E' : 'rgba(61,43,46,.5)',
               }}>{tb.label}</button>
             ))}
           </div>
@@ -700,24 +700,24 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 en vez de que se sienta una pared vacía. Se apaga sola en cuanto hay
                 algo de contenido real, o si la cierran a mano. */}
             {!primerosPasosCerrado && invitadosBoda.length === 0 && presupuesto.length === 0 && !proyecto?.lugar_nombre && (
-              <div style={{ background: 'rgba(255,255,255,.06)', border: '1px dashed rgba(255,255,255,.2)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ background: 'rgba(183,110,121,.06)', border: '1px dashed rgba(183,110,121,.3)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{lang === 'en' ? 'Getting started' : 'Primeros pasos'}</div>
-                  <button onClick={() => setPrimerosPasosCerrado(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#3D2B2E' }}>{lang === 'en' ? 'Getting started' : 'Primeros pasos'}</div>
+                  <button onClick={() => setPrimerosPasosCerrado(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.4)', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>
                 </div>
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', marginBottom: 10, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 12, color: 'rgba(61,43,46,.55)', marginBottom: 10, lineHeight: 1.5 }}>
                   {lang === 'en'
                     ? 'All modules are on by default — turn off the ones you don\'t need at the bottom of this page. To start, try:'
                     : 'Todos los módulos están prendidos por default — apaga los que no necesites al final de esta página. Para empezar, prueba:'}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
-                  <button onClick={() => setEditandoLugar(true)} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(255,255,255,.06)', color: '#EEC9DD', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                  <button onClick={() => setEditandoLugar(true)} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(183,110,121,.06)', color: '#B76E79', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                     {lang === 'en' ? '→ Add your venue' : '→ Agrega tu lugar'}
                   </button>
-                  <button onClick={() => setTab('invitados')} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(255,255,255,.06)', color: '#EEC9DD', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                  <button onClick={() => setTab('invitados')} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(183,110,121,.06)', color: '#B76E79', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                     {lang === 'en' ? '→ Add your first guests' : '→ Agrega tus primeros invitados'}
                   </button>
-                  <button onClick={() => setTab('presupuesto')} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(255,255,255,.06)', color: '#EEC9DD', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                  <button onClick={() => setTab('presupuesto')} style={{ textAlign: 'left' as const, border: 'none', background: 'rgba(183,110,121,.06)', color: '#B76E79', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                     {lang === 'en' ? '→ Start your budget' : '→ Arranca tu presupuesto'}
                   </button>
                 </div>
@@ -725,96 +725,96 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             )}
 
             {/* Brief: mismo espíritu que el brief de Cheers normal — fecha, lugar, invitados, organizadores */}
-            <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '18px 20px', marginBottom: 16 }}>
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '18px 20px', marginBottom: 16 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 14, marginBottom: editandoLugar ? 12 : 0 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Date' : 'Fecha'}</div>
-                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Date' : 'Fecha'}</div>
+                  <div style={{ fontSize: 14, color: '#3D2B2E', fontWeight: 700 }}>
                     {proyecto?.fecha_boda || (lang === 'en' ? 'Pending' : 'Pendiente')}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
-                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
+                  <div style={{ fontSize: 14, color: '#3D2B2E', fontWeight: 700 }}>
                     {proyecto?.invitados_estimados ?? (lang === 'en' ? 'Pending' : 'Pendiente')}
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 160 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Venue' : 'Lugar'}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Venue' : 'Lugar'}</div>
                   {editandoLugar ? null : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>{proyecto?.lugar_nombre || (lang === 'en' ? 'Pending' : 'Pendiente')}</div>
+                      <div style={{ fontSize: 14, color: '#3D2B2E', fontWeight: 700 }}>{proyecto?.lugar_nombre || (lang === 'en' ? 'Pending' : 'Pendiente')}</div>
                       {proyecto?.lugar_nombre && (
-                        <a href={`https://maps.google.com/?q=${encodeURIComponent(proyecto.lugar_nombre)}`} target="_blank" style={{ fontSize: 11, color: '#AFA9EC', fontWeight: 700 }}>Maps ↗</a>
+                        <a href={`https://maps.google.com/?q=${encodeURIComponent(proyecto.lugar_nombre)}`} target="_blank" style={{ fontSize: 11, color: '#B76E79', fontWeight: 700 }}>Maps ↗</a>
                       )}
-                      <button onClick={() => setEditandoLugar(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                      <button onClick={() => setEditandoLugar(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
                     </div>
                   )}
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Wedding Planner' : 'Wedding Planner'}</div>
-                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 700 }}>{wpContratado?.nombre || (lang === 'en' ? 'Not selected' : 'Sin elegir')}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Wedding Planner' : 'Wedding Planner'}</div>
+                  <div style={{ fontSize: 14, color: '#3D2B2E', fontWeight: 700 }}>{wpContratado?.nombre || (lang === 'en' ? 'Not selected' : 'Sin elegir')}</div>
                 </div>
               </div>
               {editandoLugar && (
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input ref={lugarRef} value={lugarInput} onChange={e => setLugarInput(e.target.value)} placeholder={lang === 'en' ? 'Search venue…' : 'Buscar lugar…'} style={{ ...inputStyle, flex: 1 }} />
-                  <button onClick={guardarLugar} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+                  <button onClick={guardarLugar} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
                 </div>
               )}
             </div>
 
             {/* Info que ven los invitados en su página de RSVP */}
-            <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editandoInfo ? 10 : 0 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
                   {lang === 'en' ? 'Info for guests (travel & FAQ)' : 'Info para invitados (viaje y FAQ)'}
                 </div>
                 {!editandoInfo && (
-                  <button onClick={() => setEditandoInfo(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                  <button onClick={() => setEditandoInfo(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
                 )}
               </div>
               {editandoInfo ? (
                 <div>
                   <textarea value={infoViajeInput} onChange={e => setInfoViajeInput(e.target.value)} rows={3} placeholder={lang === 'en' ? 'Travel & stay info' : 'Info de viaje y hospedaje'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
                   <textarea value={faqInput} onChange={e => setFaqInput(e.target.value)} rows={3} placeholder="FAQ" style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
-                  <button onClick={guardarInfoRsvp} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+                  <button onClick={guardarInfoRsvp} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
                 </div>
               ) : (
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', margin: 0 }}>
+                <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>
                   {(proyecto?.info_viaje || proyecto?.faq) ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.') : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
                 </p>
               )}
             </div>
 
             {/* Diseño de la invitación digital que ven los invitados */}
-            <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
                   {lang === 'en' ? 'Invitation design' : 'Diseño de la invitación'}
                 </div>
-                <a href={`/bridal/preview/${id}`} target="_blank" style={{ fontSize: 11, color: '#AFA9EC', fontWeight: 700 }}>
+                <a href={`/bridal/preview/${id}`} target="_blank" style={{ fontSize: 11, color: '#B76E79', fontWeight: 700 }}>
                   {lang === 'en' ? 'Full-size preview →' : 'Vista previa a tamaño real →'}
                 </a>
               </div>
 
               <input ref={portadaInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }} style={{ display: 'none' }} />
               <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
-                <div onClick={() => portadaInputRef.current?.click()} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,.08)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div onClick={() => portadaInputRef.current?.click()} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', background: 'rgba(183,110,121,.08)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {proyecto?.portada_url ? (
                     <Image src={proyecto.portada_url} alt="portada" fill sizes="80px" style={{ objectFit: 'cover', objectPosition: proyecto.portada_posicion || 'center' }} />
                   ) : (
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)', fontWeight: 700, textAlign: 'center' as const, padding: 4 }}>{subiendoPortada ? '...' : (lang === 'en' ? 'Add photo' : 'Agregar foto')}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, textAlign: 'center' as const, padding: 4 }}>{subiendoPortada ? '...' : (lang === 'en' ? 'Add photo' : 'Agregar foto')}</span>
                   )}
                 </div>
                 {proyecto?.portada_url && (
                   <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
-                    <button onClick={() => portadaInputRef.current?.click()} style={{ border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: F, textAlign: 'left' as const }}>
+                    <button onClick={() => portadaInputRef.current?.click()} style={{ border: 'none', background: 'rgba(183,110,121,.1)', color: '#3D2B2E', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: F, textAlign: 'left' as const }}>
                       {lang === 'en' ? 'Change photo' : 'Cambiar foto'}
                     </button>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {[{ v: 'top', l: lang === 'en' ? 'Top' : 'Arriba' }, { v: 'center', l: lang === 'en' ? 'Center' : 'Centro' }, { v: 'bottom', l: lang === 'en' ? 'Bottom' : 'Abajo' }].map(p => (
-                        <button key={p.v} onClick={() => guardarPortadaPosicion(p.v)} style={{ border: 'none', background: (proyecto?.portada_posicion || 'center') === p.v ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.08)', color: (proyecto?.portada_posicion || 'center') === p.v ? '#2a2440' : 'rgba(255,255,255,.6)', fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: F }}>{p.l}</button>
+                        <button key={p.v} onClick={() => guardarPortadaPosicion(p.v)} style={{ border: 'none', background: (proyecto?.portada_posicion || 'center') === p.v ? 'rgba(183,110,121,.9)' : 'rgba(183,110,121,.08)', color: (proyecto?.portada_posicion || 'center') === p.v ? '#3D2B2E' : 'rgba(61,43,46,.6)', fontSize: 10, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: F }}>{p.l}</button>
                       ))}
                     </div>
                   </div>
@@ -827,12 +827,12 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <div style={{ position: 'relative', marginBottom: 12 }}>
                 <button aria-label={lang === 'en' ? 'Previous' : 'Anterior'} onClick={() => temaCarruselRef.current?.scrollBy({ left: -160, behavior: 'smooth' })} style={{
                   position: 'absolute', left: -6, top: 76, zIndex: 2, width: 30, height: 30, borderRadius: '50%', border: 'none',
-                  background: 'rgba(0,0,0,.55)', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 900,
+                  background: 'rgba(0,0,0,.55)', color: '#3D2B2E', cursor: 'pointer', fontSize: 15, fontWeight: 900,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.3)',
                 }}>‹</button>
                 <button aria-label={lang === 'en' ? 'Next' : 'Siguiente'} onClick={() => temaCarruselRef.current?.scrollBy({ left: 160, behavior: 'smooth' })} style={{
                   position: 'absolute', right: -6, top: 76, zIndex: 2, width: 30, height: 30, borderRadius: '50%', border: 'none',
-                  background: 'rgba(0,0,0,.55)', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 900,
+                  background: 'rgba(0,0,0,.55)', color: '#3D2B2E', cursor: 'pointer', fontSize: 15, fontWeight: 900,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.3)',
                 }}>›</button>
                 <div ref={temaCarruselRef} style={{ display: 'flex', gap: 10, overflowX: 'auto' as const, paddingBottom: 4, WebkitOverflowScrolling: 'touch' as const, scrollBehavior: 'smooth' as const }}>
@@ -844,7 +844,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   const fechaBonita = fmtFechaBonita(proyecto?.fecha_boda, lang)
                   return (
                     <div key={k} style={{ flexShrink: 0, width: 138 }}>
-                      <div onClick={() => guardarTema(k)} style={{ position: 'relative', width: 138, height: 172, borderRadius: 16, overflow: 'hidden', cursor: 'pointer', background: t.bg, outline: seleccionado ? '3px solid #D4537E' : '3px solid transparent', outlineOffset: 2 }}>
+                      <div onClick={() => guardarTema(k)} style={{ position: 'relative', width: 138, height: 172, borderRadius: 16, overflow: 'hidden', cursor: 'pointer', background: t.bg, outline: seleccionado ? '3px solid #B76E79' : '3px solid transparent', outlineOffset: 2 }}>
                         {proyecto?.portada_url && (
                           <>
                             <Image src={proyecto.portada_url} alt="" fill sizes="138px" style={{ objectFit: 'cover', objectPosition: proyecto.portada_posicion || 'center', opacity: .5 }} />
@@ -856,10 +856,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                           {fechaBonita && <div style={{ fontSize: 9, color: txt, opacity: .85, marginTop: 6, textTransform: 'uppercase' as const, letterSpacing: '.5px' }}>{fechaBonita}</div>}
                         </div>
                         {seleccionado && (
-                          <div style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#D4537E' }}>✓</div>
+                          <div style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#B76E79' }}>✓</div>
                         )}
                       </div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', fontWeight: 700, textAlign: 'center' as const, marginTop: 6 }}>{lang === 'en' ? t.label_en : t.label_es}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(61,43,46,.55)', fontWeight: 700, textAlign: 'center' as const, marginTop: 6 }}>{lang === 'en' ? t.label_en : t.label_es}</div>
                     </div>
                   )
                 })}
@@ -869,9 +869,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
                 {FUENTE_ORDER.map(k => (
                   <button key={k} onClick={() => guardarFuente(k)} style={{
-                    border: (proyecto?.fuente || 'system') === k ? '2px solid #D4537E' : '2px solid rgba(255,255,255,.15)', borderRadius: 9, padding: '7px 12px', cursor: 'pointer',
-                    background: (proyecto?.fuente || 'system') === k ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)',
-                    color: (proyecto?.fuente || 'system') === k ? '#2a2440' : '#fff', fontSize: 12, fontFamily: FUENTES[k].font, fontWeight: 700,
+                    border: (proyecto?.fuente || 'system') === k ? '2px solid #B76E79' : '2px solid rgba(183,110,121,.2)', borderRadius: 9, padding: '7px 12px', cursor: 'pointer',
+                    background: (proyecto?.fuente || 'system') === k ? 'rgba(183,110,121,.95)' : 'rgba(183,110,121,.08)',
+                    color: (proyecto?.fuente || 'system') === k ? '#fff' : 'rgba(61,43,46,.7)', fontSize: 12, fontFamily: FUENTES[k].font, fontWeight: 700,
                   }}>{FUENTES[k].label}</button>
                 ))}
               </div>
@@ -880,71 +880,71 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             {/* Métricas por módulo */}
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {moduloActivo('presupuesto') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Budget' : 'Presupuesto'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{fmtMoney(totalPagado)} / {fmtMoney(presupuestoMetaTile)}{totalEstimado === 0 && presupuestoMetaTile > 0 ? (lang === 'en' ? ' (estimate)' : ' (estimado)') : ''}</div>
-                  {pagosVencidos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#f4a3a3', color: '#241c45' }}>{pagosVencidos.length} {lang === 'en' ? 'overdue' : 'vencidos'}</span>}
-                  {pagosProximos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#c98a1e', color: '#241c45' }}>{pagosProximos.length} {lang === 'en' ? 'due soon' : 'próximos'}</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{lang === 'en' ? 'Budget' : 'Presupuesto'}</div>
+                  <div style={{ fontSize: 12, color: '#B76E79' }}>{fmtMoney(totalPagado)} / {fmtMoney(presupuestoMetaTile)}{totalEstimado === 0 && presupuestoMetaTile > 0 ? (lang === 'en' ? ' (estimate)' : ' (estimado)') : ''}</div>
+                  {pagosVencidos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#f4a3a3', color: '#3D2B2E' }}>{pagosVencidos.length} {lang === 'en' ? 'overdue' : 'vencidos'}</span>}
+                  {pagosProximos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#c98a1e', color: '#3D2B2E' }}>{pagosProximos.length} {lang === 'en' ? 'due soon' : 'próximos'}</span>}
                 </div>
               )}
               {moduloActivo('proveedores') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Vendors' : 'Proveedores'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{proveedores.filter(p => p.estado === 'contratado').length}/{proveedores.length} {lang === 'en' ? 'booked' : 'contratados'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{lang === 'en' ? 'Vendors' : 'Proveedores'}</div>
+                  <div style={{ fontSize: 12, color: '#B76E79' }}>{proveedores.filter(p => p.estado === 'contratado').length}/{proveedores.length} {lang === 'en' ? 'booked' : 'contratados'}</div>
                 </div>
               )}
               {moduloActivo('invitados') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{rsvpConfirmados}/{invitadosMetaTile} {lang === 'en' ? 'confirmed' : 'confirmados'}{invitadosBoda.length === 0 && invitadosMetaTile > 0 ? (lang === 'en' ? ' (estimate)' : ' (estimado)') : ''}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
+                  <div style={{ fontSize: 12, color: '#B76E79' }}>{rsvpConfirmados}/{invitadosMetaTile} {lang === 'en' ? 'confirmed' : 'confirmados'}{invitadosBoda.length === 0 && invitadosMetaTile > 0 ? (lang === 'en' ? ' (estimate)' : ' (estimado)') : ''}</div>
                 </div>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>Timeline</div>
-                <div style={{ fontSize: 12, color: '#EEC9DD' }}>{timeline.filter(x => x.completado).length}/{timeline.length}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>Timeline</div>
+                <div style={{ fontSize: 12, color: '#B76E79' }}>{timeline.filter(x => x.completado).length}/{timeline.length}</div>
               </div>
               {['novia', 'novio', 'pareja', 'luna_miel', 'vida_despues', 'embarazo', 'wedding_planner', 'beauty_timeline', 'dia_b'].filter(moduloActivo).map(k => {
                 const items = tablero.filter(x => x.tablero === k)
                 const modulo = MODULOS.find(m => m.key === k)!
                 if (k === 'wedding_planner' && !wpContratado) return null
                 return (
-                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                    <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? modulo.en : modulo.es}</div>
-                    <div style={{ fontSize: 12, color: '#EEC9DD' }}>{items.filter(x => x.completado).length}/{items.length}</div>
+                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{lang === 'en' ? modulo.en : modulo.es}</div>
+                    <div style={{ fontSize: 12, color: '#B76E79' }}>{items.filter(x => x.completado).length}/{items.length}</div>
                   </div>
                 )
               })}
               {moduloActivo('contratos') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Contracts' : 'Contratos'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{contratosFirmados}/{contratos.length} {lang === 'en' ? 'signed' : 'firmados'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{lang === 'en' ? 'Contracts' : 'Contratos'}</div>
+                  <div style={{ fontSize: 12, color: '#B76E79' }}>{contratosFirmados}/{contratos.length} {lang === 'en' ? 'signed' : 'firmados'}</div>
                 </div>
               )}
               {moduloActivo('pagos') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Payments' : 'Pagos'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{fmtMoney(totalPagos)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{lang === 'en' ? 'Payments' : 'Pagos'}</div>
+                  <div style={{ fontSize: 12, color: '#B76E79' }}>{fmtMoney(totalPagos)}</div>
                 </div>
               )}
               {moduloActivo('inspiracion') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Inspiration' : 'Inspiración'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{proyecto?.link_inspiracion ? (lang === 'en' ? 'Saved' : 'Guardado') : (lang === 'en' ? 'Pending' : 'Pendiente')}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{lang === 'en' ? 'Inspiration' : 'Inspiración'}</div>
+                  <div style={{ fontSize: 12, color: '#B76E79' }}>{proyecto?.link_inspiracion ? (lang === 'en' ? 'Saved' : 'Guardado') : (lang === 'en' ? 'Pending' : 'Pendiente')}</div>
                 </div>
               )}
             </div>
 
             {/* Módulos: prender/apagar */}
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'Modules' : 'Módulos'}</div>
+            <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'Modules' : 'Módulos'}</div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
               {MODULOS.map(m => {
                 const activo = moduloActivo(m.key)
                 return (
-                  <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,.04)', borderRadius: 10, opacity: activo ? 1 : .5 }}>
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', fontWeight: 600 }}>{lang === 'en' ? m.en : m.es}</span>
+                  <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(183,110,121,.04)', borderRadius: 10, opacity: activo ? 1 : .5 }}>
+                    <span style={{ fontSize: 13, color: 'rgba(61,43,46,.8)', fontWeight: 600 }}>{lang === 'en' ? m.en : m.es}</span>
                     <button onClick={() => toggleModulo(m.key)} style={{
                       border: 'none', cursor: 'pointer', width: 40, height: 24, borderRadius: 99, padding: 3,
-                      background: activo ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.15)', display: 'flex', justifyContent: activo ? 'flex-end' : 'flex-start',
+                      background: activo ? 'linear-gradient(135deg,#C9A876,#C98A93)' : 'rgba(183,110,121,.2)', display: 'flex', justifyContent: activo ? 'flex-end' : 'flex-start',
                     }}>
                       <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', display: 'block' }} />
                     </button>
@@ -958,30 +958,30 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
         {tab === 'invitados' && (
           <div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Confirmed' : 'Confirmados'}</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: '#7CE0A8' }}>{rsvpsBoda.filter(r => r.asistencia === 'si').length}</div>
+              <div style={{ flex: 1, background: 'rgba(183,110,121,.06)', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Confirmed' : 'Confirmados'}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#3FA76B' }}>{rsvpsBoda.filter(r => r.asistencia === 'si').length}</div>
               </div>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Pending' : 'Por confirmar'}</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{invitadosBoda.length - rsvpsBoda.length}</div>
+              <div style={{ flex: 1, background: 'rgba(183,110,121,.06)', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Pending' : 'Por confirmar'}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#3D2B2E' }}>{invitadosBoda.length - rsvpsBoda.length}</div>
               </div>
             </div>
 
             {invitadosBoda.length - rsvpsBoda.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
                   {lang === 'en' ? 'Remind pending guests' : 'Recordar a pendientes'}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
-                  <button onClick={recordarPorCorreo} disabled={recordando} style={{ border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                  <button onClick={recordarPorCorreo} disabled={recordando} style={{ border: 'none', background: 'rgba(183,110,121,.1)', color: '#3D2B2E', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                     {recordando ? '...' : (lang === 'en' ? 'By email' : 'Por correo')}
                   </button>
                   <button onClick={recordarSiguientePorWA} style={{ border: 'none', background: '#25D366', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                     {lang === 'en' ? 'By WhatsApp (next one)' : 'Por WhatsApp (el siguiente)'}
                   </button>
                 </div>
-                {ultimoRecordatorio && <p style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginTop: 8 }}>{ultimoRecordatorio}</p>}
+                {ultimoRecordatorio && <p style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', marginTop: 8 }}>{ultimoRecordatorio}</p>}
               </div>
             )}
 
@@ -989,51 +989,51 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               {invitadosBoda.map(inv => {
                 const rsvp = rsvpsBoda.find(r => r.invitado_id === inv.id)
                 return (
-                  <div key={inv.id} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div key={inv.id} style={{ background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{inv.nombre}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{inv.nombre}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)' }}>
                           {[inv.grupo, inv.acompanantes_permitidos > 0 ? `+${inv.acompanantes_permitidos}` : null].filter(Boolean).join(' · ')}
                         </div>
                       </div>
                       {rsvp ? (
-                        <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: ASISTENCIA_LABEL[rsvp.asistencia].color, color: '#241c45' }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: ASISTENCIA_LABEL[rsvp.asistencia].color, color: '#3D2B2E' }}>
                           {lang === 'en' ? ASISTENCIA_LABEL[rsvp.asistencia].en : ASISTENCIA_LABEL[rsvp.asistencia].es}
                         </span>
                       ) : (
-                        <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)' }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: 'rgba(183,110,121,.1)', color: 'rgba(61,43,46,.5)' }}>
                           {lang === 'en' ? 'Pending' : 'Sin responder'}
                         </span>
                       )}
                       <button onClick={() => enviarInvitacionWA(inv)} title="WhatsApp" style={{ border: 'none', background: '#25D366', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, fontSize: 13 }}>↗</button>
-                      <button onClick={() => capturandoManual === inv.id ? setCapturandoManual(null) : abrirCapturaManual(inv)} title={lang === 'en' ? 'Log a call' : 'Registrar llamada'} style={{ border: 'none', background: 'rgba(255,255,255,.12)', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, fontSize: 12 }}>☎</button>
-                      <button onClick={() => borrarInvitadoBoda(inv.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                      <button onClick={() => capturandoManual === inv.id ? setCapturandoManual(null) : abrirCapturaManual(inv)} title={lang === 'en' ? 'Log a call' : 'Registrar llamada'} style={{ border: 'none', background: 'rgba(183,110,121,.12)', color: '#3D2B2E', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, fontSize: 12 }}>☎</button>
+                      <button onClick={() => borrarInvitadoBoda(inv.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                     </div>
 
                     {capturandoManual === inv.id && (
-                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.1)' }}>
-                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginBottom: 8 }}>
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(183,110,121,.15)' }}>
+                        <p style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', marginBottom: 8 }}>
                           {lang === 'en' ? 'Log what they confirmed by phone — same as a digital RSVP.' : 'Registra lo que confirmó por teléfono — cuenta igual que un RSVP digital.'}
                         </p>
                         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                           {(['si', 'tal_vez', 'no'] as const).map(op => (
                             <button key={op} onClick={() => setManualAsistencia(op)} style={{
                               flex: 1, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 800, padding: '8px', borderRadius: 8,
-                              background: manualAsistencia === op ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.08)',
-                              color: manualAsistencia === op ? '#fff' : 'rgba(255,255,255,.6)',
+                              background: manualAsistencia === op ? 'linear-gradient(135deg,#C9A876,#C98A93)' : 'rgba(183,110,121,.08)',
+                              color: manualAsistencia === op ? '#fff' : 'rgba(61,43,46,.6)',
                             }}>{op === 'si' ? (lang === 'en' ? 'Yes' : 'Sí') : op === 'no' ? 'No' : (lang === 'en' ? 'Maybe' : 'Tal vez')}</button>
                           ))}
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 8 }}>
-                          <select value={manualMenu} onChange={e => setManualMenu(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 110, colorScheme: 'dark' as const }}>
+                          <select value={manualMenu} onChange={e => setManualMenu(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 110, colorScheme: 'light' as const }}>
                             <option value="">{lang === 'en' ? 'Meal' : 'Platillo'}</option>
                             {['res', 'pollo', 'vegetariano', 'vegano'].map(m => <option key={m} value={m}>{m}</option>)}
                           </select>
                           <input type="number" min={0} value={manualAcompanantes} onChange={e => setManualAcompanantes(e.target.value)} placeholder={lang === 'en' ? '+1s' : 'Acompañantes'} style={{ ...inputStyle, width: 90 }} />
                         </div>
                         <input value={manualNotas} onChange={e => setManualNotas(e.target.value)} placeholder={lang === 'en' ? 'Note (optional)' : 'Nota (opcional)'} style={{ ...inputStyle, width: '100%' }} />
-                        <button onClick={() => guardarRsvpManual(inv.id)} disabled={!manualAsistencia || guardando} style={{ border: 'none', background: !manualAsistencia ? 'rgba(255,255,255,.15)' : 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: manualAsistencia ? 'pointer' : 'default', fontFamily: F }}>
+                        <button onClick={() => guardarRsvpManual(inv.id)} disabled={!manualAsistencia || guardando} style={{ border: 'none', background: !manualAsistencia ? 'rgba(183,110,121,.18)' : 'linear-gradient(135deg,#C9A876,#C98A93)', color: !manualAsistencia ? 'rgba(61,43,46,.5)' : '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: manualAsistencia ? 'pointer' : 'default', fontFamily: F }}>
                           {lang === 'en' ? 'Save' : 'Guardar'}
                         </button>
                       </div>
@@ -1043,31 +1043,31 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               })}
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,.05)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#fff', marginBottom: 4 }}>{lang === 'en' ? 'Import from Excel' : 'Importar desde Excel'}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', marginBottom: 10 }}>
+            <div style={{ background: 'rgba(183,110,121,.05)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#3D2B2E', marginBottom: 4 }}>{lang === 'en' ? 'Import from Excel' : 'Importar desde Excel'}</div>
+              <div style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', marginBottom: 10 }}>
                 {lang === 'en' ? "Upload your guest list (.xlsx, .xls or .csv) — we'll find the names automatically." : 'Sube tu lista de invitados (.xlsx, .xls o .csv) — detectamos los nombres solos, sin importar el orden de las columnas.'}
               </div>
               <input ref={excelInvitadosRef} type="file" accept=".xlsx,.xls,.csv" onChange={e => { const f = e.target.files?.[0]; if (f) onArchivoInvitados(f) }} style={{ display: 'none' }} />
-              <button onClick={() => excelInvitadosRef.current?.click()} style={{ border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+              <button onClick={() => excelInvitadosRef.current?.click()} style={{ border: 'none', background: 'rgba(183,110,121,.1)', color: '#3D2B2E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
                 {lang === 'en' ? 'Choose file' : 'Elegir archivo'}
               </button>
-              {errorImportInv && <div style={{ fontSize: 11, color: '#f4a3a3', marginTop: 8 }}>{errorImportInv}</div>}
+              {errorImportInv && <div style={{ fontSize: 11, color: '#C24B4B', marginTop: 8 }}>{errorImportInv}</div>}
 
               {previewImportInv && (
                 <div style={{ marginTop: 12, background: 'rgba(0,0,0,.15)', borderRadius: 10, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#3D2B2E', marginBottom: 6 }}>
                     {lang === 'en' ? `Found ${previewImportInv.length} guests:` : `Encontré ${previewImportInv.length} invitados:`}
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', maxHeight: 120, overflowY: 'auto' as const, marginBottom: 10, lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 11, color: 'rgba(61,43,46,.6)', maxHeight: 120, overflowY: 'auto' as const, marginBottom: 10, lineHeight: 1.6 }}>
                     {previewImportInv.slice(0, 8).map((r, i) => <div key={i}>{r.nombre}{r.grupo ? ` · ${r.grupo}` : ''}</div>)}
                     {previewImportInv.length > 8 && <div>{lang === 'en' ? `+ ${previewImportInv.length - 8} more` : `+ ${previewImportInv.length - 8} más`}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={confirmarImportacionInv} disabled={importandoInv} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                    <button onClick={confirmarImportacionInv} disabled={importandoInv} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
                       {importandoInv ? '...' : (lang === 'en' ? `Add ${previewImportInv.length} guests` : `Agregar ${previewImportInv.length} invitados`)}
                     </button>
-                    <button onClick={() => { setPreviewImportInv(null); if (excelInvitadosRef.current) excelInvitadosRef.current.value = '' }} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.6)', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                    <button onClick={() => { setPreviewImportInv(null); if (excelInvitadosRef.current) excelInvitadosRef.current.value = '' }} style={{ border: 'none', background: 'rgba(183,110,121,.08)', color: 'rgba(61,43,46,.6)', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
                       {lang === 'en' ? 'Cancel' : 'Cancelar'}
                     </button>
                   </div>
@@ -1075,13 +1075,13 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               )}
             </div>
 
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 700, marginBottom: 8 }}>{lang === 'en' ? 'Or add one at a time' : 'O agrega uno a la vez'}</div>
+            <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)', fontWeight: 700, marginBottom: 8 }}>{lang === 'en' ? 'Or add one at a time' : 'O agrega uno a la vez'}</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
               <input value={nuevoInvNombre} onChange={e => setNuevoInvNombre(e.target.value)} placeholder={lang === 'en' ? 'Name' : 'Nombre'} style={{ ...inputStyle, flex: 2, minWidth: 120 }} />
               <input value={nuevoInvContacto} onChange={e => setNuevoInvContacto(e.target.value)} placeholder={lang === 'en' ? 'Phone or email' : 'Teléfono o email'} style={{ ...inputStyle, flex: 1, minWidth: 130 }} />
               <input value={nuevoInvGrupo} onChange={e => setNuevoInvGrupo(e.target.value)} placeholder={lang === 'en' ? 'Group' : 'Grupo'} style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
               <input type="number" min={0} value={nuevoInvAcompanantes} onChange={e => setNuevoInvAcompanantes(e.target.value)} placeholder={lang === 'en' ? '+1s' : 'Acompañantes'} style={{ ...inputStyle, width: 80 }} />
-              <button onClick={agregarInvitadoBoda} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={agregarInvitadoBoda} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
         )}
@@ -1089,28 +1089,28 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
         {tab === 'presupuesto' && (
           <div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Estimated' : 'Estimado'}</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{fmtMoney(totalEstimado)}</div>
+              <div style={{ flex: 1, background: 'rgba(183,110,121,.06)', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Estimated' : 'Estimado'}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#3D2B2E' }}>{fmtMoney(totalEstimado)}</div>
               </div>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Paid so far' : 'Pagado'}</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: '#7CE0A8' }}>{fmtMoney(totalPagado)}</div>
+              <div style={{ flex: 1, background: 'rgba(183,110,121,.06)', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Paid so far' : 'Pagado'}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#3FA76B' }}>{fmtMoney(totalPagado)}</div>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {presupuesto.map(item => (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <input type="checkbox" checked={!!item.pagado} onChange={() => togglePagado(item)} style={{ width: 16, height: 16, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: item.pagado ? 'line-through' : 'none', opacity: item.pagado ? .6 : 1 }}>{item.nombre}</div>
-                    <div style={{ fontSize: 11, color: item.fecha_limite && !item.pagado && item.fecha_limite < hoy ? '#f4a3a3' : 'rgba(255,255,255,.4)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#3D2B2E', textDecoration: item.pagado ? 'line-through' : 'none', opacity: item.pagado ? .6 : 1 }}>{item.nombre}</div>
+                    <div style={{ fontSize: 11, color: item.fecha_limite && !item.pagado && item.fecha_limite < hoy ? '#C24B4B' : 'rgba(61,43,46,.4)' }}>
                       {[item.categoria, item.fecha_limite ? (lang === 'en' ? `due ${item.fecha_limite}` : `vence ${item.fecha_limite}`) : null].filter(Boolean).join(' · ')}
                     </div>
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(item.costo_real ?? item.costo_estimado)}</div>
-                  <button onClick={() => borrarPresupuesto(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#B76E79' }}>{fmtMoney(item.costo_real ?? item.costo_estimado)}</div>
+                  <button onClick={() => borrarPresupuesto(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                 </div>
               ))}
             </div>
@@ -1120,10 +1120,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} placeholder={lang === 'en' ? 'Category' : 'Categoría'} style={{ ...inputStyle, flex: 1, minWidth: 100 }} />
               <input type="number" value={nuevoCosto} onChange={e => setNuevoCosto(e.target.value)} placeholder={lang === 'en' ? 'Cost' : 'Costo'} style={{ ...inputStyle, width: 90 }} />
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Due date (optional)' : 'Fecha límite de pago (opcional)'}</span>
-                <input type="date" value={nuevaFechaLimite} onChange={e => setNuevaFechaLimite(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const, marginBottom: 0 }} />
+                <span style={{ fontSize: 9, color: 'rgba(61,43,46,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Due date (optional)' : 'Fecha límite de pago (opcional)'}</span>
+                <input type="date" value={nuevaFechaLimite} onChange={e => setNuevaFechaLimite(e.target.value)} style={{ ...inputStyle, colorScheme: 'light' as const, marginBottom: 0 }} />
               </div>
-              <button onClick={agregarPresupuesto} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={agregarPresupuesto} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
         )}
@@ -1132,23 +1132,23 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           <div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {timeline.map(item => (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <input type="checkbox" checked={!!item.completado} onChange={() => toggleCompletadoTimeline(item)} style={{ width: 16, height: 16, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: item.completado ? 'line-through' : 'none', opacity: item.completado ? .6 : 1 }}>{item.titulo}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#3D2B2E', textDecoration: item.completado ? 'line-through' : 'none', opacity: item.completado ? .6 : 1 }}>{item.titulo}</div>
                   </div>
-                  {item.fecha_objetivo && <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', flexShrink: 0 }}>{item.fecha_objetivo}</div>}
-                  <button onClick={() => borrarTimeline(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                  {item.fecha_objetivo && <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', flexShrink: 0 }}>{item.fecha_objetivo}</div>}
+                  <button onClick={() => borrarTimeline(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
               <input value={nuevoTitulo} onChange={e => setNuevoTitulo(e.target.value)} placeholder={lang === 'en' ? 'Task' : 'Tarea'} style={{ ...inputStyle, flex: 2, minWidth: 140 }} />
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Target date' : 'Fecha objetivo'}</span>
-                <input type="date" value={nuevaFecha} onChange={e => setNuevaFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const, marginBottom: 0 }} />
+                <span style={{ fontSize: 9, color: 'rgba(61,43,46,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Target date' : 'Fecha objetivo'}</span>
+                <input type="date" value={nuevaFecha} onChange={e => setNuevaFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'light' as const, marginBottom: 0 }} />
               </div>
-              <button onClick={agregarTimeline} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={agregarTimeline} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
         )}
@@ -1157,42 +1157,42 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           <div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {tablero.filter(x => x.tablero === tab).map(item => (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <input type="checkbox" checked={!!item.completado} onChange={() => toggleCompletadoTablero(item)} style={{ width: 16, height: 16, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: item.completado ? 'line-through' : 'none', opacity: item.completado ? .6 : 1 }}>{item.titulo}</div>
-                  <button onClick={() => borrarTablero(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#3D2B2E', textDecoration: item.completado ? 'line-through' : 'none', opacity: item.completado ? .6 : 1 }}>{item.titulo}</div>
+                  <button onClick={() => borrarTablero(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarTablero(tab)} placeholder={lang === 'en' ? 'Add a to-do' : 'Agregar pendiente'} style={{ ...inputStyle, flex: 1 }} />
-              <button onClick={() => agregarTablero(tab as TableroKey)} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={() => agregarTablero(tab as TableroKey)} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
         )}
 
         {tab === 'wedding_planner' && (
           <div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
               {lang === 'en' ? 'Compare candidates' : 'Comparativa'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {wpCandidatos.map(item => (
-                <div key={item.id} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div key={item.id} style={{ background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{item.nombre}</div>
-                      {item.contacto_nombre && <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{item.contacto_nombre}</div>}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{item.nombre}</div>
+                      {item.contacto_nombre && <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)' }}>{item.contacto_nombre}</div>}
                     </div>
-                    {item.costo_cotizado != null && <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(item.costo_cotizado)}</div>}
-                    <button onClick={() => borrarProveedor(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                    {item.costo_cotizado != null && <div style={{ fontSize: 13, fontWeight: 800, color: '#B76E79' }}>{fmtMoney(item.costo_cotizado)}</div>}
+                    <button onClick={() => borrarProveedor(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                   </div>
                   <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' as const }}>
                     {ESTADOS_PROVEEDOR.map(e => (
                       <button key={e} onClick={() => cambiarEstadoProveedor(item, e)} style={{
                         border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99,
-                        background: item.estado === e ? ESTADO_LABEL[e].color : 'rgba(255,255,255,.08)',
-                        color: item.estado === e ? '#241c45' : 'rgba(255,255,255,.5)',
+                        background: item.estado === e ? ESTADO_LABEL[e].color : 'rgba(183,110,121,.08)',
+                        color: item.estado === e ? '#3D2B2E' : 'rgba(61,43,46,.5)',
                       }}>{lang === 'en' ? ESTADO_LABEL[e].en : ESTADO_LABEL[e].es}</button>
                     ))}
                   </div>
@@ -1203,30 +1203,30 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input value={nuevoWpNombre} onChange={e => setNuevoWpNombre(e.target.value)} placeholder={lang === 'en' ? 'Candidate name' : 'Nombre'} style={{ ...inputStyle, flex: 2, minWidth: 130 }} />
               <input value={nuevoWpContacto} onChange={e => setNuevoWpContacto(e.target.value)} placeholder={lang === 'en' ? 'Contact' : 'Contacto'} style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
               <input type="number" value={nuevoWpCosto} onChange={e => setNuevoWpCosto(e.target.value)} placeholder={lang === 'en' ? 'Quote' : 'Cotización'} style={{ ...inputStyle, width: 90 }} />
-              <button onClick={agregarWpCandidato} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={agregarWpCandidato} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
 
             {wpContratado ? (
               <div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
                   {lang === 'en' ? `What ${wpContratado.nombre} will do` : `Qué va a hacer ${wpContratado.nombre}`}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
                   {tablero.filter(x => x.tablero === 'wedding_planner').map(item => (
-                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                       <input type="checkbox" checked={!!item.completado} onChange={() => toggleCompletadoTablero(item)} style={{ width: 16, height: 16, flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: item.completado ? 'line-through' : 'none', opacity: item.completado ? .6 : 1 }}>{item.titulo}</div>
-                      <button onClick={() => borrarTablero(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#3D2B2E', textDecoration: item.completado ? 'line-through' : 'none', opacity: item.completado ? .6 : 1 }}>{item.titulo}</div>
+                      <button onClick={() => borrarTablero(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                     </div>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input value={nuevoItem} onChange={e => setNuevoItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && agregarTablero('wedding_planner')} placeholder={lang === 'en' ? 'Add a responsibility' : 'Agregar responsabilidad'} style={{ ...inputStyle, flex: 1 }} />
-                  <button onClick={() => agregarTablero('wedding_planner')} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+                  <button onClick={() => agregarTablero('wedding_planner')} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
                 </div>
               </div>
             ) : (
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)' }}>
+              <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)' }}>
                 {lang === 'en' ? 'Mark one candidate as "Booked" above to unlock their checklist.' : 'Marca a uno como "Contratado" arriba para desbloquear su checklist.'}
               </p>
             )}
@@ -1237,23 +1237,23 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           <div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {proveedores.map(item => (
-                <div key={item.id} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div key={item.id} style={{ background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{item.nombre}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{item.nombre}</div>
                       {(item.categoria || item.contacto_nombre) && (
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{[item.categoria, item.contacto_nombre].filter(Boolean).join(' · ')}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)' }}>{[item.categoria, item.contacto_nombre].filter(Boolean).join(' · ')}</div>
                       )}
                     </div>
-                    {item.costo_cotizado != null && <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(item.costo_cotizado)}</div>}
-                    <button onClick={() => borrarProveedor(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                    {item.costo_cotizado != null && <div style={{ fontSize: 13, fontWeight: 800, color: '#B76E79' }}>{fmtMoney(item.costo_cotizado)}</div>}
+                    <button onClick={() => borrarProveedor(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                   </div>
                   <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' as const }}>
                     {ESTADOS_PROVEEDOR.map(e => (
                       <button key={e} onClick={() => cambiarEstadoProveedor(item, e)} style={{
                         border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99,
-                        background: item.estado === e ? ESTADO_LABEL[e].color : 'rgba(255,255,255,.08)',
-                        color: item.estado === e ? '#241c45' : 'rgba(255,255,255,.5)',
+                        background: item.estado === e ? ESTADO_LABEL[e].color : 'rgba(183,110,121,.08)',
+                        color: item.estado === e ? '#3D2B2E' : 'rgba(61,43,46,.5)',
                       }}>{lang === 'en' ? ESTADO_LABEL[e].en : ESTADO_LABEL[e].es}</button>
                     ))}
                   </div>
@@ -1265,7 +1265,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input value={nuevoProvCategoria} onChange={e => setNuevoProvCategoria(e.target.value)} placeholder={lang === 'en' ? 'Category' : 'Categoría'} style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
               <input value={nuevoProvContacto} onChange={e => setNuevoProvContacto(e.target.value)} placeholder={lang === 'en' ? 'Contact' : 'Contacto'} style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
               <input type="number" value={nuevoProvCosto} onChange={e => setNuevoProvCosto(e.target.value)} placeholder={lang === 'en' ? 'Quote' : 'Cotización'} style={{ ...inputStyle, width: 90 }} />
-              <button onClick={agregarProveedor} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={agregarProveedor} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
         )}
@@ -1274,19 +1274,19 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           <div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {contratos.map(item => (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'rgba(255,255,255,.5)', fontWeight: 700, flexShrink: 0 }}>
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'rgba(61,43,46,.5)', fontWeight: 700, flexShrink: 0 }}>
                     <input type="checkbox" checked={!!item.firmado} onChange={() => toggleFirmado(item)} style={{ width: 16, height: 16 }} />
                     {lang === 'en' ? 'Signed' : 'Firmado'}
                   </label>
-                  <div onClick={() => verContrato(item.archivo_url)} style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#EEC9DD', cursor: 'pointer', textDecoration: 'underline' }}>{item.nombre}</div>
-                  <button onClick={() => borrarContrato(item)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                  <div onClick={() => verContrato(item.archivo_url)} style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: '#B76E79', cursor: 'pointer', textDecoration: 'underline' }}>{item.nombre}</div>
+                  <button onClick={() => borrarContrato(item)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
               <input value={nuevoContratoNombre} onChange={e => setNuevoContratoNombre(e.target.value)} placeholder={lang === 'en' ? 'Contract name (optional)' : 'Nombre del contrato (opcional)'} style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
-              <label style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+              <label style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                 {subiendoContrato ? '...' : (lang === 'en' ? 'Upload' : 'Subir')}
                 <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={e => e.target.files?.[0] && subirContrato(e.target.files[0])} style={{ display: 'none' }} />
               </label>
@@ -1296,19 +1296,19 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
         {tab === 'pagos' && (
           <div>
-            <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 14, padding: '14px 16px', marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Total paid' : 'Total pagado'}</div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#7CE0A8' }}>{fmtMoney(totalPagos)}</div>
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 14, padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700 }}>{lang === 'en' ? 'Total paid' : 'Total pagado'}</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#3FA76B' }}>{fmtMoney(totalPagos)}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
               {pagos.map(item => (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{item.concepto}</div>
-                    {item.fecha && <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{item.fecha}</div>}
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{item.concepto}</div>
+                    {item.fecha && <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)' }}>{item.fecha}</div>}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(item.monto)}</div>
-                  <button onClick={() => borrarPago(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#B76E79' }}>{fmtMoney(item.monto)}</div>
+                  <button onClick={() => borrarPago(item.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
                 </div>
               ))}
             </div>
@@ -1316,10 +1316,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input value={nuevoPagoConcepto} onChange={e => setNuevoPagoConcepto(e.target.value)} placeholder={lang === 'en' ? 'What was it for' : 'Concepto'} style={{ ...inputStyle, flex: 2, minWidth: 130 }} />
               <input type="number" value={nuevoPagoMonto} onChange={e => setNuevoPagoMonto(e.target.value)} placeholder={lang === 'en' ? 'Amount' : 'Monto'} style={{ ...inputStyle, width: 90 }} />
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Payment date' : 'Fecha del pago'}</span>
-                <input type="date" value={nuevoPagoFecha} onChange={e => setNuevoPagoFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const, marginBottom: 0 }} />
+                <span style={{ fontSize: 9, color: 'rgba(61,43,46,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Payment date' : 'Fecha del pago'}</span>
+                <input type="date" value={nuevoPagoFecha} onChange={e => setNuevoPagoFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'light' as const, marginBottom: 0 }} />
               </div>
-              <button onClick={agregarPago} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+              <button onClick={agregarPago} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
         )}
@@ -1345,19 +1345,19 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
           return (
             <div>
               {filas.length === 0 ? (
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,.4)' }}>
+                <p style={{ fontSize: 13, color: 'rgba(61,43,46,.4)' }}>
                   {lang === 'en' ? 'Nothing yet — add due dates in Budget or payments in Payments.' : 'Todavía nada — agrega fechas límite en Presupuesto o pagos en Pagos.'}
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                   {filas.map(f => (
-                    <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                    <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{f.concepto}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>{f.fecha}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{f.concepto}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)' }}>{f.fecha}</div>
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#EEC9DD' }}>{fmtMoney(f.monto)}</div>
-                      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: ESTADO_CAL[f.estado].color, color: '#241c45' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#B76E79' }}>{fmtMoney(f.monto)}</div>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: ESTADO_CAL[f.estado].color, color: '#3D2B2E' }}>
                         {lang === 'en' ? ESTADO_CAL[f.estado].en : ESTADO_CAL[f.estado].es}
                       </span>
                     </div>
@@ -1370,16 +1370,16 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
         {tab === 'inspiracion' && (
           <div>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', marginBottom: 14 }}>
+            <p style={{ fontSize: 13, color: 'rgba(61,43,46,.55)', marginBottom: 14 }}>
               {lang === 'en' ? 'Save a link to your inspiration board (Pinterest, Canva, etc).' : 'Guarda un link a tu tablero de inspiración (Pinterest, Canva, etc).'}
             </p>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
               <input value={linkInspiracion} onChange={e => setLinkInspiracion(e.target.value)} placeholder={lang === 'en' ? 'https://...' : 'https://...'} style={{ ...inputStyle, flex: 1, minWidth: 200 }} />
-              <button onClick={guardarLinkInspiracion} disabled={guardandoInspiracion} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+              <button onClick={guardarLinkInspiracion} disabled={guardandoInspiracion} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                 {lang === 'en' ? 'Save' : 'Guardar'}
               </button>
               {proyecto?.link_inspiracion && (
-                <button onClick={() => window.open(proyecto.link_inspiracion, '_blank')} style={{ border: '1px solid rgba(255,255,255,.15)', background: 'rgba(255,255,255,.06)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
+                <button onClick={() => window.open(proyecto.link_inspiracion, '_blank')} style={{ border: '1px solid rgba(183,110,121,.15)', background: 'rgba(183,110,121,.06)', color: '#3D2B2E', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>
                   {lang === 'en' ? 'Open' : 'Abrir'}
                 </button>
               )}
