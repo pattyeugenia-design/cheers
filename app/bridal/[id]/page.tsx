@@ -14,15 +14,15 @@ const BG = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
 // Mismos temas/fuentes que la invitación normal de Cheers (app/[usuario]/[evento])
 // — así la invitación de boda se ve consistente con el resto de la app en vez de
 // inventar un sistema de diseño aparte.
-const TEMAS: Record<string, { label_es: string; label_en: string; bg: string }> = {
-  morado:  { label_es: 'Morado',  label_en: 'Purple', bg: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)' },
-  rosa:    { label_es: 'Rosa',    label_en: 'Pink',   bg: 'linear-gradient(155deg,#D4537E,#a14b9c)' },
-  noche:   { label_es: 'Noche',   label_en: 'Night',  bg: 'linear-gradient(160deg,#0f0c29,#302b63,#24243e)' },
-  bosque:  { label_es: 'Bosque',  label_en: 'Forest', bg: 'linear-gradient(155deg,#1a3c2a,#2d6a4f,#40916c)' },
-  ambar:   { label_es: 'Ámbar',   label_en: 'Amber',  bg: 'linear-gradient(155deg,#b5451b,#e76f51,#f4a261)' },
-  carbon:  { label_es: 'Carbón',  label_en: 'Carbon', bg: 'linear-gradient(160deg,#1a1a1a,#2d2d2d,#3d3d3d)' },
-  lavanda: { label_es: 'Lavanda', label_en: 'Lavender', bg: '#B8B0F0' },
-  crema:   { label_es: 'Crema',   label_en: 'Cream',  bg: '#FBF4EC' },
+const TEMAS: Record<string, { label_es: string; label_en: string; bg: string; dark: boolean }> = {
+  morado:  { label_es: 'Morado',  label_en: 'Purple', bg: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)', dark: true },
+  rosa:    { label_es: 'Rosa',    label_en: 'Pink',   bg: 'linear-gradient(155deg,#D4537E,#a14b9c)', dark: true },
+  noche:   { label_es: 'Noche',   label_en: 'Night',  bg: 'linear-gradient(160deg,#0f0c29,#302b63,#24243e)', dark: true },
+  bosque:  { label_es: 'Bosque',  label_en: 'Forest', bg: 'linear-gradient(155deg,#1a3c2a,#2d6a4f,#40916c)', dark: true },
+  ambar:   { label_es: 'Ámbar',   label_en: 'Amber',  bg: 'linear-gradient(155deg,#b5451b,#e76f51,#f4a261)', dark: true },
+  carbon:  { label_es: 'Carbón',  label_en: 'Carbon', bg: 'linear-gradient(160deg,#1a1a1a,#2d2d2d,#3d3d3d)', dark: true },
+  lavanda: { label_es: 'Lavanda', label_en: 'Lavender', bg: '#B8B0F0', dark: false },
+  crema:   { label_es: 'Crema',   label_en: 'Cream',  bg: '#FBF4EC', dark: false },
 }
 const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
 
@@ -81,7 +81,16 @@ const inputStyle: React.CSSProperties = {
 
 function fmtMoney(n: number | null | undefined) {
   if (n == null) return '—'
-  return '$' + Number(n).toLocaleString()
+  return Number(n).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// Solo para las tarjetas de vista previa de la invitación — la fecha se guarda como
+// YYYY-MM-DD (sin formato), aquí solo se muestra bonita, no se toca lo guardado.
+function fmtFechaBonita(fecha: string | null | undefined, lang: string) {
+  if (!fecha) return null
+  const d = new Date(fecha + 'T00:00:00')
+  if (isNaN(d.getTime())) return fecha
+  return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export default function ProyectoBoda({ params }: { params: Promise<{ id: string }> }) {
@@ -576,6 +585,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const pagosProximos = presupuesto.filter(x => !x.pagado && x.fecha_limite && x.fecha_limite >= hoy && x.fecha_limite <= en30dias)
   const contratosFirmados = contratos.filter(c => c.firmado).length
   const rsvpConfirmados = rsvpsBoda.filter(r => r.asistencia === 'si').length
+  // Si aún no hay detalle línea por línea, usar el estimado que se llenó al crear el proyecto,
+  // para que el tile no se vea en $0/0 cuando en realidad ya hay un número dado.
+  const presupuestoMetaTile = totalEstimado > 0 ? totalEstimado : (Number(proyecto?.presupuesto_total) || 0)
+  const invitadosMetaTile = invitadosBoda.length > 0 ? invitadosBoda.length : (Number(proyecto?.invitados_estimados) || 0)
 
   return (
     <main style={{ minHeight: '100vh', background: BG, fontFamily: F, padding: '50px 20px 80px' }}>
@@ -746,19 +759,43 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
-                {TEMA_ORDER.map(k => (
-                  <button key={k} onClick={() => guardarTema(k)} style={{
-                    border: (proyecto?.tema || 'morado') === k ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 9, padding: '7px 10px', cursor: 'pointer',
-                    background: TEMAS[k].bg, color: '#fff', fontSize: 11, fontWeight: 700, fontFamily: F,
-                  }}>{lang === 'en' ? TEMAS[k].label_en : TEMAS[k].label_es}</button>
-                ))}
+              {/* Vista previa real por tema — como Zola/Joy/Bliss & Bone: cada tarjeta
+                  ya muestra tu foto, tus nombres y tu fecha con ese tema puesto, no
+                  solo un color suelto. Toca una para elegirla. */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12, overflowX: 'auto' as const, paddingBottom: 4, WebkitOverflowScrolling: 'touch' as const }}>
+                {TEMA_ORDER.map(k => {
+                  const t = TEMAS[k]
+                  const seleccionado = (proyecto?.tema || 'morado') === k
+                  const txt = t.dark ? '#fff' : '#3D2B2E'
+                  const nombreBoda = [proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ') || (lang === 'en' ? 'Your names' : 'Tus nombres')
+                  const fechaBonita = fmtFechaBonita(proyecto?.fecha_boda, lang)
+                  return (
+                    <div key={k} style={{ flexShrink: 0, width: 138 }}>
+                      <div onClick={() => guardarTema(k)} style={{ position: 'relative', width: 138, height: 172, borderRadius: 16, overflow: 'hidden', cursor: 'pointer', background: t.bg, outline: seleccionado ? '3px solid #D4537E' : '3px solid transparent', outlineOffset: 2 }}>
+                        {proyecto?.portada_url && (
+                          <>
+                            <Image src={proyecto.portada_url} alt="" fill sizes="138px" style={{ objectFit: 'cover', objectPosition: proyecto.portada_posicion || 'center', opacity: .5 }} />
+                            <div style={{ position: 'absolute', inset: 0, background: t.bg, opacity: .55 }} />
+                          </>
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '10px 10px', textAlign: 'center' as const }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: txt, fontFamily: FUENTES[proyecto?.fuente || 'system'].font, lineHeight: 1.2 }}>{nombreBoda}</div>
+                          {fechaBonita && <div style={{ fontSize: 9, color: txt, opacity: .85, marginTop: 6, textTransform: 'uppercase' as const, letterSpacing: '.5px' }}>{fechaBonita}</div>}
+                        </div>
+                        {seleccionado && (
+                          <div style={{ position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#D4537E' }}>✓</div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', fontWeight: 700, textAlign: 'center' as const, marginTop: 6 }}>{lang === 'en' ? t.label_en : t.label_es}</div>
+                    </div>
+                  )
+                })}
               </div>
 
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
                 {FUENTE_ORDER.map(k => (
                   <button key={k} onClick={() => guardarFuente(k)} style={{
-                    border: (proyecto?.fuente || 'system') === k ? '2px solid #fff' : '2px solid rgba(255,255,255,.15)', borderRadius: 9, padding: '7px 12px', cursor: 'pointer',
+                    border: (proyecto?.fuente || 'system') === k ? '2px solid #D4537E' : '2px solid rgba(255,255,255,.15)', borderRadius: 9, padding: '7px 12px', cursor: 'pointer',
                     background: (proyecto?.fuente || 'system') === k ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.08)',
                     color: (proyecto?.fuente || 'system') === k ? '#2a2440' : '#fff', fontSize: 12, fontFamily: FUENTES[k].font, fontWeight: 700,
                   }}>{FUENTES[k].label}</button>
@@ -771,7 +808,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               {moduloActivo('presupuesto') && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Budget' : 'Presupuesto'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{fmtMoney(totalPagado)} / {fmtMoney(totalEstimado)}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{fmtMoney(totalPagado)} / {fmtMoney(presupuestoMetaTile)}{totalEstimado === 0 && presupuestoMetaTile > 0 ? (lang === 'en' ? ' (estimate)' : ' (estimado)') : ''}</div>
                   {pagosVencidos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#f4a3a3', color: '#241c45' }}>{pagosVencidos.length} {lang === 'en' ? 'overdue' : 'vencidos'}</span>}
                   {pagosProximos.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99, background: '#c98a1e', color: '#241c45' }}>{pagosProximos.length} {lang === 'en' ? 'due soon' : 'próximos'}</span>}
                 </div>
@@ -785,7 +822,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               {moduloActivo('invitados') && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
                   <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
-                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{rsvpConfirmados}/{invitadosBoda.length} {lang === 'en' ? 'confirmed' : 'confirmados'}</div>
+                  <div style={{ fontSize: 12, color: '#EEC9DD' }}>{rsvpConfirmados}/{invitadosMetaTile} {lang === 'en' ? 'confirmed' : 'confirmados'}{invitadosBoda.length === 0 && invitadosMetaTile > 0 ? (lang === 'en' ? ' (estimate)' : ' (estimado)') : ''}</div>
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '10px 14px' }}>
@@ -975,7 +1012,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder={lang === 'en' ? 'Item' : 'Concepto'} style={{ ...inputStyle, flex: 2, minWidth: 120 }} />
               <input value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} placeholder={lang === 'en' ? 'Category' : 'Categoría'} style={{ ...inputStyle, flex: 1, minWidth: 100 }} />
               <input type="number" value={nuevoCosto} onChange={e => setNuevoCosto(e.target.value)} placeholder={lang === 'en' ? 'Cost' : 'Costo'} style={{ ...inputStyle, width: 90 }} />
-              <input type="date" value={nuevaFechaLimite} onChange={e => setNuevaFechaLimite(e.target.value)} title={lang === 'en' ? 'Payment due date (optional)' : 'Fecha límite de pago (opcional)'} style={{ ...inputStyle, colorScheme: 'dark' as const }} />
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Due date (optional)' : 'Fecha límite de pago (opcional)'}</span>
+                <input type="date" value={nuevaFechaLimite} onChange={e => setNuevaFechaLimite(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const, marginBottom: 0 }} />
+              </div>
               <button onClick={agregarPresupuesto} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
@@ -997,7 +1037,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
               <input value={nuevoTitulo} onChange={e => setNuevoTitulo(e.target.value)} placeholder={lang === 'en' ? 'Task' : 'Tarea'} style={{ ...inputStyle, flex: 2, minWidth: 140 }} />
-              <input type="date" value={nuevaFecha} onChange={e => setNuevaFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const }} />
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Target date' : 'Fecha objetivo'}</span>
+                <input type="date" value={nuevaFecha} onChange={e => setNuevaFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const, marginBottom: 0 }} />
+              </div>
               <button onClick={agregarTimeline} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
@@ -1165,7 +1208,10 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
               <input value={nuevoPagoConcepto} onChange={e => setNuevoPagoConcepto(e.target.value)} placeholder={lang === 'en' ? 'What was it for' : 'Concepto'} style={{ ...inputStyle, flex: 2, minWidth: 130 }} />
               <input type="number" value={nuevoPagoMonto} onChange={e => setNuevoPagoMonto(e.target.value)} placeholder={lang === 'en' ? 'Amount' : 'Monto'} style={{ ...inputStyle, width: 90 }} />
-              <input type="date" value={nuevoPagoFecha} onChange={e => setNuevoPagoFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const }} />
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Payment date' : 'Fecha del pago'}</span>
+                <input type="date" value={nuevoPagoFecha} onChange={e => setNuevoPagoFecha(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const, marginBottom: 0 }} />
+              </div>
               <button onClick={agregarPago} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
           </div>
