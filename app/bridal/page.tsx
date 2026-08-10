@@ -5,11 +5,23 @@ import { supabase } from '../supabase'
 import { getLang } from '../i18n'
 
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
-const BG = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
+// Paleta Bridal: blanco/champagne/pale rose/gold rose — distinta del morado oscuro
+// del resto de Cheers, solo para el panel de organización de la boda (no toca el
+// picker de temas de la invitación, que sigue siendo independiente).
+const BG = 'linear-gradient(160deg,#FFFDFB,#FBF1E7 55%,#F6E4DC)'
+const ACCENT_GRADIENT = 'linear-gradient(135deg,#C9A876,#C98A93)'
+const ACCENT = '#B76E79'
+const TXT_PRIMARY = '#3D2B2E'
+const TXT_SECONDARY = 'rgba(61,43,46,.62)'
+const TXT_TERTIARY = 'rgba(61,43,46,.42)'
+const CARD_BG = 'rgba(183,110,121,.07)'
+const CARD_BORDER = '1px solid rgba(183,110,121,.14)'
+const PILL_BG = 'rgba(183,110,121,.08)'
+const PILL_BORDER = 'rgba(183,110,121,.2)'
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', border: '1px solid rgba(255,255,255,.15)', background: 'rgba(255,255,255,.06)',
-  color: '#fff', fontSize: 14, padding: '11px 14px', borderRadius: 10, fontFamily: F, marginBottom: 12,
+  width: '100%', border: '1px solid rgba(183,110,121,.22)', background: '#fff',
+  color: TXT_PRIMARY, fontSize: 14, padding: '11px 14px', borderRadius: 10, fontFamily: F, marginBottom: 12,
 }
 
 export default function Bridal() {
@@ -155,31 +167,31 @@ export default function Bridal() {
 
   if (cargando) return (
     <main style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F }}>
-      <p style={{ color: '#EEC9DD' }}>{lang === 'en' ? 'Loading…' : 'Cargando…'}</p>
+      <p style={{ color: ACCENT }}>{lang === 'en' ? 'Loading…' : 'Cargando…'}</p>
     </main>
   )
 
   return (
     <main style={{ minHeight: '100vh', background: BG, fontFamily: F, padding: '60px 20px' }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
-        <button onClick={() => router.push('/perfil')} style={{ border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: F, marginBottom: 28 }}>
+        <button onClick={() => router.push('/perfil')} style={{ border: 'none', background: PILL_BG, color: TXT_SECONDARY, fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 99, cursor: 'pointer', fontFamily: F, marginBottom: 28 }}>
           {lang === 'en' ? '← Back' : '← Atrás'}
         </button>
 
-        <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', margin: '0 0 6px', letterSpacing: '-.5px' }}>Cheers Bridal</h1>
-        <p style={{ fontSize: 14, color: 'rgba(255,255,255,.55)', marginBottom: 32 }}>
+        <h1 style={{ fontSize: 30, fontWeight: 900, color: TXT_PRIMARY, margin: '0 0 6px', letterSpacing: '-.5px' }}>Cheers Bridal</h1>
+        <p style={{ fontSize: 14, color: TXT_SECONDARY, marginBottom: 32 }}>
           {lang === 'en' ? 'Everything to plan your wedding, in one place.' : 'Todo para planear tu boda, en un solo lugar.'}
         </p>
 
         {activando && (
-          <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: '16px 18px', marginBottom: 20, color: '#EEC9DD', fontSize: 13, fontWeight: 700 }}>
+          <div style={{ background: CARD_BG, border: CARD_BORDER, borderRadius: 16, padding: '16px 18px', marginBottom: 20, color: ACCENT, fontSize: 13, fontWeight: 700 }}>
             {lang === 'en' ? 'Activating your account…' : 'Activando tu cuenta…'}
           </div>
         )}
 
         {plan !== 'lifetime' ? (
-          <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: '28px 24px' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 14 }}>
+          <div style={{ background: '#fff', border: CARD_BORDER, boxShadow: '0 2px 10px rgba(61,43,46,.06)', borderRadius: 20, padding: '28px 24px' }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: TXT_PRIMARY, marginBottom: 14 }}>
               {lang === 'en' ? "What's inside" : 'Qué incluye'}
             </div>
             {/* Antes esto era una sola frase antes de pedir la tarjeta — sin decir
@@ -195,61 +207,61 @@ export default function Bridal() {
                 { es: 'El gran día y después', en: 'The big day & after', esD: 'Timeline del día B, luna de miel y vida después de la boda.', enD: 'Wedding-day timeline, honeymoon, and life after the wedding.' },
               ].map((f, i) => (
                 <div key={i}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 2 }}>{lang === 'en' ? f.en : f.es}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', lineHeight: 1.5 }}>{lang === 'en' ? f.enD : f.esD}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: TXT_PRIMARY, marginBottom: 2 }}>{lang === 'en' ? f.en : f.es}</div>
+                  <div style={{ fontSize: 12, color: TXT_SECONDARY, lineHeight: 1.5 }}>{lang === 'en' ? f.enD : f.esD}</div>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, marginBottom: 16 }}>
+            <p style={{ fontSize: 13, color: TXT_SECONDARY, lineHeight: 1.6, marginBottom: 16 }}>
               {lang === 'en'
                 ? 'Cheers Bridal is not a separate purchase — buying Extra Cheer ($49, one time) unlocks it, plus everything Extra Cheer already includes for the rest of your celebrations, forever.'
                 : 'Cheers Bridal no se compra aparte — con Extra Cheer ($49, pago único) lo desbloqueas, además de todo lo que Extra Cheer ya incluye para el resto de tus celebraciones, para siempre.'}
             </p>
-            <button onClick={comprar} disabled={comprando} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 14, fontWeight: 800, padding: '12px 20px', borderRadius: 12, cursor: 'pointer', fontFamily: F }}>
+            <button onClick={comprar} disabled={comprando} style={{ border: 'none', background: ACCENT_GRADIENT, color: '#fff', fontSize: 14, fontWeight: 800, padding: '12px 20px', borderRadius: 12, cursor: 'pointer', fontFamily: F }}>
               {comprando ? '...' : (lang === 'en' ? 'Get Extra Cheer — $49 →' : 'Comprar Extra Cheer — $49 →')}
             </button>
           </div>
         ) : proyectos.length === 0 && !creando ? (
-          <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: '28px 24px', textAlign: 'center' as const }}>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,.6)', marginBottom: 18 }}>
+          <div style={{ background: '#fff', border: CARD_BORDER, boxShadow: '0 2px 10px rgba(61,43,46,.06)', borderRadius: 20, padding: '28px 24px', textAlign: 'center' as const }}>
+            <p style={{ fontSize: 14, color: TXT_SECONDARY, marginBottom: 18 }}>
               {lang === 'en' ? "You don't have a wedding project yet." : 'Todavía no tienes un proyecto de boda.'}
             </p>
-            <button onClick={() => setCreando(true)} style={{ border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 14, fontWeight: 800, padding: '12px 20px', borderRadius: 12, cursor: 'pointer', fontFamily: F }}>
+            <button onClick={() => setCreando(true)} style={{ border: 'none', background: ACCENT_GRADIENT, color: '#fff', fontSize: 14, fontWeight: 800, padding: '12px 20px', borderRadius: 12, cursor: 'pointer', fontFamily: F }}>
               {lang === 'en' ? '+ Start planning' : '+ Empezar a planear'}
             </button>
           </div>
         ) : creando ? (
-          <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 20, padding: '24px 22px' }}>
+          <div style={{ background: '#fff', border: CARD_BORDER, boxShadow: '0 2px 10px rgba(61,43,46,.06)', borderRadius: 20, padding: '24px 22px' }}>
             <input value={nombreNovia} onChange={e => setNombreNovia(e.target.value)} placeholder={lang === 'en' ? "Bride's name" : 'Nombre de la novia'} style={inputStyle} />
             <input value={nombreNovio} onChange={e => setNombreNovio(e.target.value)} placeholder={lang === 'en' ? "Groom's name" : 'Nombre del novio'} style={inputStyle} />
-            <input type="date" value={fechaBoda} onChange={e => setFechaBoda(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' as const }} />
+            <input type="date" value={fechaBoda} onChange={e => setFechaBoda(e.target.value)} style={{ ...inputStyle, colorScheme: 'light' as const }} />
             <input type="number" value={presupuestoTotal} onChange={e => setPresupuestoTotal(e.target.value)} placeholder={lang === 'en' ? 'Total budget (optional)' : 'Presupuesto total (opcional)'} style={inputStyle} />
             <input type="number" min={0} value={invitadosEstimados} onChange={e => setInvitadosEstimados(e.target.value)} placeholder={lang === 'en' ? 'Estimated guests (optional)' : 'Invitados estimados (opcional)'} style={inputStyle} />
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px' }}>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', fontWeight: 600 }}>{lang === 'en' ? 'Church ceremony' : 'Ceremonia religiosa'}</span>
+              <span style={{ fontSize: 13, color: TXT_SECONDARY, fontWeight: 600 }}>{lang === 'en' ? 'Church ceremony' : 'Ceremonia religiosa'}</span>
               <button type="button" onClick={() => setHayIglesia(v => !v)} style={{
                 border: 'none', cursor: 'pointer', width: 44, height: 26, borderRadius: 99, padding: 3,
-                background: hayIglesia ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.15)', display: 'flex', justifyContent: hayIglesia ? 'flex-end' : 'flex-start',
+                background: hayIglesia ? ACCENT_GRADIENT : PILL_BG, display: 'flex', justifyContent: hayIglesia ? 'flex-end' : 'flex-start',
               }}>
                 <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff', display: 'block' }} />
               </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px', marginBottom: 12 }}>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', fontWeight: 600 }}>{lang === 'en' ? 'Civil ceremony' : 'Ceremonia civil'}</span>
+              <span style={{ fontSize: 13, color: TXT_SECONDARY, fontWeight: 600 }}>{lang === 'en' ? 'Civil ceremony' : 'Ceremonia civil'}</span>
               <button type="button" onClick={() => setHayCivil(v => !v)} style={{
                 border: 'none', cursor: 'pointer', width: 44, height: 26, borderRadius: 99, padding: 3,
-                background: hayCivil ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.15)', display: 'flex', justifyContent: hayCivil ? 'flex-end' : 'flex-start',
+                background: hayCivil ? ACCENT_GRADIENT : PILL_BG, display: 'flex', justifyContent: hayCivil ? 'flex-end' : 'flex-start',
               }}>
                 <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff', display: 'block' }} />
               </button>
             </div>
-            {error && <p style={{ color: '#f4a3a3', fontSize: 12, marginBottom: 10 }}>{error}</p>}
+            {error && <p style={{ color: '#B84A4A', fontSize: 12, marginBottom: 10 }}>{error}</p>}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={crearProyecto} disabled={guardando} style={{ flex: 1, border: 'none', background: 'linear-gradient(135deg,#534AB7,#D4537E)', color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
+              <button onClick={crearProyecto} disabled={guardando} style={{ flex: 1, border: 'none', background: ACCENT_GRADIENT, color: '#fff', fontSize: 14, fontWeight: 800, padding: '11px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
                 {guardando ? '...' : (lang === 'en' ? 'Create project' : 'Crear proyecto')}
               </button>
-              <button onClick={() => setCreando(false)} style={{ border: '1px solid rgba(255,255,255,.15)', background: 'transparent', color: 'rgba(255,255,255,.7)', fontSize: 14, fontWeight: 700, padding: '11px 16px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
+              <button onClick={() => setCreando(false)} style={{ border: `1px solid ${PILL_BORDER}`, background: 'transparent', color: TXT_SECONDARY, fontSize: 14, fontWeight: 700, padding: '11px 16px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
                 {lang === 'en' ? 'Cancel' : 'Cancelar'}
               </button>
             </div>
@@ -257,12 +269,12 @@ export default function Bridal() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
             {proyectos.map(p => (
-              <div key={p.id} onClick={() => router.push(`/bridal/${p.id}`)} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 18, padding: '20px 22px', cursor: 'pointer' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>
+              <div key={p.id} onClick={() => router.push(`/bridal/${p.id}`)} style={{ background: '#fff', border: CARD_BORDER, boxShadow: '0 2px 10px rgba(61,43,46,.06)', borderRadius: 18, padding: '20px 22px', cursor: 'pointer' }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: TXT_PRIMARY }}>
                   {[p.nombre_novia, p.nombre_novio].filter(Boolean).join(' & ') || (lang === 'en' ? 'Your wedding' : 'Tu boda')}
                 </div>
-                {p.fecha_boda && <div style={{ fontSize: 13, color: '#EEC9DD', marginTop: 4 }}>{p.fecha_boda}</div>}
-                <div style={{ fontSize: 12, color: '#AFA9EC', marginTop: 14, fontWeight: 700 }}>
+                {p.fecha_boda && <div style={{ fontSize: 13, color: ACCENT, marginTop: 4 }}>{p.fecha_boda}</div>}
+                <div style={{ fontSize: 12, color: ACCENT, marginTop: 14, fontWeight: 700 }}>
                   {lang === 'en' ? 'Open budget, timeline & boards →' : 'Abrir presupuesto, timeline y tableros →'}
                 </div>
               </div>
