@@ -72,6 +72,9 @@ Además, en una auditoría RLS anterior (27 de julio) ya se habían cerrado: buc
 3. **Logo/foto de perfil para Instagram** — no existe ningún asset de marca en `/public` todavía.
 4. **`sameAs` de schema.org con el link de Instagram** — cambio de una línea, ofrecido antes, sin confirmar todavía si Patty quiere que se aplique.
 5. **RSVP flood** — el límite de 50 cada 10 min es una primera pasada; si en la práctica resulta muy bajo (evento muy popular) o muy alto (spam que igual se cuela), ajustar el número.
+6. **Flood en el muro de mensajes** — a diferencia de RSVPs, no tiene ningún límite todavía. Encontrado 2026-09-02, decisión pendiente de Patty (no urgente, requiere estar logueado para explotarlo).
+7. **Rate limit de "invitar por email" poco confiable en Vercel** — el límite actual (10/min) vive en memoria de una sola instancia serverless; con varias instancias corriendo el límite real es más flojo. Arreglarlo bien requiere Redis/Upstash (cuenta nueva, posible costo) — no urgente, encontrado 2026-09-02.
+8. **Dashboard personalizable por evento** — visión grande de Patty (2026-09-02): que cada celebración se arme con bloques personalizables (checklist, nota libre, etc.), no solo el set fijo actual por tipo de evento. Falta armar el spec antes de tocar código — es cambio grande al modelo de datos (`tile_layouts`).
 
 **Ya NO están pendientes** (estaban en la versión anterior de este brief, ya resueltos, no volver a preguntar):
 - Apelación de la cuenta de Google `joincheers.app@gmail.com` — resuelta (confirmado por Patty el 31 de julio).
@@ -79,13 +82,34 @@ Además, en una auditoría RLS anterior (27 de julio) ya se habían cerrado: buc
 - Verificación del dominio de Resend en DNS — confirmado verificado vía la API de Resend.
 - Activación de Stripe en modo live — ya está live desde el 21 de julio.
 
-## 7. Dónde está todo
+## 7. Actualización — 2 de septiembre de 2026
+
+Desde el 1 de agosto pasaron dos cosas grandes que este brief no reflejaba:
+
+**Cheers Bridal** (lanzado 6 de agosto): producto paralelo en `/bridal`, tabla `proyectos_boda` separada de `celebraciones`, mismo precio/plan que Extra Cheer. 13 módulos (presupuesto, contratos, proveedores, invitados, timeline, etc.). Auditado por separado el 8 de agosto (RLS, storage y funciones sólidos, 1 hallazgo bajo ya corregido).
+
+**Campaña de cortesías en grupo de Facebook** ("Girls Diary"): primera vez que Cheers regala cuentas a gente que Patty no conoce en persona, no solo amigas/familia. Se construyó un sistema nuevo — tabla `cortesias_preaprobadas` + triggers que aplican Extra Cheer automático en cuanto la persona crea su cuenta, sin que Patty tenga que activarlo a mano ni que la persona avise su username. Botón "Preaprobar cortesía" en el dashboard admin. Seguimiento completo en `correos_cortesia_grupo_facebook_2026_08_31.md`.
+
+**Auditoría de seguridad ampliada (2026-09-01/02)**, disparada por lo anterior — ya no son solo usuarios de confianza. 3 huecos reales cerrados:
+- `perfiles.plan` y `celebraciones.plan` se podían cambiar directo desde el navegador (INSERT y UPDATE) sin pasar por Stripe — cualquiera podía regalarse Lifetime o Super Cheer. Cerrado con triggers que solo dejan tocar `plan` a admin o `service_role`.
+- `proyectos_boda_miembros` (Bridal) dejaba que cualquier miembro de una boda se auto-ascendiera a "creador" o agregara a terceros sin invitación real. Cerrado — hoy no existe flujo de invitar colaboradores a una boda, así que se restringió al único caso legítimo (auto-alta del creador). Si algún día se construye ese flujo, esta policy necesita rediseñarse.
+
+**`xlsx` actualizado** de 0.18.5 a 0.20.3 por 2 CVEs altos (prototype pollution, ReDoS). Ojo: SheetJS ya no publica versiones arregladas en el registro normal de npm — la dependencia en `package.json` apunta directo a `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`, no a un número de versión.
+
+**Bug de foto de portada corregido**: subida fallaba en silencio (sin mensaje) si la página no había cargado o si el archivo era HEIC de iPhone (Supabase no lo acepta). Ahora convierte HEIC a JPEG automático (librería `heic2any`), avisa cualquier error, y el recuadro detecta si la imagen falló al cargar en vez de quedarse en blanco sin explicación.
+
+**5 bugs de "falla silenciosa" corregidos** en `app/[usuario]/[evento]/page.tsx` y `app/[usuario]/nueva/page.tsx`: editar RSVP, agregar gasto compartido, agregar invitado, reservar regalo (incluye mensaje específico si dos personas reservan casi al mismo tiempo), crear evento con invitados iniciales. Antes fallaban sin avisar nada al usuario. Los de Bridal quedan pendientes, en stand-by.
+
+**Cancelar evento + aviso automático de cambio de fecha** (2 de septiembre): botón "Cancelar evento" (solo organizadora) con motivo opcional, manda correo + notificación in-app a todos los invitados (`app/api/notificar-cancelacion`), muestra un aviso arriba de la página a todos, y se auto-archiva a las 2 semanas (chequeo agregado al cron `post-evento`). Aparte, cambiar la fecha/hora del evento ahora también avisa automático a todos los invitados en cada guardado (`app/api/notificar-cambio-fecha`) — antes esto no notificaba a nadie. Columnas nuevas en `celebraciones`: `cancelada`, `cancelada_en`, `cancelada_motivo`.
+
+## 8. Dónde está todo
 
 - Proyecto de Supabase: `ykqlgogliwqgpxsmutvx` (nombre "Cheers", región us-east-1) — MCP de Supabase conectado, usar `apply_migration` para cualquier DDL.
 - Dominio de Resend verificado: `joincheers.app` — MCP de Resend conectado.
 - App de Facebook Developers: `967579169623123` (modo Development).
 - Estrategia de redes: `Estrategia_Redes_Sociales_Cheers.pdf` en la carpeta de Cheers.
-- Lista de cortesías Lifetime: `cortesias_lifetime.md`.
+- Lista de cortesías Lifetime (amigas/familia): `cortesias_lifetime.md`. Lista de cortesías del grupo de Facebook: `correos_cortesia_grupo_facebook_2026_08_31.md`.
+- Endpoint para preaprobar cortesías: `app/api/admin-preaprobar-cortesia/route.ts`.
 - Helper de correos compartido: `app/emailTemplate.ts`.
 - Login: `app/login/page.tsx` (Google + Facebook + email/password).
 - Página pública de evento (RSVP, mensajes, gastos, etc.): `app/[usuario]/[evento]/page.tsx`.

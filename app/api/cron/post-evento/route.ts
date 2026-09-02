@@ -16,6 +16,18 @@ export async function GET(req: Request) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
   const admin = createClient(supabaseUrl, serviceKey)
 
+  // Eventos cancelados hace más de 2 semanas se archivan solos — ya no hace
+  // falta que la organizadora los archive a mano, y la página cancelada deja
+  // de aparecer entre los eventos activos del dashboard.
+  const haceDosSemanas = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: archivadosAuto } = await admin
+    .from('celebraciones')
+    .update({ archivada: true })
+    .eq('cancelada', true)
+    .eq('archivada', false)
+    .lt('cancelada_en', haceDosSemanas)
+    .select('slug')
+
   // Eventos cuya fecha fue ayer (1 día después de la celebración)
   const ayerInicio = new Date()
   ayerInicio.setDate(ayerInicio.getDate() - 1)
@@ -101,5 +113,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ success: true, enviados, revisados: pasadas?.length ?? 0 })
+  return NextResponse.json({ success: true, enviados, revisados: pasadas?.length ?? 0, archivadosAutoPorCancelacion: archivadosAuto?.length ?? 0 })
 }

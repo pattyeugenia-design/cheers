@@ -242,10 +242,17 @@ export default function NuevaCelebracion() {
     setGuardandoInvitados(true)
     const seleccionados = invitados.filter(i => invited[i.id])
     if (seleccionados.length > 0) {
-      await supabase.from('invitados').insert(seleccionados.map(inv => ({
+      const { error } = await supabase.from('invitados').insert(seleccionados.map(inv => ({
         celebracion_slug: slugFinal, email: inv.email.includes('@') ? inv.email : null,
         nombre: inv.name, user_id: null, created_at: new Date().toISOString(),
       })))
+      // El evento ya se creó y de todos modos entramos a verlo — pero si esto falla,
+      // antes nadie se enteraba de que la lista de invitados quedó vacía.
+      if (error) {
+        alert(lang === 'en'
+          ? "Your event was created, but the guests couldn't be added. Add them from the event page."
+          : 'Tu evento se creó, pero no se pudo agregar a los invitados. Agrégalos desde la página del evento.')
+      }
     }
     setGuardandoInvitados(false)
     clearDraft()

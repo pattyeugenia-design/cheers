@@ -463,6 +463,16 @@ function VistaBrief({ celebracion, lang, locale, organizador, ocurrencias }: any
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
           <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
         </div>
+        {celebracion.cancelada && (
+          <div style={{ background: 'rgba(212,83,126,.12)', border: '1px solid rgba(212,83,126,.35)', borderRadius: 14, padding: '12px 16px', marginBottom: 18, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#D4537E' }}>
+              {lang === 'en' ? 'This event was cancelled' : 'Este evento fue cancelado'}
+            </p>
+            {celebracion.cancelada_motivo && (
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: txtSecundario, fontStyle: 'italic' }}>"{celebracion.cancelada_motivo}"</p>
+            )}
+          </div>
+        )}
         {celebracion.portada_url && (
           <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)', position: 'relative', height: 220 }}>
             <Image src={celebracion.portada_url} alt="portada" fill sizes="600px" style={{ objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center' }} />
@@ -639,6 +649,10 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
         body: JSON.stringify({ celebracionSlug: celebracion.slug, mensajeId: data.id }),
       }).catch(() => {})
       track('mensaje_publicado', { userId: user.id, celebracionSlug: celebracion.slug })
+    } else if (error) {
+      alert(error.message?.includes('mensajes_flood_limit')
+        ? (lang === 'en' ? 'This event just got a lot of messages at once — try again in a few minutes.' : 'Este evento acaba de recibir muchos mensajes de golpe — intenta de nuevo en unos minutos.')
+        : (lang === 'en' ? "Couldn't post your message. Try again." : 'No se pudo publicar tu mensaje. Intenta de nuevo.'))
     }
     setNuevoMensajeMuro('')
     setPublicandoMensaje(false)
@@ -661,7 +675,12 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
     const payload = { celebracion_slug: celebracion.slug, nombre, asistencia, mensaje: mensaje.trim() || null }
     let rsvpId = rsvpExistente?.id
     if (rsvpExistente) {
-      await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
+      const { error: errorUpdate } = await supabase.from('rsvps').update(payload).eq('id', rsvpExistente.id)
+      if (errorUpdate) {
+        setGuardando(false)
+        setErrorRsvp(lang === 'en' ? 'Something went wrong, try again' : 'Algo salió mal, intenta de nuevo')
+        return
+      }
     } else {
       const { data, error: errorInsert } = await supabase.from('rsvps').insert(payload).select('id').single()
       if (errorInsert) {
@@ -715,6 +734,16 @@ function VistaInvitado({ celebracion, user, lang, tx, locale, organizador, ocurr
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
           <div style={{ fontSize: 16, fontWeight: 900, background: 'linear-gradient(135deg,#a89df0,#f08cb0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Cheers</div>
         </div>
+        {celebracion.cancelada && (
+          <div style={{ background: 'rgba(212,83,126,.12)', border: '1px solid rgba(212,83,126,.35)', borderRadius: 14, padding: '12px 16px', marginBottom: 18, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#D4537E' }}>
+              {lang === 'en' ? 'This event was cancelled' : 'Este evento fue cancelado'}
+            </p>
+            {celebracion.cancelada_motivo && (
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: txtSecundario, fontStyle: 'italic' }}>"{celebracion.cancelada_motivo}"</p>
+            )}
+          </div>
+        )}
         {celebracion.portada_url && (
           <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 20, boxShadow: '0 16px 40px rgba(0,0,0,.3)', position: 'relative', height: 220 }}>
             <Image src={celebracion.portada_url} alt="portada" fill sizes="600px" style={{ objectFit: 'cover', objectPosition: celebracion.portada_posicion || 'center' }} />
@@ -1160,12 +1189,21 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   const [recFinTipo, setRecFinTipo] = useState<'nunca' | 'fecha' | 'conteo'>('nunca')
   const [recFinFecha, setRecFinFecha] = useState('')
   const [recFinConteo, setRecFinConteo] = useState(10)
+  // Cancelar evento: modal con motivo opcional antes de mandar el aviso a
+  // todos los invitados (correo + notificación in-app).
+  const [mostrarCancelarEvento, setMostrarCancelarEvento] = useState(false)
+  const [motivoCancelacion, setMotivoCancelacion] = useState('')
+  const [cancelando, setCancelando] = useState(false)
+  const [errorCancelar, setErrorCancelar] = useState('')
   const [mapsListo, setMapsListo] = useState(false)
   const lugarRef = useRef<HTMLInputElement>(null)
   const nuevaParadaLugarRef = useRef<HTMLInputElement>(null)
   const ocurrenciaLugarRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
+  // Si la imagen de portada falla al cargar en el navegador (ej. el CDN todavía no la
+  // propaga, o la red falla) lo mostramos en vez de dejar el recuadro en blanco sin explicar nada.
+  const [portadaError, setPortadaError] = useState(false)
   const [imgPosition, setImgPosition] = useState('center')
   const [showLightbox, setShowLightbox] = useState(false)
 
@@ -1502,11 +1540,25 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (error) console.error('Error guardando tiles_visibles:', error)
   }
 
+  // Avisa a todos los invitados (correo + notificación in-app) de que la
+  // fecha/hora cambió. Fire-and-forget: si esto falla, la fecha ya se guardó
+  // bien de todos modos, solo se pierde el aviso — no bloquea al organizador.
+  async function avisarCambioFecha() {
+    if (!celebracion) return
+    const { data: { session } } = await supabase.auth.getSession()
+    fetch('/api/notificar-cambio-fecha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ celebracionSlug: celebracion.slug, accessToken: session?.access_token }),
+    }).catch(() => {})
+  }
+
   async function guardarCampo(campo: string, valor: any) {
     if (!celebracion) return
     // Si cambia la fecha, el recordatorio fijo de 15h debe poder volver a mandarse para la nueva fecha
     const payload: any = campo === 'fecha' ? { [campo]: valor, recordatorio_15h_enviado: false } : { [campo]: valor }
     const { error } = await supabase.from('celebraciones').update(payload).eq('slug', celebracion.slug)
+    if (!error && campo === 'fecha') avisarCambioFecha()
     if (error && ['tema', 'fuente', 'titulo_align', 'titulo_size'].includes(campo)) {
       setBloqueoPro(tx.customize_locked_title)
       const { data } = await supabase.from('celebraciones').select('*').eq('slug', celebracion.slug).single()
@@ -1571,7 +1623,32 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     if (!celebracion) return
     const ps = [...paradas]
     if (ps.length > 0) ps[0].hora = val; else ps.push({ lugar: '', hora: val, nota: '' })
-    setParadas(ps); await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
+    setParadas(ps)
+    const { error } = await supabase.from('celebraciones').update({ paradas: ps }).eq('slug', celebracion.slug)
+    if (!error) avisarCambioFecha()
+  }
+
+  // Cancela el evento: la ruta hace las dos cosas juntas (marcar cancelada=true
+  // Y avisar a todos los invitados) para que nunca quede cancelado sin que
+  // nadie se entere.
+  async function cancelarEvento() {
+    if (!celebracion) return
+    setCancelando(true); setErrorCancelar('')
+    const { data: { session } } = await supabase.auth.getSession()
+    try {
+      const res = await fetch('/api/notificar-cancelacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celebracionSlug: celebracion.slug, motivo: motivoCancelacion, accessToken: session?.access_token }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErrorCancelar(data.error || (lang === 'en' ? 'Could not cancel the event.' : 'No se pudo cancelar el evento.')); setCancelando(false); return }
+      setCelebracion((prev: any) => ({ ...prev, cancelada: true, cancelada_motivo: motivoCancelacion || null }))
+      setMostrarCancelarEvento(false); setCancelando(false); setMotivoCancelacion('')
+    } catch (e) {
+      setErrorCancelar(lang === 'en' ? 'Could not cancel the event.' : 'No se pudo cancelar el evento.')
+      setCancelando(false)
+    }
   }
 
   // Guarda toda la configuración de recurrencia de una vez y actualiza
@@ -1660,23 +1737,60 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   }, [mapsListo, fechasExpandidas, ocurrencias])
 
   async function subirPortada(file: File) {
-    if (!file || !celebracion || !file.type.startsWith('image/')) return
+    if (!file) return
+    // Antes esto fallaba en silencio si la página todavía no terminaba de cargar
+    // la celebración (click muy rápido) — ahora sí avisa en vez de no hacer nada.
+    if (!celebracion) {
+      alert(lang === 'en' ? 'Give it a second, the page is still loading. Try again.' : 'Dale un momento, la página sigue cargando. Intenta de nuevo en un segundo.')
+      return
+    }
+    // Fotos de iPhone en formato HEIC: el navegador a veces las reporta con file.type
+    // vacío o 'image/heic', y Supabase Storage no acepta ese formato — antes esto
+    // también fallaba en silencio. Las convertimos a JPEG aquí mismo antes de subir.
+    const esHEIC = file.type === 'image/heic' || file.type === 'image/heif' || /\.hei[cf]$/i.test(file.name)
+    if (!esHEIC && !file.type.startsWith('image/')) {
+      alert(lang === 'en' ? 'That file is not a photo — pick an image instead.' : 'Ese archivo no es una foto — elige una imagen.')
+      return
+    }
     if (file.size > 8 * 1024 * 1024) {
       alert(lang === 'en' ? 'Photo is too big (max 8MB). Try a smaller one.' : 'La foto pesa demasiado (máx. 8MB). Intenta con una más chica.')
       return
     }
     setSubiendoPortada(true)
-    const ext = file.name.split('.').pop()
+    setPortadaError(false)
+
+    let archivoASubir: File | Blob = file
+    let ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    let contentType = file.type || 'image/jpeg'
+
+    if (esHEIC) {
+      try {
+        const heic2any = (await import('heic2any')).default
+        const convertido = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
+        archivoASubir = Array.isArray(convertido) ? convertido[0] : convertido
+        ext = 'jpg'
+        contentType = 'image/jpeg'
+      } catch {
+        setSubiendoPortada(false)
+        alert(lang === 'en' ? "Couldn't read that iPhone photo. Try exporting it as JPEG first." : 'No pude leer esa foto de iPhone. Intenta exportarla como JPEG primero.')
+        return
+      }
+    }
+
     const path = `${celebracion.slug.replace('/', '-')}-portada.${ext}`
-    const { error } = await supabase.storage.from('portadas').upload(path, file, { upsert: true })
+    const { error } = await supabase.storage.from('portadas').upload(path, archivoASubir, { upsert: true, contentType })
     if (error) {
       setSubiendoPortada(false)
       alert(lang === 'en' ? "Couldn't upload the photo. Try a smaller file." : 'No se pudo subir la foto. Intenta con un archivo más chico.')
       return
     }
     const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
-    await supabase.from('celebraciones').update({ portada_url: publicUrl }).eq('slug', celebracion.slug)
-    setPortadaUrl(publicUrl); setSubiendoPortada(false)
+    // Le agregamos un parámetro de versión: como la ruta del archivo es siempre la misma
+    // (upsert sobre el mismo nombre), sin esto el navegador o el CDN podían quedarse con
+    // una respuesta vieja o fallida en caché y el recuadro se veía en blanco para siempre.
+    const urlConVersion = `${publicUrl}?v=${Date.now()}`
+    await supabase.from('celebraciones').update({ portada_url: urlConVersion }).eq('slug', celebracion.slug)
+    setPortadaUrl(urlConVersion); setSubiendoPortada(false)
   }
 
   async function toggleLinkCerrado() {
@@ -1695,7 +1809,7 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     // (pero si otro organizador lo invita a un evento distinto, sí le llega, es un slug diferente).
     const yaInvitadoAquí = !!emailNuevo && invitadosList.some(i => i.email?.toLowerCase() === emailNuevo)
     const row = { celebracion_slug: celebracion.slug, email: emailNuevo, nombre: nuevoInvitado.trim(), user_id: null, created_at: new Date().toISOString() }
-    const { data } = await supabase.from('invitados').insert(row).select().single()
+    const { data, error } = await supabase.from('invitados').insert(row).select().single()
     if (data) {
       setInvitadosList(prev => [...prev, data])
       track('invitado_agregado', { userId: user?.id, celebracionSlug: celebracion.slug, metadata: { origen: 'organizador' } })
@@ -1710,8 +1824,11 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
           }).catch(() => {})
         })
       }
+      setNuevoInvitado(''); setShowAddInvitado(false)
+    } else if (error) {
+      alert(lang === 'en' ? "Couldn't add this guest. Try again." : 'No se pudo agregar a este invitado. Intenta de nuevo.')
     }
-    setNuevoInvitado(''); setGuardandoInvitado(false); setShowAddInvitado(false)
+    setGuardandoInvitado(false)
   }
 
   async function borrarInvitado(id: string) {
@@ -1792,6 +1909,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ celebracionSlug: celebracion.slug, regaloId }),
       }).catch(() => {})
+    } else if (error) {
+      // Hay un límite único (celebracion_slug, regalo_id) en la base — si dos invitados
+      // le dan click casi al mismo tiempo, el segundo choca con ese límite. Antes esto
+      // fallaba en silencio y esa persona creía que sí lo había reservado.
+      alert(error.code === '23505'
+        ? (lang === 'en' ? 'Someone else just reserved this gift.' : 'Alguien más acaba de reservar este regalo.')
+        : (lang === 'en' ? "Couldn't reserve the gift. Try again." : 'No se pudo reservar el regalo. Intenta de nuevo.'))
     }
   }
 
@@ -1862,7 +1986,10 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
       responsable_invitado_id: (eventoEsPro && nuevoGasto.responsableId) ? nuevoGasto.responsableId : null,
       creado_por: user.id,
     }).select().single()
-    if (error || !gastoRow) return
+    if (error || !gastoRow) {
+      alert(lang === 'en' ? "Couldn't save the expense. Try again." : 'No se pudo guardar el gasto. Intenta de nuevo.')
+      return
+    }
 
     // El pagador no se debe a sí mismo, aunque haya elegido participar en el split —
     // su parte ya la cubrió al pagar, así que se excluye de las filas de deuda.
@@ -1930,7 +2057,13 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
     const nombre = user?.user_metadata?.name || user?.email || ''
     const payload = { celebracion_slug: celebracion.slug, user_id: user.id, nombre, texto: nuevoMensajeMuroOrg.trim() }
     const { data, error } = await supabase.from('mensajes').insert(payload).select().single()
-    if (!error && data) setMensajesMuro(prev => [data, ...prev])
+    if (!error && data) {
+      setMensajesMuro(prev => [data, ...prev])
+    } else if (error) {
+      alert(error.message?.includes('mensajes_flood_limit')
+        ? (lang === 'en' ? 'This event just got a lot of messages at once — try again in a few minutes.' : 'Este evento acaba de recibir muchos mensajes de golpe — intenta de nuevo en unos minutos.')
+        : (lang === 'en' ? "Couldn't post your message. Try again." : 'No se pudo publicar tu mensaje. Intenta de nuevo.'))
+    }
     setNuevoMensajeMuroOrg('')
     setPublicandoMensajeOrg(false)
   }
@@ -2103,18 +2236,30 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
   )
 
   function TileBody({ tileKey }: { tileKey: string }) {
-    if (tileKey === 'portada') return (
-      <div style={{ height: '100%', margin: '-8px -14px -14px', cursor: portadaUrl ? 'zoom-in' : 'pointer', position: 'relative', borderRadius: '0 0 18px 18px', overflow: 'hidden' }}
-        onClick={() => { if (portadaUrl) setShowLightbox(true); else fileInputRef.current?.click() }}>
-        <div style={{ height: '100%', background: portadaUrl ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-          {subiendoPortada
-            ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
-            : portadaUrl
-              ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>{tx.change_image}</div>
-              : <div style={{ textAlign: 'center' as const, color: '#a39ec0' }}><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div><div style={{ fontSize: 12 }}>{tx.cover_hint}</div></div>}
+    if (tileKey === 'portada') {
+      // Antes el fondo era puro CSS (background-image) sin forma de saber si la imagen
+      // realmente cargó — si fallaba (CDN sin propagar, red, caché vieja), el recuadro se
+      // quedaba en blanco sin explicación. Este <img> oculto es solo para detectar el error.
+      const mostrarFoto = !!portadaUrl && !portadaError
+      const mostrarError = !!portadaUrl && portadaError && !subiendoPortada
+      return (
+        <div style={{ height: '100%', margin: '-8px -14px -14px', cursor: mostrarFoto ? 'zoom-in' : 'pointer', position: 'relative', borderRadius: '0 0 18px 18px', overflow: 'hidden' }}
+          onClick={() => { if (mostrarFoto) setShowLightbox(true); else fileInputRef.current?.click() }}>
+          {portadaUrl && (
+            <img src={portadaUrl} alt="" onLoad={() => setPortadaError(false)} onError={() => setPortadaError(true)} style={{ display: 'none' }} />
+          )}
+          <div style={{ height: '100%', background: mostrarFoto ? `url(${portadaUrl}) ${imgPosition}/cover no-repeat` : 'linear-gradient(135deg,#EEEDFE,#FCE9F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            {subiendoPortada
+              ? <div style={{ background: 'rgba(255,255,255,.9)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 700, color: '#534AB7' }}>{tx.uploading}</div>
+              : mostrarError
+                ? <div style={{ textAlign: 'center' as const, color: '#c9536e' }}><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_error}</div><div style={{ fontSize: 12 }}>{tx.cover_retry}</div></div>
+                : mostrarFoto
+                  ? <div onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }} style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 99, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>{tx.change_image}</div>
+                  : <div style={{ textAlign: 'center' as const, color: '#a39ec0' }}><div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tx.cover_image}</div><div style={{ fontSize: 12 }}>{tx.cover_hint}</div></div>}
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
 
     if (tileKey === 'invitados') return (
       <div>
@@ -3100,10 +3245,50 @@ export default function EventoPage({ params }: { params: Promise<{ usuario: stri
                   </div>
                 )
               })()}
+
+              {!celebracion.cancelada && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(0,0,0,.06)' }}>
+                  <button type="button" onClick={() => setMostrarCancelarEvento(true)} style={{ border: 'none', background: 'rgba(212,83,126,.08)', color: '#D4537E', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: FSYS }}>
+                    {lang === 'en' ? 'Cancel event' : 'Cancelar evento'}
+                  </button>
+                </div>
+              )}
               </div>
               )}
             </div>
           </div>
+
+          {mostrarCancelarEvento && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => { if (!cancelando) setMostrarCancelarEvento(false) }}>
+              <div style={{ background: '#fff', borderRadius: 20, padding: 24, maxWidth: 420, width: '100%' }} onClick={e => e.stopPropagation()}>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: '#2a2440', margin: '0 0 8px' }}>
+                  {lang === 'en' ? 'Cancel this event?' : '¿Cancelar este evento?'}
+                </h3>
+                <p style={{ fontSize: 13, color: '#6d668c', margin: '0 0 14px', lineHeight: 1.5 }}>
+                  {lang === 'en'
+                    ? "This sends an email and an in-app notice to every guest saying the event was cancelled. If this is just a date change, close this and update the date instead — that already notifies everyone automatically."
+                    : 'Esto le manda correo y notificación en la app a todos los invitados avisando que el evento se canceló. Si solo cambió la fecha, cierra esto y actualiza la fecha en vez de cancelar — eso ya le avisa a todos automático.'}
+                </p>
+                <textarea
+                  value={motivoCancelacion}
+                  onChange={e => setMotivoCancelacion(e.target.value)}
+                  placeholder={lang === 'en' ? 'Reason (optional)' : 'Motivo (opcional)'}
+                  maxLength={500}
+                  rows={3}
+                  style={{ ...fieldInput, fontSize: 13, resize: 'vertical' as const, marginBottom: 12 }}
+                />
+                {errorCancelar && <p style={{ fontSize: 12, color: '#c0392b', margin: '0 0 10px' }}>{errorCancelar}</p>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" disabled={cancelando} onClick={() => setMostrarCancelarEvento(false)} style={{ flex: 1, border: '1.5px solid #e2dff5', background: '#fff', color: '#534AB7', fontSize: 13, fontWeight: 700, padding: '10px', borderRadius: 12, cursor: 'pointer', fontFamily: FSYS }}>
+                    {lang === 'en' ? 'Never mind' : 'Ya no'}
+                  </button>
+                  <button type="button" disabled={cancelando} onClick={cancelarEvento} style={{ flex: 1, border: 'none', background: '#D4537E', color: '#fff', fontSize: 13, fontWeight: 700, padding: '10px', borderRadius: 12, cursor: cancelando ? 'default' : 'pointer', fontFamily: FSYS, opacity: cancelando ? .7 : 1 }}>
+                    {cancelando ? (lang === 'en' ? 'Cancelling…' : 'Cancelando…') : (lang === 'en' ? 'Yes, cancel event' : 'Sí, cancelar evento')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Fechas de la serie recurrente — id fijo para que el Calendario del
               dashboard pueda mandar aquí directo con un link tipo #proximas-fechas.

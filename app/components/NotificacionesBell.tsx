@@ -28,7 +28,7 @@ function tiempoRelativo(iso: string, lang: string) {
 
 // Mismo patrón de badge de 3 letras que usan los tiles dentro de una
 // celebración (INV, REG, MSG) — nada de emoji, para que se vea consistente.
-const ICONO: Record<string, string> = { rsvp: 'RSV', regalo: 'REG', mensaje: 'MSG' }
+const ICONO: Record<string, string> = { rsvp: 'RSV', regalo: 'REG', mensaje: 'MSG', cancelacion: 'X', cambio_fecha: 'FEC' }
 
 export default function NotificacionesBell({ userId, lang, light }: { userId: string; lang: string; light?: boolean }) {
   const router = useRouter()

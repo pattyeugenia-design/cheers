@@ -28,6 +28,12 @@ export default function Admin() {
   const [regaloMensaje, setRegaloMensaje] = useState('')
   const [regaloOpciones, setRegaloOpciones] = useState<any[] | null>(null)
 
+  // Preaprobar cortesía por correo — aunque la cuenta todavía no exista, en cuanto se registre le cae Extra Cheer solo
+  const [preaprobados, setPreaprobados] = useState<any[]>([])
+  const [preaprobarEmail, setPreaprobarEmail] = useState('')
+  const [preaprobarCargando, setPreaprobarCargando] = useState(false)
+  const [preaprobarMensaje, setPreaprobarMensaje] = useState('')
+
   // Borrar cuenta por moderación (abuso, bullying, etc.) — una por una, con preview y confirmación escrita
   const [moderarEmail, setModerarEmail] = useState('')
   const [moderarPreview, setModerarPreview] = useState<any | null>(null)
@@ -55,7 +61,7 @@ export default function Admin() {
   }
 
   const cargarDatos = useCallback(async () => {
-    const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }, { data: eventosData }, { data: comprasData }] = await Promise.all([
+    const [{ data: cels }, { data: users }, { data: rsvpData }, { data: invData }, { data: eventosData }, { data: comprasData }, { data: preaprobadosData }] = await Promise.all([
       supabase.from('celebraciones').select('*').order('created_at', { ascending: false }),
       supabase.from('perfiles').select('*').order('created_at', { ascending: false }),
       supabase.from('rsvps').select('*').order('created_at', { ascending: false }),
@@ -64,6 +70,7 @@ export default function Admin() {
       supabase.from('eventos_analytics').select('*').gte('created_at', new Date(Date.now() - 90*24*60*60*1000).toISOString()).order('created_at', { ascending: false }),
       // Compras reales: sin límite de fecha, son pocas filas y es el ingreso real acumulado
       supabase.from('eventos_analytics').select('metadata, created_at').eq('tipo', 'compra_completada'),
+      supabase.from('cortesias_preaprobadas').select('*').order('created_at', { ascending: false }),
     ])
     setCelebraciones(cels || [])
     setUsuarios(users || [])
@@ -71,6 +78,7 @@ export default function Admin() {
     setInvitados(invData || [])
     setEventos(eventosData || [])
     setComprasReales(comprasData || [])
+    setPreaprobados(preaprobadosData || [])
     setUltimaActualizacion(new Date())
   }, [])
 
@@ -152,6 +160,38 @@ export default function Admin() {
     } else {
       setRegaloMensaje('Algo falló, intenta de nuevo.')
     }
+  }
+
+  async function preaprobarCortesia() {
+    if (!preaprobarEmail.trim()) return
+    setPreaprobarCargando(true)
+    setPreaprobarMensaje('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin-preaprobar-cortesia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session?.access_token, correo: preaprobarEmail.trim(), tipoPlan: 'lifetime' }),
+    })
+    const data = await res.json()
+    setPreaprobarCargando(false)
+    if (data.ok && data.estado === 'aplicado_inmediato') {
+      setPreaprobarMensaje(`✓ ${preaprobarEmail.trim()} ya tenía cuenta — Extra Cheer aplicado de una vez.`)
+      setPreaprobarEmail('')
+      cargarDatos()
+    } else if (data.ok && data.estado === 'pendiente') {
+      setPreaprobarMensaje(`✓ Guardado — en cuanto ${preaprobarEmail.trim()} cree su cuenta le cae Extra Cheer solo.`)
+      setPreaprobarEmail('')
+      cargarDatos()
+    } else if (data.error === 'ya_pendiente') {
+      setPreaprobarMensaje('Ese correo ya estaba en la lista de pendientes.')
+    } else {
+      setPreaprobarMensaje('Algo falló, intenta de nuevo.')
+    }
+  }
+
+  async function quitarPreaprobado(id: string) {
+    await supabase.from('cortesias_preaprobadas').delete().eq('id', id)
+    setPreaprobados(prev => prev.filter(p => p.id !== id))
   }
 
   async function buscarParaModerar() {
@@ -535,6 +575,36 @@ export default function Admin() {
                     <button key={c.slug} onClick={() => regalarPlan(c.slug)} style={{ textAlign:'left', border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', color:'#fff', fontSize:13, fontWeight:600, padding:'8px 12px', borderRadius:8, cursor:'pointer', fontFamily:F }}>
                       {c.nombre || 'Sin título'} <span style={{ color:'rgba(255,255,255,.4)', fontFamily:'monospace', fontSize:11 }}>({c.slug})</span>
                     </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Preaprobar cortesía por correo, tenga o no cuenta todavía */}
+            <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:16, padding:'20px', marginBottom:24 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:4, textTransform:'uppercase', letterSpacing:'.5px' }}>Preaprobar cortesía (Extra Cheer)</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:16 }}>Pon el correo aunque todavía no tenga cuenta — si ya existe se activa al toque, si no, se activa sola en cuanto se registre.</div>
+              <div style={{ display:'flex', gap:8 }}>
+                <input
+                  value={preaprobarEmail}
+                  onChange={e => setPreaprobarEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && preaprobarCortesia()}
+                  placeholder="email@ejemplo.com"
+                  style={{ flex:1, border:'1px solid rgba(255,255,255,.12)', background:'rgba(255,255,255,.04)', color:'#fff', fontFamily:F, fontSize:14, padding:'10px 14px', borderRadius:10, outline:'none' }}
+                />
+                <button onClick={() => preaprobarCortesia()} disabled={preaprobarCargando || !preaprobarEmail.trim()} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:13, fontWeight:800, padding:'10px 20px', borderRadius:10, cursor:preaprobarCargando||!preaprobarEmail.trim()?'default':'pointer', opacity:preaprobarCargando||!preaprobarEmail.trim()?0.5:1, fontFamily:F }}>
+                  {preaprobarCargando ? '...' : 'Preaprobar'}
+                </button>
+              </div>
+              {preaprobarMensaje && <div style={{ fontSize:13, color:'rgba(255,255,255,.7)', marginTop:12 }}>{preaprobarMensaje}</div>}
+              {preaprobados.filter(p => !p.aplicado).length > 0 && (
+                <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:14 }}>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.35)', textTransform:'uppercase', letterSpacing:'.5px' }}>Pendientes de registro ({preaprobados.filter(p => !p.aplicado).length})</div>
+                  {preaprobados.filter(p => !p.aplicado).map(p => (
+                    <div key={p.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', padding:'8px 12px', borderRadius:8 }}>
+                      <span style={{ fontSize:13, color:'#fff', fontFamily:F }}>{p.correo}</span>
+                      <button onClick={() => quitarPreaprobado(p.id)} style={{ fontSize:11, fontWeight:700, color:'#f08cb0', background:'transparent', border:'none', cursor:'pointer', fontFamily:F }}>Quitar</button>
+                    </div>
                   ))}
                 </div>
               )}
