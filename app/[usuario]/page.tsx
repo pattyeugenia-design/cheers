@@ -184,6 +184,8 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   const [username, setUsername] = useState('')
   const [mostrarPasadas, setMostrarPasadas] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [proyectosBoda, setProyectosBoda] = useState<any[]>([])
+  const [mostrarBienvenidaBridal, setMostrarBienvenidaBridal] = useState(false)
 
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l])
@@ -267,6 +269,18 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           }
 
           setOcurrenciasPorSlug(nuevoOcurrenciasPorSlug)
+
+          // Proyecto(s) de boda del usuario (Cheers Bridal) — se muestran junto a
+          // las celebraciones sociales en este mismo dashboard, no en una sección
+          // aparte. Si alguno todavía no tuvo su animación de bienvenida, se marca
+          // para mostrarla (una sola vez por proyecto, ver cerrarBienvenidaBridal).
+          const { data: miembrosBoda } = await supabase
+            .from('proyectos_boda_miembros')
+            .select('boda_id, proyectos_boda(id, nombre_novia, nombre_novio, fecha_boda, bienvenida_mostrada)')
+            .eq('user_id', authUser.id)
+          const listaBodas = (miembrosBoda || []).map((m: any) => m.proyectos_boda).filter(Boolean)
+          setProyectosBoda(listaBodas)
+          if (listaBodas.some((p: any) => !p.bienvenida_mostrada)) setMostrarBienvenidaBridal(true)
         }
       }
 
@@ -323,9 +337,42 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     router.push('/')
   }
 
+  async function cerrarBienvenidaBridal() {
+    const proyecto = proyectosBoda.find(p => !p.bienvenida_mostrada)
+    setMostrarBienvenidaBridal(false)
+    if (proyecto) {
+      await supabase.from('proyectos_boda').update({ bienvenida_mostrada: true }).eq('id', proyecto.id)
+      setProyectosBoda(prev => prev.map(p => p.id === proyecto.id ? { ...p, bienvenida_mostrada: true } : p))
+    }
+  }
+
   if (cargando) return (
     <main style={{ minHeight:'100vh', background:BG, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:F }}>
       <p style={{ color:'#AFA9EC' }}>{t[lang as 'es'|'en'].loading}</p>
+    </main>
+  )
+
+  // Animación de bienvenida a Cheers Bridal — solo la primera vez que esta
+  // cuenta entra al dashboard después de crear un proyecto de boda.
+  if (mostrarBienvenidaBridal) return (
+    <main style={{ minHeight:'100vh', background:'linear-gradient(160deg,#FFFDFB,#FBF1E7 55%,#F6E4DC)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:F, padding:20 }}>
+      <style>{`@keyframes bridalPop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.05);opacity:1}100%{transform:scale(1);opacity:1}}@keyframes bridalFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <div style={{ textAlign:'center', maxWidth:360 }}>
+        <div style={{ width:76, height:76, borderRadius:'50%', background:'linear-gradient(135deg,#C9A876,#C98A93)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 22px', animation:'bridalPop .6s ease-out' }}>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 17.5c-2-1.4-3.3-2.6-3.3-4a1.9 1.9 0 0 1 3.3-1.3 1.9 1.9 0 0 1 3.3 1.3c0 1.4-1.3 2.6-3.3 4z" fill="rgba(255,255,255,0.9)" stroke="none"/></svg>
+        </div>
+        <h1 style={{ fontSize:24, fontWeight:900, color:'#3D2B2E', margin:'0 0 10px', letterSpacing:'-.5px', animation:'bridalFade .5s ease-out .15s both' }}>
+          {lang==='en' ? 'Your wedding lives in Cheers now' : 'Tu boda ya vive en Cheers'}
+        </h1>
+        <p style={{ fontSize:14, color:'rgba(61,43,46,.62)', lineHeight:1.6, margin:'0 0 28px', animation:'bridalFade .5s ease-out .25s both' }}>
+          {lang==='en'
+            ? "From now on you'll find it right next to your other celebrations, every time you come in."
+            : 'De ahora en adelante la vas a encontrar junto a tus demás celebraciones, cada vez que entres.'}
+        </p>
+        <button onClick={cerrarBienvenidaBridal} style={{ border:'none', background:'linear-gradient(135deg,#C9A876,#C98A93)', color:'#fff', fontSize:14, fontWeight:800, padding:'13px 28px', borderRadius:14, cursor:'pointer', fontFamily:F, animation:'bridalFade .5s ease-out .35s both' }}>
+          {lang==='en' ? 'Continue' : 'Continuar'}
+        </button>
+      </div>
     </main>
   )
 
@@ -384,6 +431,23 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         </button>}
         <span style={{ fontSize:18, color:'#AFA9EC' }}>→</span>
       </div>
+    </div>
+  )
+
+  const BodaCard = ({ p }: { p: any }) => (
+    <div onClick={() => router.push(`/bridal/${p.id}`)} style={{ display:'flex', alignItems:'center', gap:14, padding:'1rem 1.25rem', background:'linear-gradient(135deg,rgba(201,168,118,.14),rgba(201,138,147,.14))', borderRadius:16, cursor:'pointer', border:'1px solid rgba(201,138,147,.3)', marginBottom:10 }}>
+      <div style={{ width:40, height:40, borderRadius:12, background:'linear-gradient(135deg,#C9A876,#C98A93)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 17.5c-2-1.4-3.3-2.6-3.3-4a1.9 1.9 0 0 1 3.3-1.3 1.9 1.9 0 0 1 3.3 1.3c0 1.4-1.3 2.6-3.3 4z" fill="rgba(255,255,255,0.9)" stroke="none"/></svg>
+      </div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:15, fontWeight:700, color:'#EEEDFE', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          {[p.nombre_novia, p.nombre_novio].filter(Boolean).join(' & ') || (lang==='en'?'Your wedding':'Tu boda')}
+        </div>
+        <div style={{ fontSize:12, color:'#d8b3ba', marginTop:1 }}>
+          {p.fecha_boda ? new Date(p.fecha_boda + 'T00:00:00').toLocaleDateString(lang==='en'?'en-US':'es-MX', { month:'short', day:'numeric', year:'numeric' }) : (lang==='en'?'Wedding project':'Proyecto de boda')}
+        </div>
+      </div>
+      <span style={{ fontSize:18, color:'#d8b3ba' }}>→</span>
     </div>
   )
 
@@ -463,6 +527,16 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           <button onClick={() => router.push(`/${username}/nueva`)} style={{ width:'100%', padding:'1rem', background:'linear-gradient(135deg,#534AB7,#D4537E)', border:'none', borderRadius:16, color:'#fff', fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:'2rem', boxShadow:'0 8px 24px rgba(212,83,126,.3)', fontFamily:F }}>
             {tx.new_celebration}
           </button>
+        )}
+
+        {/* Tu boda (Cheers Bridal) — junto a las celebraciones sociales, no aparte */}
+        {esPropio && proyectosBoda.length > 0 && (
+          <div style={{ marginBottom:24 }}>
+            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#d8b3ba', textTransform:'uppercase', margin:'0 0 10px 4px' }}>
+              {lang==='en' ? 'Your wedding' : 'Tu boda'}
+            </p>
+            {proyectosBoda.map(p => <BodaCard key={p.id} p={p} />)}
+          </div>
         )}
 
         {/* Tus invitaciones (celebraciones donde eres invitada, no organizadora) */}

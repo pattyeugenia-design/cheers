@@ -315,7 +315,7 @@ export default function Home() {
             </div>
             <div style={{ padding:isMobile?'0 24px 32px':'40px 48px 40px 0', display:'flex', justifyContent:isMobile?'flex-start':'center' }}>
               <div style={{ width:isMobile?72:96, height:isMobile?72:96, borderRadius:'50%', background:'linear-gradient(135deg,#C9A876,#C98A93)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 16px 40px rgba(183,110,121,.3)' }}>
-                <svg width={isMobile?34:44} height={isMobile?34:44} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C9 6 7 8 7 11a5 5 0 0 0 10 0c0-3-2-5-5-9z"/><path d="M12 16v6M8 22h8"/></svg>
+                <svg width={isMobile?34:44} height={isMobile?34:44} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 17.5c-2-1.4-3.3-2.6-3.3-4a1.9 1.9 0 0 1 3.3-1.3 1.9 1.9 0 0 1 3.3 1.3c0 1.4-1.3 2.6-3.3 4z" fill="rgba(255,255,255,0.9)" stroke="none"/></svg>
               </div>
             </div>
           </div>
