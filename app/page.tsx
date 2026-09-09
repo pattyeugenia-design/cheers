@@ -57,6 +57,10 @@ const translations = {
     no_cc2: 'Gratis para empezar · Sin tarjeta',
     footer_privacy: 'Privacidad',
     footer_terms: 'Términos',
+    bridal_badge: 'NUEVO',
+    bridal_title: '¿Organizando una boda?',
+    bridal_sub: 'Invitación, itinerario, lista de regalos y confirmaciones — todo en un link, diseñado especialmente para bodas.',
+    bridal_cta: 'Descubre Cheers Bridal',
   },
   en: {
     nav_how: 'How it works', nav_prices: 'Pricing', nav_cta: 'Sign in',
@@ -109,6 +113,10 @@ const translations = {
     no_cc2: 'Free to start · No card needed',
     footer_privacy: 'Privacy',
     footer_terms: 'Terms',
+    bridal_badge: 'NEW',
+    bridal_title: 'Planning a wedding?',
+    bridal_sub: 'Invitation, itinerary, gift list, and RSVPs — all in one link, designed just for weddings.',
+    bridal_cta: 'Discover Cheers Bridal',
   }
 }
 
@@ -289,6 +297,29 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* BRIDAL — hero secundario para descubrir Cheers Bridal desde la home */}
+      <section style={{ padding:isMobile?'0 20px 64px':`0 ${px} 80px`, position:'relative', zIndex:1 }}>
+        <a href="/bridal" className="card-h" style={{ display:'block', maxWidth:1100, margin:'0 auto', textDecoration:'none', borderRadius:28, overflow:'hidden', position:'relative', background:'linear-gradient(135deg,#FFFDFB,#FBF1E7 55%,#F6E4DC)', boxShadow:'0 30px 80px rgba(0,0,0,.35)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1.3fr 1fr', alignItems:'center', gap:isMobile?24:0 }}>
+            <div style={{ padding:isMobile?'36px 24px 8px':'56px 60px' }}>
+              <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(183,110,121,.12)', border:'1px solid rgba(183,110,121,.3)', borderRadius:99, padding:'5px 12px', marginBottom:18 }}>
+                <span style={{ fontSize:11, fontWeight:800, color:'#B76E79', letterSpacing:'.5px' }}>{tx.bridal_badge}</span>
+              </div>
+              <h2 style={{ fontSize:isMobile?28:40, fontWeight:900, letterSpacing:'-1px', color:'#3D2B2E', margin:'0 0 14px', lineHeight:1.1 }}>{tx.bridal_title}</h2>
+              <p style={{ fontSize:isMobile?14:16, color:'#6b5457', lineHeight:1.6, margin:'0 0 24px', maxWidth:440 }}>{tx.bridal_sub}</p>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:8, padding:isMobile?'12px 20px':'13px 24px', background:'linear-gradient(135deg,#C9A876,#C98A93)', borderRadius:14, color:'#fff', fontSize:14, fontWeight:800, boxShadow:'0 10px 24px rgba(183,110,121,.35)' }}>
+                {tx.bridal_cta} →
+              </span>
+            </div>
+            <div style={{ padding:isMobile?'0 24px 32px':'40px 48px 40px 0', display:'flex', justifyContent:isMobile?'flex-start':'center' }}>
+              <div style={{ width:isMobile?72:96, height:isMobile?72:96, borderRadius:'50%', background:'linear-gradient(135deg,#C9A876,#C98A93)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 16px 40px rgba(183,110,121,.3)' }}>
+                <svg width={isMobile?34:44} height={isMobile?34:44} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C9 6 7 8 7 11a5 5 0 0 0 10 0c0-3-2-5-5-9z"/><path d="M12 16v6M8 22h8"/></svg>
+              </div>
+            </div>
+          </div>
+        </a>
       </section>
 
       {/* CÓMO FUNCIONA */}
