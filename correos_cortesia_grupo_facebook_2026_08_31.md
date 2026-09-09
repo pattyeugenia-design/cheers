@@ -93,9 +93,26 @@ anahisernacantu@gmail.com, luciatorresvazquez48@gmail.com, athdelpradoj@gmail.co
 | Nombre | Correo | ¿Cuenta creada? | ¿Lifetime activado? | Notas |
 |---|---|---|---|---|
 | Claudia Peña | claudialpg@outlook.com | No | No | |
-| Kati Leon | katileonmex@gmail.com | No | No | |
+| Kati Leon | katileonmex@gmail.com | Sí (@katileon) | Sí | Auto-activado 2026-09-02 |
 | Are Torres | arelitorresr@outlook.com | No | No | |
 | Valeria Muriel | valeriamurielvaldez@gmail.com | No | No | |
 | Julieth Ortiz | julieth.ortiz@live.com.mx | No | No | |
 | (incógnita) | salejandro@conexioncontable.com.mx | No | No | correo de dominio de empresa, no personal — confirmar quién es |
 | Sofía | carramansof@gmail.com | No | No | agregada 2026-09-01, ya preaprobada — falta correo |
+
+---
+
+## Tanda 4 (agregadas 2026-09-02) — ya preaprobadas en la base de datos, falta enviar el correo.
+
+**Destinatarias (CCO):**
+nokkocases@gmail.com, karynaa.56@gmail.com, i.valeriaojeda.b@gmail.com, sofia.glz@hotmail.com, ashleyrdzco@gmail.com, gabriela.i12@hotmail.com, v.sld@hotmail.com
+
+| Nombre | Correo | ¿Cuenta creada? | ¿Lifetime activado? | Notas |
+|---|---|---|---|---|
+| WittyGiraffe5009 (usuario raro de Facebook, sin nombre real visible) | nokkocases@gmail.com | No | No | |
+| Karyna Anguiano | karynaa.56@gmail.com | No | No | |
+| Valeria Ojeda | i.valeriaojeda.b@gmail.com | No | No | |
+| Sofia Badillo | sofia.glz@hotmail.com | No | No | |
+| Ashley Rodríguez | ashleyrdzco@gmail.com | No | No | |
+| Gaby Ibañez | gabriela.i12@hotmail.com | No | No | |
+| Valeria Villarreal | v.sld@hotmail.com | No | No | |

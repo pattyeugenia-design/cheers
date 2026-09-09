@@ -38,21 +38,25 @@ export default function Icon() {
               <path d="M18,4 L21,13 Q23,15 25,13 L28,4 Z" />
             </clipPath>
           </defs>
-          <g transform="rotate(-8, 9, 26)">
-            <path d="M4,4 L7,13 Q9,15 11,13 L14,4 Z" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.6" />
-            <rect x="4" y="9" width="10" height="5" fill="url(#liq)" opacity="0.85" clipPath="url(#c1)" />
-            <rect x="8.3" y="13.5" width="1.4" height="7" fill="rgba(255,255,255,0.28)" rx="0.7" />
-            <rect x="5.5" y="20" width="7" height="1" fill="rgba(255,255,255,0.28)" rx="0.5" />
+          {/* Mismo ajuste que app/icon.svg: las copas quedaban corridas hacia
+              arriba dentro del cuadro — este grupo las recentra parejo. */}
+          <g transform="translate(16,16) scale(0.8403) translate(-16,-11.719)">
+            <g transform="rotate(-8, 9, 26)">
+              <path d="M4,4 L7,13 Q9,15 11,13 L14,4 Z" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.6" />
+              <rect x="4" y="9" width="10" height="5" fill="url(#liq)" opacity="0.85" clipPath="url(#c1)" />
+              <rect x="8.3" y="13.5" width="1.4" height="7" fill="rgba(255,255,255,0.28)" rx="0.7" />
+              <rect x="5.5" y="20" width="7" height="1" fill="rgba(255,255,255,0.28)" rx="0.5" />
+            </g>
+            <g transform="rotate(8, 23, 26)">
+              <path d="M18,4 L21,13 Q23,15 25,13 L28,4 Z" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.6" />
+              <rect x="18" y="9" width="10" height="5" fill="url(#liq)" opacity="0.85" clipPath="url(#c2)" />
+              <rect x="22.3" y="13.5" width="1.4" height="7" fill="rgba(255,255,255,0.28)" rx="0.7" />
+              <rect x="19.5" y="20" width="7" height="1" fill="rgba(255,255,255,0.28)" rx="0.5" />
+            </g>
+            <circle cx="16" cy="3.5" r="1" fill="#f7d76b" opacity="0.95" />
+            <circle cx="13" cy="2.5" r="0.55" fill="#fff" opacity="0.85" />
+            <circle cx="19" cy="2.5" r="0.55" fill="#fff" opacity="0.85" />
           </g>
-          <g transform="rotate(8, 23, 26)">
-            <path d="M18,4 L21,13 Q23,15 25,13 L28,4 Z" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.6" />
-            <rect x="18" y="9" width="10" height="5" fill="url(#liq)" opacity="0.85" clipPath="url(#c2)" />
-            <rect x="22.3" y="13.5" width="1.4" height="7" fill="rgba(255,255,255,0.28)" rx="0.7" />
-            <rect x="19.5" y="20" width="7" height="1" fill="rgba(255,255,255,0.28)" rx="0.5" />
-          </g>
-          <circle cx="16" cy="3.5" r="1" fill="#f7d76b" opacity="0.95" />
-          <circle cx="13" cy="2.5" r="0.55" fill="#fff" opacity="0.85" />
-          <circle cx="19" cy="2.5" r="0.55" fill="#fff" opacity="0.85" />
         </svg>
       </div>
     ),
