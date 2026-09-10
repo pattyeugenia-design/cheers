@@ -35,7 +35,7 @@ const FUENTES: Record<string, { label: string; font: string }> = {
 }
 const FUENTE_ORDER = ['system', 'verdana', 'georgia', 'cursive']
 
-type Tab = 'dashboard' | 'invitados' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion' | 'beauty_timeline' | 'dia_b' | 'calendario_pagos'
+type Tab = 'dashboard' | 'invitados' | 'mesas' | 'presupuesto' | 'timeline' | 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'proveedores' | 'contratos' | 'pagos' | 'inspiracion' | 'beauty_timeline' | 'dia_b' | 'calendario_pagos'
 type TableroKey = 'novia' | 'novio' | 'pareja' | 'luna_miel' | 'vida_despues' | 'embarazo' | 'wedding_planner' | 'beauty_timeline' | 'dia_b'
 
 const CATEGORIA_WEDDING_PLANNER = 'Wedding Planner'
@@ -44,6 +44,7 @@ const CATEGORIA_WEDDING_PLANNER = 'Wedding Planner'
 // tabKey (iglesia/civil) no son pestañas, solo afectan el checklist de trámites.
 const MODULOS: { key: string; tabKey?: Tab; es: string; en: string }[] = [
   { key: 'invitados', tabKey: 'invitados', es: 'Invitados', en: 'Guests' },
+  { key: 'mesas', tabKey: 'mesas', es: 'Mesas', en: 'Seating' },
   { key: 'presupuesto', tabKey: 'presupuesto', es: 'Presupuesto', en: 'Budget' },
   { key: 'novia', tabKey: 'novia', es: 'Novia', en: 'Bride' },
   { key: 'novio', tabKey: 'novio', es: 'Novio', en: 'Groom' },
@@ -189,8 +190,13 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const excelInvitadosRef = useRef<HTMLInputElement>(null)
   const [primerosPasosCerrado, setPrimerosPasosCerrado] = useState(false)
 
+  const [mesasBoda, setMesasBoda] = useState<any[]>([])
+  const [nuevaMesaNombre, setNuevaMesaNombre] = useState('')
+  const [nuevaMesaCapacidad, setNuevaMesaCapacidad] = useState('')
+  const [guardandoMesa, setGuardandoMesa] = useState(false)
+
   async function cargarTodo(bodaId: string) {
-    const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }, { data: ms }] = await Promise.all([
       supabase.from('boda_presupuesto_items').select('*').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_timeline_items').select('*').eq('boda_id', bodaId).order('fecha_objetivo', { ascending: true, nullsFirst: false }),
       supabase.from('boda_tablero_items').select('*').eq('boda_id', bodaId).order('orden'),
@@ -199,6 +205,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       supabase.from('boda_pagos').select('*').eq('boda_id', bodaId).order('fecha', { ascending: false, nullsFirst: false }),
       supabase.from('boda_invitados').select('*').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_rsvps').select('*').eq('boda_id', bodaId),
+      supabase.from('boda_mesas').select('*').eq('boda_id', bodaId).order('orden'),
     ])
     setPresupuesto(p || [])
     setTimeline(t || [])
@@ -208,6 +215,42 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setPagos(pg || [])
     setInvitadosBoda(inv || [])
     setRsvpsBoda(rs || [])
+    setMesasBoda(ms || [])
+  }
+
+  async function agregarMesa() {
+    if (!nuevaMesaNombre.trim()) return
+    setGuardandoMesa(true)
+    const { data } = await supabase.from('boda_mesas').insert({
+      boda_id: id,
+      nombre: nuevaMesaNombre.trim(),
+      capacidad: nuevaMesaCapacidad ? Number(nuevaMesaCapacidad) : null,
+      orden: mesasBoda.length,
+    }).select().single()
+    if (data) setMesasBoda(prev => [...prev, data])
+    setNuevaMesaNombre('')
+    setNuevaMesaCapacidad('')
+    setGuardandoMesa(false)
+  }
+
+  async function borrarMesa(mesaId: string) {
+    setMesasBoda(prev => prev.filter(m => m.id !== mesaId))
+    setInvitadosBoda(prev => prev.map(i => i.mesa_id === mesaId ? { ...i, mesa_id: null } : i))
+    await supabase.from('boda_mesas').delete().eq('id', mesaId)
+  }
+
+  async function asignarInvitadoAMesa(invitadoId: string, mesaId: string | null) {
+    setInvitadosBoda(prev => prev.map(i => i.id === invitadoId ? { ...i, mesa_id: mesaId } : i))
+    await supabase.from('boda_invitados').update({ mesa_id: mesaId }).eq('id', invitadoId)
+  }
+
+  // Cuenta al invitado + sus acompañantes confirmados (si ya respondió el RSVP)
+  // como los asientos que ocupa en la mesa — si todavía no responde, cuenta
+  // solo como 1 para no subestimar la capacidad necesaria.
+  function asientosDe(invitadoId: string) {
+    const rsvp = rsvpsBoda.find(r => r.invitado_id === invitadoId)
+    if (rsvp && rsvp.asistencia === 'si') return 1 + (rsvp.num_acompanantes || 0)
+    return 1
   }
 
   useEffect(() => {
@@ -654,6 +697,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const TABS_TODAS: { key: Tab; label: string; moduloKey?: string; seccion: string }[] = [
     { key: 'dashboard', label: lang === 'en' ? 'Dashboard' : 'Dashboard', seccion: 'resumen' },
     { key: 'invitados', label: lang === 'en' ? 'Guests' : 'Invitados', moduloKey: 'invitados', seccion: 'invitados' },
+    { key: 'mesas', label: lang === 'en' ? 'Seating' : 'Mesas', moduloKey: 'mesas', seccion: 'invitados' },
     { key: 'presupuesto', label: lang === 'en' ? 'Budget' : 'Presupuesto', moduloKey: 'presupuesto', seccion: 'logistica' },
     { key: 'timeline', label: lang === 'en' ? 'Timeline' : 'Timeline', seccion: 'logistica' },
     { key: 'proveedores', label: lang === 'en' ? 'Vendors' : 'Proveedores', moduloKey: 'proveedores', seccion: 'logistica' },
@@ -1178,6 +1222,76 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <input type="number" min={0} value={nuevoInvAcompanantes} onChange={e => setNuevoInvAcompanantes(e.target.value)} placeholder={lang === 'en' ? '+1s' : 'Acompañantes'} style={{ ...inputStyle, width: 80 }} />
               <button onClick={agregarInvitadoBoda} disabled={guardando} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
             </div>
+          </div>
+        )}
+
+        {tab === 'mesas' && (
+          <div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+              <input value={nuevaMesaNombre} onChange={e => setNuevaMesaNombre(e.target.value)} placeholder={lang === 'en' ? 'Table name (e.g. Table 1)' : 'Nombre de la mesa (ej. Mesa 1)'} style={{ ...inputStyle, flex: 2, minWidth: 140 }} />
+              <input type="number" min={0} value={nuevaMesaCapacidad} onChange={e => setNuevaMesaCapacidad(e.target.value)} placeholder={lang === 'en' ? 'Seats' : 'Capacidad'} style={{ ...inputStyle, width: 100 }} />
+              <button onClick={agregarMesa} disabled={guardandoMesa || !nuevaMesaNombre.trim()} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>+</button>
+            </div>
+
+            {mesasBoda.length === 0 && (
+              <p style={{ fontSize: 13, color: 'rgba(61,43,46,.45)', marginBottom: 20 }}>
+                {lang === 'en' ? 'Create your first table above to start seating your guests.' : 'Crea tu primera mesa arriba para empezar a acomodar a tus invitados.'}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12, marginBottom: 20 }}>
+              {mesasBoda.map(mesa => {
+                const asignados = invitadosBoda.filter(i => i.mesa_id === mesa.id)
+                const ocupados = asignados.reduce((sum, i) => sum + asientosDe(i.id), 0)
+                return (
+                  <div key={mesa.id} style={{ background: 'rgba(183,110,121,.06)', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: asignados.length > 0 ? 10 : 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#3D2B2E' }}>{mesa.nombre}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: mesa.capacidad && ocupados > mesa.capacidad ? '#C24B4B' : 'rgba(61,43,46,.5)' }}>
+                          {ocupados}{mesa.capacidad ? `/${mesa.capacidad}` : ''} {lang === 'en' ? 'seated' : 'sentados'}
+                        </span>
+                        <button onClick={() => borrarMesa(mesa.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 16, cursor: 'pointer', padding: '0 2px' }}>×</button>
+                      </div>
+                    </div>
+                    {asignados.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                        {asignados.map(inv => (
+                          <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,.5)', borderRadius: 8, padding: '6px 10px' }}>
+                            <span style={{ fontSize: 12, color: '#3D2B2E', fontWeight: 600 }}>{inv.nombre}</span>
+                            <button onClick={() => asignarInvitadoAMesa(inv.id, null)} style={{ border: 'none', background: 'transparent', color: '#B76E79', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: F }}>
+                              {lang === 'en' ? 'remove' : 'quitar'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {mesasBoda.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.4)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                  {lang === 'en' ? 'Not seated yet' : 'Sin mesa asignada'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                  {invitadosBoda.filter(i => !i.mesa_id).map(inv => (
+                    <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(183,110,121,.06)', borderRadius: 12, padding: '10px 14px' }}>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#3D2B2E' }}>{inv.nombre}</span>
+                      <select value="" onChange={e => e.target.value && asignarInvitadoAMesa(inv.id, e.target.value)} style={{ ...inputStyle, width: 160, marginBottom: 0, colorScheme: 'light' as const }}>
+                        <option value="">{lang === 'en' ? 'Assign to…' : 'Asignar a…'}</option>
+                        {mesasBoda.map(mesa => <option key={mesa.id} value={mesa.id}>{mesa.nombre}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                  {invitadosBoda.filter(i => !i.mesa_id).length === 0 && (
+                    <p style={{ fontSize: 13, color: 'rgba(61,43,46,.45)' }}>{lang === 'en' ? 'Everyone has a table.' : 'Todos tienen mesa.'}</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
