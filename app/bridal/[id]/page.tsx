@@ -164,6 +164,11 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [lugarInput, setLugarInput] = useState('')
   const lugarRef = useRef<HTMLInputElement>(null)
 
+  const [editandoFecha, setEditandoFecha] = useState(false)
+  const [fechaInput, setFechaInput] = useState('')
+  const [horaInput, setHoraInput] = useState('')
+  const [guardandoFecha, setGuardandoFecha] = useState(false)
+
   const [editandoInfo, setEditandoInfo] = useState(false)
   const [infoViajeInput, setInfoViajeInput] = useState('')
   const [faqInput, setFaqInput] = useState('')
@@ -458,6 +463,25 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('proyectos_boda').update({ lugar_nombre: valor }).eq('id', id)
     setProyecto((prev: any) => ({ ...prev, lugar_nombre: valor }))
     setEditandoLugar(false)
+  }
+
+  async function guardarFecha() {
+    setGuardandoFecha(true)
+    const fecha_boda = fechaInput || null
+    const hora_boda = horaInput || null
+    const { error } = await supabase.from('proyectos_boda').update({ fecha_boda, hora_boda }).eq('id', id)
+    setGuardandoFecha(false)
+    if (error) return
+    setProyecto((prev: any) => ({ ...prev, fecha_boda, hora_boda }))
+    setEditandoFecha(false)
+    // Aviso por correo a los invitados — fire-and-forget, igual que en las
+    // celebraciones normales: si falla, la fecha ya quedó guardada bien.
+    const { data: { session } } = await supabase.auth.getSession()
+    fetch('/api/notificar-cambio-fecha-boda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bodaId: id, accessToken: session?.access_token }),
+    }).catch(() => {})
   }
 
   async function guardarInfoRsvp() {
@@ -772,12 +796,18 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
 
             {/* Brief: mismo espíritu que el brief de Cheers normal — fecha, lugar, invitados, organizadores */}
             <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '18px 20px', marginBottom: 16 }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 14, marginBottom: editandoLugar ? 12 : 0 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 14, marginBottom: (editandoLugar || editandoFecha) ? 12 : 0 }}>
                 <div>
                   <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Date' : 'Fecha'}</div>
-                  <div style={{ fontSize: 14, color: '#3D2B2E', fontWeight: 700 }}>
-                    {proyecto?.fecha_boda || (lang === 'en' ? 'Pending' : 'Pendiente')}
-                  </div>
+                  {editandoFecha ? null : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontSize: 14, color: '#3D2B2E', fontWeight: 700 }}>
+                        {proyecto?.fecha_boda || (lang === 'en' ? 'Pending' : 'Pendiente')}
+                        {proyecto?.hora_boda ? `, ${new Date(`2000-01-01T${proyecto.hora_boda.slice(0, 5)}`).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-MX', { hour: 'numeric', minute: '2-digit' })}` : ''}
+                      </div>
+                      <button onClick={() => { setFechaInput(proyecto?.fecha_boda || ''); setHoraInput(proyecto?.hora_boda || ''); setEditandoFecha(true) }} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Guests' : 'Invitados'}</div>
@@ -806,6 +836,25 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input ref={lugarRef} value={lugarInput} onChange={e => setLugarInput(e.target.value)} placeholder={lang === 'en' ? 'Search venue…' : 'Buscar lugar…'} style={{ ...inputStyle, flex: 1 }} />
                   <button onClick={guardarLugar} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+                </div>
+              )}
+              {editandoFecha && (
+                <div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                    <input type="date" value={fechaInput} onChange={e => setFechaInput(e.target.value)} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+                    <input type="time" value={horaInput} onChange={e => setHoraInput(e.target.value)} style={{ ...inputStyle, width: 110, marginBottom: 0 }} />
+                  </div>
+                  {/* Si ya hay invitados con RSVP, cambiar la fecha les manda un correo
+                      automático — mismo comportamiento que las celebraciones normales. */}
+                  {invitadosBoda.length > 0 && (
+                    <p style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', margin: '0 0 8px' }}>
+                      {lang === 'en' ? 'Your guests will get an email about this change.' : 'A tus invitados les va a llegar un correo avisando de este cambio.'}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={guardarFecha} disabled={guardandoFecha} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{guardandoFecha ? '...' : (lang === 'en' ? 'Save' : 'Guardar')}</button>
+                    <button onClick={() => setEditandoFecha(false)} style={{ border: '1px solid rgba(183,110,121,.2)', background: 'transparent', color: 'rgba(61,43,46,.5)', fontSize: 13, fontWeight: 700, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Cancel' : 'Cancelar'}</button>
+                  </div>
                 </div>
               )}
             </div>
