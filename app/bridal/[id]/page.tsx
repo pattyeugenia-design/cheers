@@ -170,6 +170,12 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [horaInput, setHoraInput] = useState('')
   const [guardandoFecha, setGuardandoFecha] = useState(false)
 
+  const [miUsername, setMiUsername] = useState('')
+  const [editandoSlug, setEditandoSlug] = useState(false)
+  const [slugInput, setSlugInput] = useState('')
+  const [guardandoSlug, setGuardandoSlug] = useState(false)
+  const [errorSlug, setErrorSlug] = useState('')
+
   const [editandoInfo, setEditandoInfo] = useState(false)
   const [infoViajeInput, setInfoViajeInput] = useState('')
   const [faqInput, setFaqInput] = useState('')
@@ -260,6 +266,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUser(user)
+      const { data: perfilPropio } = await supabase.from('perfiles').select('username').eq('user_id', user.id).single()
+      setMiUsername(perfilPropio?.username || '')
       const { data: proy } = await supabase.from('proyectos_boda').select('*').eq('id', id).single()
       if (!proy) { router.push('/bridal'); return }
       setProyecto(proy)
@@ -267,6 +275,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       setLugarInput(proy.lugar_nombre || '')
       setInfoViajeInput(proy.info_viaje || '')
       setFaqInput(proy.faq || '')
+      setSlugInput(proy.slug || '')
       await cargarTodo(id)
       setCargando(false)
     })
@@ -506,6 +515,26 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('proyectos_boda').update({ lugar_nombre: valor }).eq('id', id)
     setProyecto((prev: any) => ({ ...prev, lugar_nombre: valor }))
     setEditandoLugar(false)
+  }
+
+  function slugify(str: string) {
+    return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40)
+  }
+
+  async function guardarSlug() {
+    const valor = slugify(slugInput)
+    if (!valor) { setErrorSlug(lang === 'en' ? 'Write something first.' : 'Escribe algo primero.'); return }
+    setGuardandoSlug(true)
+    setErrorSlug('')
+    const { error } = await supabase.from('proyectos_boda').update({ slug: valor }).eq('id', id)
+    setGuardandoSlug(false)
+    if (error) {
+      setErrorSlug(error.code === '23505' ? (lang === 'en' ? 'That link is taken, try another.' : 'Ese link ya está en uso, intenta con otro.') : (lang === 'en' ? 'Something went wrong.' : 'Algo salió mal.'))
+      return
+    }
+    setProyecto((prev: any) => ({ ...prev, slug: valor }))
+    setSlugInput(valor)
+    setEditandoSlug(false)
   }
 
   async function guardarFecha() {
@@ -935,6 +964,40 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <a href={`/bridal/preview/${id}`} target="_blank" style={{ fontSize: 11, color: '#B76E79', fontWeight: 700 }}>
                   {lang === 'en' ? 'Full-size preview →' : 'Vista previa a tamaño real →'}
                 </a>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>
+                  {lang === 'en' ? 'Public link to share' : 'Link público para compartir'}
+                </div>
+                {editandoSlug ? (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', whiteSpace: 'nowrap' as const }}>joincheers.app/boda/{miUsername}/</span>
+                      <input value={slugInput} onChange={e => setSlugInput(e.target.value)} placeholder="boda-patty-y-valente" style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+                    </div>
+                    {errorSlug && <p style={{ fontSize: 11, color: '#C24B4B', marginBottom: 6 }}>{errorSlug}</p>}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={guardarSlug} disabled={guardandoSlug} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                        {guardandoSlug ? '...' : (lang === 'en' ? 'Save' : 'Guardar')}
+                      </button>
+                      <button onClick={() => { setEditandoSlug(false); setErrorSlug('') }} style={{ border: '1px solid rgba(183,110,121,.2)', background: 'transparent', color: 'rgba(61,43,46,.5)', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                        {lang === 'en' ? 'Cancel' : 'Cancelar'}
+                      </button>
+                    </div>
+                  </div>
+                ) : proyecto?.slug ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <a href={`/boda/${miUsername}/${proyecto.slug}`} target="_blank" style={{ fontSize: 12, color: '#B76E79', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                      joincheers.app/boda/{miUsername}/{proyecto.slug}
+                    </a>
+                    <button onClick={() => setEditandoSlug(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setEditandoSlug(true)} style={{ border: 'none', background: 'rgba(183,110,121,.1)', color: '#B76E79', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>
+                    {lang === 'en' ? '+ Create public link' : '+ Crear link público'}
+                  </button>
+                )}
               </div>
 
               <input ref={portadaInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }} style={{ display: 'none' }} />
