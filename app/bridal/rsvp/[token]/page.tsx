@@ -336,7 +336,7 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
             </>
           )}
 
-          <textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder={lang === 'en' ? 'Allergies or a note for the couple (optional)' : 'Alergias o un mensaje para la pareja (opcional)'} rows={3} style={{ ...inputStyle, resize: 'none' as const }} />
+          <textarea value={notas} maxLength={1000} onChange={e => setNotas(e.target.value)} placeholder={lang === 'en' ? 'Allergies or a note for the couple (optional)' : 'Alergias o un mensaje para la pareja (opcional)'} rows={3} style={{ ...inputStyle, resize: 'none' as const }} />
 
           <button onClick={enviar} disabled={!asistencia || enviando} style={{ width: '100%', border: 'none', background: !asistencia ? pillBg : 'linear-gradient(135deg,#534AB7,#D4537E)', color: !asistencia ? txtSecundario : '#fff', fontSize: 14, fontWeight: 800, padding: '12px', borderRadius: 10, cursor: asistencia ? 'pointer' : 'default', fontFamily: F }}>
             {enviando ? '...' : (lang === 'en' ? 'Send RSVP' : 'Enviar respuesta')}

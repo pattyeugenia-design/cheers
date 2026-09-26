@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomInt } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { envolverEmail, escapeHtml } from '../../emailTemplate'
@@ -22,9 +23,14 @@ function excedeLimite(ip: string): boolean {
   return recientes.length > LIMITE_SOLICITUDES
 }
 
+// crypto.randomInt en vez de Math.random: Math.random no es seguro para códigos
 function generarCodigo(): string {
-  return String(Math.floor(100000 + Math.random() * 900000))
+  return String(randomInt(100000, 1000000))
 }
+
+// Máximo de códigos que se le pueden mandar a un mismo invitado por hora,
+// sin importar desde cuántas IPs lo pidan (el límite por IP solo no basta).
+const MAX_CODIGOS_POR_HORA = 3
 
 export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
@@ -57,6 +63,18 @@ export async function POST(req: Request) {
     .eq('id', bodaId)
     .single()
   const nombreBoda = [proyecto?.nombre_novia, proyecto?.nombre_novio].filter(Boolean).join(' & ') || 'la boda'
+
+  const haceUnaHora = new Date(Date.now() - 60 * 60_000).toISOString()
+  const { count: codigosRecientes } = await admin
+    .from('boda_codigos_verificacion')
+    .select('id', { count: 'exact', head: true })
+    .eq('invitado_id', invitado.id)
+    .gte('created_at', haceUnaHora)
+  if ((codigosRecientes ?? 0) >= MAX_CODIGOS_POR_HORA) return NextResponse.json({ success: true })
+
+  // Solo un código vivo a la vez: al pedir uno nuevo, los anteriores dejan de servir.
+  // Así nadie acumula muchos códigos válidos para tener más chance de adivinar.
+  await admin.from('boda_codigos_verificacion').update({ usado: true }).eq('invitado_id', invitado.id).eq('usado', false)
 
   const codigo = generarCodigo()
   const expiraEn = new Date(Date.now() + 15 * 60_000).toISOString()

@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 const solicitudesPorIP = new Map<string, number[]>()
 const LIMITE_SOLICITUDES = 15
 const VENTANA_MS = 60_000
+const MAX_INTENTOS = 5
 
 function excedeLimite(ip: string): boolean {
   const ahora = Date.now()
@@ -40,17 +41,28 @@ export async function POST(req: Request) {
     .maybeSingle()
   if (!invitado) return NextResponse.json({ error: 'Código incorrecto o vencido.' }, { status: 400 })
 
+  // Se toma el código vivo más reciente (no se busca por el código que manda
+  // el navegador) y se cuentan los intentos fallidos: a los 5 errores el código
+  // se quema. Sin esto, alguien podría probar códigos hasta atinarle.
   const { data: fila } = await admin
     .from('boda_codigos_verificacion')
-    .select('id, expira_en, usado')
+    .select('id, codigo, expira_en, usado, intentos')
     .eq('invitado_id', invitado.id)
-    .eq('codigo', String(codigo).trim())
     .eq('usado', false)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
   if (!fila || new Date(fila.expira_en).getTime() < Date.now()) {
+    return NextResponse.json({ error: 'Código incorrecto o vencido.' }, { status: 400 })
+  }
+
+  if (fila.codigo !== String(codigo).trim()) {
+    const intentos = (fila.intentos ?? 0) + 1
+    await admin
+      .from('boda_codigos_verificacion')
+      .update(intentos >= MAX_INTENTOS ? { intentos, usado: true } : { intentos })
+      .eq('id', fila.id)
     return NextResponse.json({ error: 'Código incorrecto o vencido.' }, { status: 400 })
   }
 
