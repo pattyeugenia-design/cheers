@@ -187,6 +187,51 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
             )}
           </div>
         )}
+
+        {proyecto?.solo_adultos && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '20px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'A note with love' : 'Una nota con cariño'}</div>
+            <p style={{ fontSize: 13, color: txtSecundario, lineHeight: 1.5, margin: 0 }}>
+              {lang === 'en' ? 'We love the little ones, but this event is adults-only. Thank you for understanding!' : 'Adoramos a los más pequeños, sin embargo este evento está destinado solo para adultos. ¡Esperamos tu comprensión!'}
+            </p>
+          </div>
+        )}
+
+        {proyecto?.versiculo && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 15, color: txtPrimario, lineHeight: 1.6, fontStyle: 'italic', margin: '0 0 10px', fontFamily: fInv }}>{proyecto.versiculo}</p>
+            {proyecto?.versiculo_autor && <p style={{ fontSize: 12, color: txtTerciario, fontWeight: 700, margin: 0 }}>{proyecto.versiculo_autor}</p>}
+          </div>
+        )}
+
+        {(proyecto?.padre_novia || proyecto?.madre_novia || proyecto?.padre_novio || proyecto?.madre_novio) && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 13, color: txtSecundario, fontStyle: 'italic', margin: '0 0 16px', fontFamily: fInv }}>
+              {lang === 'en' ? 'With the blessing of our parents' : 'Con la bendición de nuestros padres'}
+            </p>
+            {(proyecto?.padre_novia || proyecto?.madre_novia) && (
+              <div style={{ marginBottom: (proyecto?.padre_novio || proyecto?.madre_novio) ? 14 : 0 }}>
+                <div style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>{lang === 'en' ? "Bride's parents" : 'Padres de la novia'}</div>
+                {proyecto?.padre_novia && <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 2px' }}>{proyecto.padre_novia}</p>}
+                {proyecto?.madre_novia && <p style={{ fontSize: 14, color: txtPrimario, margin: 0 }}>{proyecto.madre_novia}</p>}
+              </div>
+            )}
+            {(proyecto?.padre_novio || proyecto?.madre_novio) && (
+              <div>
+                <div style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>{lang === 'en' ? "Groom's parents" : 'Padres del novio'}</div>
+                {proyecto?.padre_novio && <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 2px' }}>{proyecto.padre_novio}</p>}
+                {proyecto?.madre_novio && <p style={{ fontSize: 14, color: txtPrimario, margin: 0 }}>{proyecto.madre_novio}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {proyecto?.frase_cierre && (
+          <div style={{ padding: '28px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 16, color: txtPrimario, lineHeight: 1.6, fontStyle: 'italic', margin: 0, fontFamily: fInv }}>{proyecto.frase_cierre}</p>
+            <p style={{ fontSize: 13, color: txtTerciario, marginTop: 10 }}>— {nombreBoda}</p>
+          </div>
+        )}
         </div>
       </div>
     </main>
