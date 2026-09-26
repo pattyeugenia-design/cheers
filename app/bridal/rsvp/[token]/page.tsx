@@ -79,6 +79,19 @@ function Countdown({ fecha, hora, cardBg, txtPrimario, txtTerciario, acento, lan
   )
 }
 
+function formatICSDate(date: Date) {
+  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+}
+
+function calendarLinksBoda(nombre: string, fecha: string, hora: string | null, lugar: string | null) {
+  const inicio = new Date(`${fecha}T${hora || '12:00'}:00`)
+  const fin = new Date(inicio.getTime() + 5 * 60 * 60 * 1000) // 5 horas por default (ceremonia + recepción)
+  const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(nombre)}&dates=${formatICSDate(inicio)}/${formatICSDate(fin)}&location=${encodeURIComponent(lugar || '')}`
+  const icsContent = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `DTSTART:${formatICSDate(inicio)}`, `DTEND:${formatICSDate(fin)}`, `SUMMARY:${nombre}`, `LOCATION:${lugar || ''}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
+  const icsUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
+  return { googleUrl, icsUrl }
+}
+
 const MENU_OPCIONES = ['res', 'pollo', 'vegetariano', 'vegano'] as const
 const MENU_LABEL: Record<string, { es: string; en: string }> = {
   res: { es: 'Res', en: 'Beef' },
@@ -195,7 +208,7 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
         </p>
         <h1 style={{ fontSize: 30, fontWeight: 900, color: txtPrimario, margin: '0 0 6px', textAlign: 'center' as const, letterSpacing: '-.5px', fontFamily: fInv }}>{nombreBoda}</h1>
         {(invitado.fecha_boda || invitado.lugar_nombre) && (
-          <p style={{ fontSize: 13, color: txtTerciario, textAlign: 'center' as const, marginBottom: 28 }}>
+          <p style={{ fontSize: 13, color: txtTerciario, textAlign: 'center' as const, marginBottom: 8 }}>
             {invitado.fecha_boda}
             {invitado.fecha_boda && invitado.lugar_nombre && ' · '}
             {invitado.lugar_nombre && (
@@ -203,6 +216,22 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
             )}
           </p>
         )}
+
+        {invitado.acompanantes_permitidos > 0 && (
+          <p style={{ fontSize: 12, color: acento, fontWeight: 700, textAlign: 'center' as const, marginBottom: 20 }}>
+            {lang === 'en' ? `This invitation is for up to ${invitado.acompanantes_permitidos + 1} people` : `Esta invitación es para hasta ${invitado.acompanantes_permitidos + 1} personas`}
+          </p>
+        )}
+
+        {invitado.fecha_boda && (() => {
+          const { googleUrl, icsUrl } = calendarLinksBoda(nombreBoda, invitado.fecha_boda, invitado.hora_boda, invitado.lugar_nombre)
+          return (
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+              <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: txtPrimario, background: pillBg, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
+              <a href={icsUrl} download={`boda-${invitado.slug || 'evento'}.ics`} style={{ fontSize: 11, fontWeight: 700, color: txtPrimario, background: pillBg, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
+            </div>
+          )
+        })()}
 
         {invitado.fecha_boda && (
           <Countdown fecha={invitado.fecha_boda} hora={invitado.hora_boda} cardBg={cardBg} txtPrimario={txtPrimario} txtTerciario={txtTerciario} acento={acento} lang={lang} />
