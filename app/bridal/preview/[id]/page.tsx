@@ -325,8 +325,8 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
           <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16, textAlign: 'center' as const }}>
             <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 10 }}>{lang === 'en' ? 'Gift registry' : 'Mesa de regalos'}</div>
             {proyecto?.mesa_regalos_nota && <p style={{ fontSize: 13, color: txtSecundario, margin: '0 0 12px', lineHeight: 1.5 }}>{proyecto.mesa_regalos_nota}</p>}
-            {proyecto?.mesa_regalos_link && (
-              <a href={proyecto.mesa_regalos_link} target="_blank" style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', padding: '10px 20px', borderRadius: 99, textDecoration: 'none', marginBottom: proyecto?.lluvia_sobres ? 12 : 0 }}>
+            {proyecto?.mesa_regalos_link && /^https?:\/\//i.test(proyecto.mesa_regalos_link) && (
+              <a href={proyecto.mesa_regalos_link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', padding: '10px 20px', borderRadius: 99, textDecoration: 'none', marginBottom: proyecto?.lluvia_sobres ? 12 : 0 }}>
                 {lang === 'en' ? 'See registry' : 'Ver mesa de regalos'} ↗
               </a>
             )}

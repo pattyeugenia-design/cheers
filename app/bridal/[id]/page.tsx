@@ -699,6 +699,17 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   }
 
   async function guardarFase3() {
+    // Link de mesa de regalos: solo se aceptan links web reales (http/https).
+    // Si la pareja escribe "liverpool.com.mx/..." sin https, se lo agregamos;
+    // cualquier otra cosa (espacios, "javascript:", etc.) se rechaza con aviso.
+    let linkRegalos = mesaRegalosLinkInput.trim()
+    if (linkRegalos && !/^https?:\/\//i.test(linkRegalos) && /^[a-z0-9.-]+\.[a-z]{2,}(\/\S*)?$/i.test(linkRegalos)) {
+      linkRegalos = 'https://' + linkRegalos
+    }
+    if (linkRegalos && (!/^https?:\/\/\S+$/i.test(linkRegalos) || linkRegalos.length > 500)) {
+      alert(lang === 'en' ? 'The gift registry link must be a web address (https://...).' : 'El link de la mesa de regalos debe ser una dirección web (https://...).')
+      return
+    }
     const cambios = {
       itinerario: textoAItinerario(itinerarioInput),
       vestimenta_tipo: vestimentaTipoInput.trim() || null,
@@ -706,11 +717,16 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       vestimenta_nota: vestimentaNotaInput.trim() || null,
       lugar2_nombre: lugar2Input.trim() || null,
       hoteles: textoAHoteles(hotelesInput),
-      mesa_regalos_link: mesaRegalosLinkInput.trim() || null,
+      mesa_regalos_link: linkRegalos || null,
       mesa_regalos_nota: mesaRegalosNotaInput.trim() || null,
       lluvia_sobres: lluviaSobresInput,
     }
-    await supabase.from('proyectos_boda').update(cambios).eq('id', id)
+    const { error } = await supabase.from('proyectos_boda').update(cambios).eq('id', id)
+    if (error) {
+      alert(lang === 'en' ? 'Could not save, please try again.' : 'No se pudo guardar, intenta de nuevo.')
+      return
+    }
+    setMesaRegalosLinkInput(linkRegalos)
     setProyecto((prev: any) => ({ ...prev, ...cambios }))
     setEditandoFase3(false)
   }

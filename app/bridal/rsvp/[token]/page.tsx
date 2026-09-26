@@ -158,15 +158,39 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
     setFirmaEnviada(true)
   }
 
+  // Reduce la foto en el navegador antes de subirla (máx. 2000px, JPG): las
+  // fotos de celular pueden pasar el límite de 4.5MB de Vercel, y en JPG el
+  // filtro de contenido siempre puede revisarlas (HEIC no se puede escanear).
+  async function reducirFoto(archivo: File): Promise<Blob> {
+    try {
+      const bitmap = await createImageBitmap(archivo)
+      const escala = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(bitmap.width * escala)
+      canvas.height = Math.round(bitmap.height * escala)
+      canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.85))
+      return blob || archivo
+    } catch {
+      return archivo
+    }
+  }
+
   async function subirFoto(archivo: File) {
     setSubiendoFoto(true)
+    const foto = await reducirFoto(archivo)
     const form = new FormData()
     form.append('token', token)
     form.append('nombre', invitado?.nombre || '')
-    form.append('archivo', archivo)
+    form.append('archivo', foto, foto === archivo ? archivo.name : 'foto.jpg')
     const res = await fetch('/api/subir-foto-boda', { method: 'POST', body: form })
     setSubiendoFoto(false)
-    if (res.ok) setFotoRecienSubida(true)
+    if (res.ok) {
+      setFotoRecienSubida(true)
+    } else {
+      const data = await res.json().catch(() => null)
+      alert(data?.error || (lang === 'en' ? 'Could not upload the photo, please try again.' : 'No se pudo subir la foto, intenta de nuevo.'))
+    }
   }
 
   function actualizarNumAcompanantes(n: number) {
@@ -414,8 +438,8 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
           <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16, textAlign: 'center' as const }}>
             <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 10 }}>{lang === 'en' ? 'Gift registry' : 'Mesa de regalos'}</div>
             {invitado.mesa_regalos_nota && <p style={{ fontSize: 13, color: txtSecundario, margin: '0 0 12px', lineHeight: 1.5 }}>{invitado.mesa_regalos_nota}</p>}
-            {invitado.mesa_regalos_link && (
-              <a href={invitado.mesa_regalos_link} target="_blank" style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', padding: '10px 20px', borderRadius: 99, textDecoration: 'none', marginBottom: invitado.lluvia_sobres ? 12 : 0 }}>
+            {invitado.mesa_regalos_link && /^https?:\/\//i.test(invitado.mesa_regalos_link) && (
+              <a href={invitado.mesa_regalos_link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', padding: '10px 20px', borderRadius: 99, textDecoration: 'none', marginBottom: invitado.lluvia_sobres ? 12 : 0 }}>
                 {lang === 'en' ? 'See registry' : 'Ver mesa de regalos'} ↗
               </a>
             )}
