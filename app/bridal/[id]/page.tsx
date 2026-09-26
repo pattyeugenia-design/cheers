@@ -182,10 +182,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [editandoContenido, setEditandoContenido] = useState(false)
   const [versiculoInput, setVersiculoInput] = useState('')
   const [versiculoAutorInput, setVersiculoAutorInput] = useState('')
-  const [padreNoviaInput, setPadreNoviaInput] = useState('')
-  const [madreNoviaInput, setMadreNoviaInput] = useState('')
-  const [padreNovioInput, setPadreNovioInput] = useState('')
-  const [madreNovioInput, setMadreNovioInput] = useState('')
+  const [mensajePadresInput, setMensajePadresInput] = useState('')
   const [soloAdultosInput, setSoloAdultosInput] = useState(false)
   const [fraseCierreInput, setFraseCierreInput] = useState('')
 
@@ -286,10 +283,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       setFaqInput(proy.faq || '')
       setVersiculoInput(proy.versiculo || '')
       setVersiculoAutorInput(proy.versiculo_autor || '')
-      setPadreNoviaInput(proy.padre_novia || '')
-      setMadreNoviaInput(proy.madre_novia || '')
-      setPadreNovioInput(proy.padre_novio || '')
-      setMadreNovioInput(proy.madre_novio || '')
+      setMensajePadresInput(proy.mensaje_padres || '')
       setSoloAdultosInput(!!proy.solo_adultos)
       setFraseCierreInput(proy.frase_cierre || '')
       setSlugInput(proy.slug || '')
@@ -585,10 +579,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     const cambios = {
       versiculo: versiculoInput.trim() || null,
       versiculo_autor: versiculoAutorInput.trim() || null,
-      padre_novia: padreNoviaInput.trim() || null,
-      madre_novia: madreNoviaInput.trim() || null,
-      padre_novio: padreNovioInput.trim() || null,
-      madre_novio: madreNovioInput.trim() || null,
+      mensaje_padres: mensajePadresInput.trim() || null,
       solo_adultos: soloAdultosInput,
       frase_cierre: fraseCierreInput.trim() || null,
     }
@@ -1002,22 +993,17 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <div>
                   <textarea value={versiculoInput} onChange={e => setVersiculoInput(e.target.value)} rows={2} placeholder={lang === 'en' ? 'Verse or quote (optional)' : 'Versículo o frase (opcional)'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
                   <input value={versiculoAutorInput} onChange={e => setVersiculoAutorInput(e.target.value)} placeholder={lang === 'en' ? 'Citation, e.g. 1 Corinthians 13:4-8' : 'Cita, ej. 1 Corintios 13:4-8'} style={{ ...inputStyle, width: '100%' }} />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-                    <input value={padreNoviaInput} onChange={e => setPadreNoviaInput(e.target.value)} placeholder={lang === 'en' ? "Bride's father" : 'Padre de la novia'} style={{ ...inputStyle, marginBottom: 0 }} />
-                    <input value={madreNoviaInput} onChange={e => setMadreNoviaInput(e.target.value)} placeholder={lang === 'en' ? "Bride's mother" : 'Madre de la novia'} style={{ ...inputStyle, marginBottom: 0 }} />
-                    <input value={padreNovioInput} onChange={e => setPadreNovioInput(e.target.value)} placeholder={lang === 'en' ? "Groom's father" : 'Padre del novio'} style={{ ...inputStyle, marginBottom: 0 }} />
-                    <input value={madreNovioInput} onChange={e => setMadreNovioInput(e.target.value)} placeholder={lang === 'en' ? "Groom's mother" : 'Madre del novio'} style={{ ...inputStyle, marginBottom: 0 }} />
-                  </div>
+                  <textarea value={mensajePadresInput} onChange={e => setMensajePadresInput(e.target.value)} rows={3} placeholder={lang === 'en' ? 'Any message about family (optional, write it exactly as you want it — mention whoever you want, or skip this entirely)' : 'Mensaje sobre la familia (opcional, escríbelo tal como lo quieras — menciona a quien quieras, o déjalo vacío)'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#3D2B2E', marginBottom: 10, cursor: 'pointer' }}>
                     <input type="checkbox" checked={soloAdultosInput} onChange={e => setSoloAdultosInput(e.target.checked)} />
-                    {lang === 'en' ? 'Adults-only event' : 'Evento solo para adultos'}
+                    {lang === 'en' ? 'Adults-only event (leave unchecked if kids are welcome)' : 'Evento solo para adultos (déjalo sin marcar si sí quieres niños)'}
                   </label>
                   <textarea value={fraseCierreInput} onChange={e => setFraseCierreInput(e.target.value)} rows={2} placeholder={lang === 'en' ? 'Closing phrase, e.g. "Choosing you every day..."' : 'Frase de cierre, ej. "Elegirte cada día fue..."'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
                   <button onClick={guardarContenidoAdicional} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
                 </div>
               ) : (
                 <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>
-                  {(proyecto?.versiculo || proyecto?.padre_novia || proyecto?.madre_novia || proyecto?.padre_novio || proyecto?.madre_novio || proyecto?.frase_cierre || proyecto?.solo_adultos)
+                  {(proyecto?.versiculo || proyecto?.mensaje_padres || proyecto?.frase_cierre || proyecto?.solo_adultos)
                     ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.')
                     : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
                 </p>
