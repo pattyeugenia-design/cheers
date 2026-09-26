@@ -242,6 +242,51 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
             )}
           </div>
         )}
+
+        {invitado.solo_adultos && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '20px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'A note with love' : 'Una nota con cariño'}</div>
+            <p style={{ fontSize: 13, color: txtSecundario, lineHeight: 1.5, margin: 0 }}>
+              {lang === 'en' ? 'We love the little ones, but this event is adults-only. Thank you for understanding!' : 'Adoramos a los más pequeños, sin embargo este evento está destinado solo para adultos. ¡Esperamos tu comprensión!'}
+            </p>
+          </div>
+        )}
+
+        {invitado.versiculo && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 15, color: txtPrimario, lineHeight: 1.6, fontStyle: 'italic', margin: '0 0 10px', fontFamily: fInv }}>{invitado.versiculo}</p>
+            {invitado.versiculo_autor && <p style={{ fontSize: 12, color: txtTerciario, fontWeight: 700, margin: 0 }}>{invitado.versiculo_autor}</p>}
+          </div>
+        )}
+
+        {(invitado.padre_novia || invitado.madre_novia || invitado.padre_novio || invitado.madre_novio) && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 13, color: txtSecundario, fontStyle: 'italic', margin: '0 0 16px', fontFamily: fInv }}>
+              {lang === 'en' ? 'With the blessing of our parents' : 'Con la bendición de nuestros padres'}
+            </p>
+            {(invitado.padre_novia || invitado.madre_novia) && (
+              <div style={{ marginBottom: (invitado.padre_novio || invitado.madre_novio) ? 14 : 0 }}>
+                <div style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>{lang === 'en' ? "Bride's parents" : 'Padres de la novia'}</div>
+                {invitado.padre_novia && <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 2px' }}>{invitado.padre_novia}</p>}
+                {invitado.madre_novia && <p style={{ fontSize: 14, color: txtPrimario, margin: 0 }}>{invitado.madre_novia}</p>}
+              </div>
+            )}
+            {(invitado.padre_novio || invitado.madre_novio) && (
+              <div>
+                <div style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>{lang === 'en' ? "Groom's parents" : 'Padres del novio'}</div>
+                {invitado.padre_novio && <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 2px' }}>{invitado.padre_novio}</p>}
+                {invitado.madre_novio && <p style={{ fontSize: 14, color: txtPrimario, margin: 0 }}>{invitado.madre_novio}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {invitado.frase_cierre && (
+          <div style={{ padding: '28px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 16, color: txtPrimario, lineHeight: 1.6, fontStyle: 'italic', margin: 0, fontFamily: fInv }}>{invitado.frase_cierre}</p>
+            {nombreBoda && <p style={{ fontSize: 13, color: txtTerciario, marginTop: 10 }}>— {nombreBoda}</p>}
+          </div>
+        )}
         </div>
       </div>
     </main>
