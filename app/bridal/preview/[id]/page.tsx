@@ -8,9 +8,6 @@ import { getLang } from '../../../i18n'
 const F = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
 const BG_DEFAULT = 'linear-gradient(160deg,#3a1f3d,#4a2245,#2a1a3e)'
 
-// Vista previa a tamaño real de la invitación, SOLO para la pareja (dueños/miembros
-// del proyecto, vía RLS de proyectos_boda) — no necesita ningún invitado real como
-// la página de RSVP normal (app/bridal/rsvp/[token]). No guarda ni manda nada.
 const TEMAS: Record<string, { bg: string; dark: boolean }> = {
   morado:  { bg: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)', dark: true },
   rosa:    { bg: 'linear-gradient(155deg,#D4537E,#a14b9c)', dark: true },
@@ -42,17 +39,12 @@ function fmtFechaBonita(fecha: string | null | undefined, lang: string) {
   return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-// Mismo criterio que el dashboard: se acerca la foto un 15% extra para que
-// "arriba/centro/abajo" siempre tenga margen real que mover, sin importar la
-// relación de aspecto de la foto original.
 const ORIGEN_POR_POSICION: Record<string, string> = { top: '50% 0%', center: '50% 50%', bottom: '50% 100%' }
 function estiloFotoConPosicion(pos: string | null | undefined) {
   const p = pos || 'center'
   return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
 }
 
-// Countdown en vivo (días/horas/min/seg) — mismo estilo visual que el resto de
-// tarjetas de la invitación, se actualiza solo cada segundo sin recargar nada.
 function Countdown({ fecha, hora, cardBg, txtPrimario, txtTerciario, acento, lang }: {
   fecha: string; hora: string | null; cardBg: string; txtPrimario: string; txtTerciario: string; acento: string; lang: string
 }) {
@@ -109,7 +101,6 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
   const [proyecto, setProyecto] = useState<any>(null)
   const [noEncontrado, setNoEncontrado] = useState(false)
 
-  // Solo para sentir cómo responde el botón — nunca se guarda ni se manda nada aquí.
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'tal_vez' | ''>('')
   const [menuPrincipal, setMenuPrincipal] = useState('')
 
@@ -258,25 +249,9 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
           </div>
         )}
 
-        {(proyecto?.padre_novia || proyecto?.madre_novia || proyecto?.padre_novio || proyecto?.madre_novio) && (
+        {proyecto?.mensaje_padres && (
           <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px', marginTop: 16, textAlign: 'center' as const }}>
-            <p style={{ fontSize: 13, color: txtSecundario, fontStyle: 'italic', margin: '0 0 16px', fontFamily: fInv }}>
-              {lang === 'en' ? 'With the blessing of our parents' : 'Con la bendición de nuestros padres'}
-            </p>
-            {(proyecto?.padre_novia || proyecto?.madre_novia) && (
-              <div style={{ marginBottom: (proyecto?.padre_novio || proyecto?.madre_novio) ? 14 : 0 }}>
-                <div style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>{lang === 'en' ? "Bride's parents" : 'Padres de la novia'}</div>
-                {proyecto?.padre_novia && <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 2px' }}>{proyecto.padre_novia}</p>}
-                {proyecto?.madre_novia && <p style={{ fontSize: 14, color: txtPrimario, margin: 0 }}>{proyecto.madre_novia}</p>}
-              </div>
-            )}
-            {(proyecto?.padre_novio || proyecto?.madre_novio) && (
-              <div>
-                <div style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>{lang === 'en' ? "Groom's parents" : 'Padres del novio'}</div>
-                {proyecto?.padre_novio && <p style={{ fontSize: 14, color: txtPrimario, margin: '0 0 2px' }}>{proyecto.padre_novio}</p>}
-                {proyecto?.madre_novio && <p style={{ fontSize: 14, color: txtPrimario, margin: 0 }}>{proyecto.madre_novio}</p>}
-              </div>
-            )}
+            <p style={{ fontSize: 14, color: txtPrimario, lineHeight: 1.6, whiteSpace: 'pre-wrap' as const, margin: 0, fontFamily: fInv }}>{proyecto.mensaje_padres}</p>
           </div>
         )}
 
