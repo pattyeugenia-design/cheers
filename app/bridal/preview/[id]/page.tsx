@@ -121,6 +121,8 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
   const [cargando, setCargando] = useState(true)
   const [proyecto, setProyecto] = useState<any>(null)
   const [noEncontrado, setNoEncontrado] = useState(false)
+  const [firmas, setFirmas] = useState<any[]>([])
+  const [fotos, setFotos] = useState<any[]>([])
 
   // Solo para sentir cómo responde el botón — nunca se guarda ni se manda nada aquí.
   const [asistencia, setAsistencia] = useState<'si' | 'no' | 'tal_vez' | ''>('')
@@ -135,6 +137,10 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
       const { data, error } = await supabase.from('proyectos_boda').select('*').eq('id', id).single()
       if (error || !data) { setNoEncontrado(true); setCargando(false); return }
       setProyecto(data)
+      const { data: fm } = await supabase.from('boda_firmas').select('*').eq('boda_id', id).eq('aprobado', true).order('created_at', { ascending: false })
+      setFirmas(fm || [])
+      const { data: fo } = await supabase.from('boda_fotos').select('*').eq('boda_id', id).eq('aprobado', true).order('created_at', { ascending: false })
+      setFotos(fo || [])
       setCargando(false)
     })
   }, [])
@@ -331,6 +337,33 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
             )}
           </div>
         )}
+
+        <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16 }}>
+          <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 12 }}>{lang === 'en' ? 'Guest book' : 'Libro de firmas'}</div>
+          {firmas.length > 0 ? (
+            firmas.map((f, i) => (
+              <div key={i} style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,.06)' : 'none', paddingTop: i > 0 ? 12 : 0, marginTop: i > 0 ? 12 : 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: txtPrimario, marginBottom: 3 }}>{f.nombre}</div>
+                <div style={{ fontSize: 13, color: txtSecundario, whiteSpace: 'pre-wrap' as const }}>{f.mensaje}</div>
+              </div>
+            ))
+          ) : (
+            <p style={{ fontSize: 12, color: txtTerciario, margin: 0 }}>{lang === 'en' ? 'Messages your guests leave (once you approve them) will show up here.' : 'Aquí aparecerán los mensajes de tus invitados una vez que los apruebes.'}</p>
+          )}
+        </div>
+
+        <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16 }}>
+          <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 12 }}>{lang === 'en' ? 'Shared photo album' : 'Álbum de fotos compartido'}</div>
+          {fotos.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+              {fotos.map((f, i) => (
+                <img key={i} src={f.url} alt="" style={{ width: '100%', height: 90, objectFit: 'cover' as const, borderRadius: 8 }} />
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: 12, color: txtTerciario, margin: 0 }}>{lang === 'en' ? 'Photos your guests upload (once you approve them) will show up here.' : 'Aquí aparecerán las fotos que suban tus invitados una vez que las apruebes.'}</p>
+          )}
+        </div>
 
         {(proyecto?.info_viaje || proyecto?.faq) && (
           <div style={{ background: cardBg, borderRadius: 20, padding: '20px 22px', marginTop: 16 }}>

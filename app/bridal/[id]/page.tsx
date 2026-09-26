@@ -191,6 +191,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [contratos, setContratos] = useState<any[]>([])
   const [pagos, setPagos] = useState<any[]>([])
   const [invitadosBoda, setInvitadosBoda] = useState<any[]>([])
+  const [firmasBoda, setFirmasBoda] = useState<any[]>([])
+  const [fotosBoda, setFotosBoda] = useState<any[]>([])
   const [rsvpsBoda, setRsvpsBoda] = useState<any[]>([])
 
   // Formularios rápidos por sección
@@ -293,7 +295,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [guardandoMesa, setGuardandoMesa] = useState(false)
 
   async function cargarTodo(bodaId: string) {
-    const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }, { data: ms }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: tb }, { data: pr }, { data: ct }, { data: pg }, { data: inv }, { data: rs }, { data: ms }, { data: fm }, { data: fo }] = await Promise.all([
       supabase.from('boda_presupuesto_items').select('*').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_timeline_items').select('*').eq('boda_id', bodaId).order('fecha_objetivo', { ascending: true, nullsFirst: false }),
       supabase.from('boda_tablero_items').select('*').eq('boda_id', bodaId).order('orden'),
@@ -303,6 +305,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       supabase.from('boda_invitados').select('*').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_rsvps').select('*').eq('boda_id', bodaId),
       supabase.from('boda_mesas').select('*').eq('boda_id', bodaId).order('orden'),
+      supabase.from('boda_firmas').select('*').eq('boda_id', bodaId).order('created_at', { ascending: false }),
+      supabase.from('boda_fotos').select('*').eq('boda_id', bodaId).order('created_at', { ascending: false }),
     ])
     setPresupuesto(p || [])
     setTimeline(t || [])
@@ -313,6 +317,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setInvitadosBoda(inv || [])
     setRsvpsBoda(rs || [])
     setMesasBoda(ms || [])
+    setFirmasBoda(fm || [])
+    setFotosBoda(fo || [])
   }
 
   async function agregarMesa() {
@@ -707,6 +713,27 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('proyectos_boda').update(cambios).eq('id', id)
     setProyecto((prev: any) => ({ ...prev, ...cambios }))
     setEditandoFase3(false)
+  }
+
+  async function aprobarFirma(firmaId: string) {
+    await supabase.from('boda_firmas').update({ aprobado: true }).eq('id', firmaId)
+    setFirmasBoda(prev => prev.map(f => f.id === firmaId ? { ...f, aprobado: true } : f))
+  }
+
+  async function rechazarFirma(firmaId: string) {
+    await supabase.from('boda_firmas').delete().eq('id', firmaId)
+    setFirmasBoda(prev => prev.filter(f => f.id !== firmaId))
+  }
+
+  async function aprobarFoto(fotoId: string) {
+    await supabase.from('boda_fotos').update({ aprobado: true }).eq('id', fotoId)
+    setFotosBoda(prev => prev.map(f => f.id === fotoId ? { ...f, aprobado: true } : f))
+  }
+
+  async function rechazarFoto(foto: any) {
+    await supabase.storage.from('fotos-boda').remove([foto.ruta_storage])
+    await supabase.from('boda_fotos').delete().eq('id', foto.id)
+    setFotosBoda(prev => prev.filter(f => f.id !== foto.id))
   }
 
   async function guardarTema(k: string) {
@@ -1219,6 +1246,84 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                     ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.')
                     : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
                 </p>
+              )}
+            </div>
+
+            {/* Libro de firmas: los invitados escriben, la pareja aprueba antes de que se vuelva público */}
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 10 }}>
+                {lang === 'en' ? 'Guest book' : 'Libro de firmas'}
+              </div>
+              {firmasBoda.filter(f => !f.aprobado).length === 0 && firmasBoda.filter(f => f.aprobado).length === 0 && (
+                <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>{lang === 'en' ? 'No messages yet.' : 'Todavía no hay mensajes.'}</p>
+              )}
+              {firmasBoda.filter(f => !f.aprobado).length > 0 && (
+                <div style={{ marginBottom: firmasBoda.some(f => f.aprobado) ? 14 : 0 }}>
+                  <div style={{ fontSize: 10, color: '#B45309', fontWeight: 800, marginBottom: 6 }}>{lang === 'en' ? 'PENDING APPROVAL' : 'PENDIENTES DE APROBAR'}</div>
+                  {firmasBoda.filter(f => !f.aprobado).map(f => (
+                    <div key={f.id} style={{ background: '#fff', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#3D2B2E', marginBottom: 3 }}>{f.nombre}</div>
+                      <div style={{ fontSize: 13, color: '#3D2B2E', marginBottom: 8, whiteSpace: 'pre-wrap' as const }}>{f.mensaje}</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => aprobarFirma(f.id)} style={{ border: 'none', background: '#2E7D32', color: '#fff', fontSize: 11, fontWeight: 800, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Approve' : 'Aprobar'}</button>
+                        <button onClick={() => rechazarFirma(f.id)} style={{ border: '1px solid rgba(0,0,0,.15)', background: 'transparent', color: '#3D2B2E', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Reject' : 'Rechazar'}</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {firmasBoda.filter(f => f.aprobado).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 800, marginBottom: 6 }}>{lang === 'en' ? `PUBLISHED (${firmasBoda.filter(f => f.aprobado).length})` : `PUBLICADOS (${firmasBoda.filter(f => f.aprobado).length})`}</div>
+                  {firmasBoda.filter(f => f.aprobado).map(f => (
+                    <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,.05)' }}>
+                      <div>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: '#3D2B2E' }}>{f.nombre}: </span>
+                        <span style={{ fontSize: 12, color: 'rgba(61,43,46,.6)' }}>{f.mensaje}</span>
+                      </div>
+                      <button onClick={() => rechazarFirma(f.id)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.35)', fontSize: 11, cursor: 'pointer', fontFamily: F, flexShrink: 0 }}>{lang === 'en' ? 'remove' : 'quitar'}</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Álbum de fotos: mismo criterio de moderación que el libro de firmas */}
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 10 }}>
+                {lang === 'en' ? 'Shared photo album' : 'Álbum de fotos compartido'}
+              </div>
+              {fotosBoda.length === 0 && (
+                <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>{lang === 'en' ? 'No photos yet.' : 'Todavía no hay fotos.'}</p>
+              )}
+              {fotosBoda.filter(f => !f.aprobado).length > 0 && (
+                <div style={{ marginBottom: fotosBoda.some(f => f.aprobado) ? 14 : 0 }}>
+                  <div style={{ fontSize: 10, color: '#B45309', fontWeight: 800, marginBottom: 6 }}>{lang === 'en' ? 'PENDING APPROVAL' : 'PENDIENTES DE APROBAR'}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+                    {fotosBoda.filter(f => !f.aprobado).map(f => (
+                      <div key={f.id} style={{ position: 'relative' as const }}>
+                        <img src={f.url} alt="" style={{ width: '100%', height: 90, objectFit: 'cover' as const, borderRadius: 8, display: 'block' }} />
+                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                          <button onClick={() => aprobarFoto(f.id)} style={{ flex: 1, border: 'none', background: '#2E7D32', color: '#fff', fontSize: 10, fontWeight: 800, padding: '4px', borderRadius: 6, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'OK' : 'Sí'}</button>
+                          <button onClick={() => rechazarFoto(f)} style={{ flex: 1, border: '1px solid rgba(0,0,0,.15)', background: 'transparent', color: '#3D2B2E', fontSize: 10, fontWeight: 700, padding: '4px', borderRadius: 6, cursor: 'pointer', fontFamily: F }}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {fotosBoda.filter(f => f.aprobado).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 800, marginBottom: 6 }}>{lang === 'en' ? `PUBLISHED (${fotosBoda.filter(f => f.aprobado).length})` : `PUBLICADAS (${fotosBoda.filter(f => f.aprobado).length})`}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+                    {fotosBoda.filter(f => f.aprobado).map(f => (
+                      <div key={f.id} style={{ position: 'relative' as const }}>
+                        <img src={f.url} alt="" style={{ width: '100%', height: 90, objectFit: 'cover' as const, borderRadius: 8, display: 'block' }} />
+                        <button onClick={() => rechazarFoto(f)} style={{ position: 'absolute' as const, top: 4, right: 4, border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 

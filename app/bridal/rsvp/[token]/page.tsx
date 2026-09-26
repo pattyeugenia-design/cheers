@@ -123,6 +123,16 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
   const [acompanantes, setAcompanantes] = useState<{ nombre: string; menu: string }[]>([])
   const [notas, setNotas] = useState('')
 
+  const [firmas, setFirmas] = useState<any[]>([])
+  const [firmaNombreInput, setFirmaNombreInput] = useState('')
+  const [firmaMensajeInput, setFirmaMensajeInput] = useState('')
+  const [firmaEnviada, setFirmaEnviada] = useState(false)
+  const [enviandoFirma, setEnviandoFirma] = useState(false)
+
+  const [fotos, setFotos] = useState<any[]>([])
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
+  const [fotoRecienSubida, setFotoRecienSubida] = useState(false)
+
   useEffect(() => {
     setLang(getLang())
     params.then(async ({ token }) => {
@@ -131,9 +141,33 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
       const info = Array.isArray(data) ? data[0] : data
       if (error || !info) { setNoEncontrado(true); setCargando(false); return }
       setInvitado(info)
+      setFirmaNombreInput(info.nombre || '')
       setCargando(false)
+      const { data: fm } = await supabase.rpc('get_firmas_aprobadas_boda', { p_token: token })
+      setFirmas(fm || [])
+      const { data: fo } = await supabase.rpc('get_fotos_aprobadas_boda', { p_token: token })
+      setFotos(fo || [])
     })
   }, [])
+
+  async function enviarFirma() {
+    if (!firmaNombreInput.trim() || !firmaMensajeInput.trim()) return
+    setEnviandoFirma(true)
+    await supabase.rpc('firmar_libro_boda', { p_token: token, p_nombre: firmaNombreInput.trim(), p_mensaje: firmaMensajeInput.trim() })
+    setEnviandoFirma(false)
+    setFirmaEnviada(true)
+  }
+
+  async function subirFoto(archivo: File) {
+    setSubiendoFoto(true)
+    const form = new FormData()
+    form.append('token', token)
+    form.append('nombre', invitado?.nombre || '')
+    form.append('archivo', archivo)
+    const res = await fetch('/api/subir-foto-boda', { method: 'POST', body: form })
+    setSubiendoFoto(false)
+    if (res.ok) setFotoRecienSubida(true)
+  }
 
   function actualizarNumAcompanantes(n: number) {
     setNumAcompanantes(n)
@@ -392,6 +426,57 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
             )}
           </div>
         )}
+
+        <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16 }}>
+          <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 12 }}>{lang === 'en' ? 'Guest book' : 'Libro de firmas'}</div>
+
+          {firmaEnviada ? (
+            <p style={{ fontSize: 13, color: txtSecundario, margin: 0 }}>{lang === 'en' ? 'Thank you — your message will appear here once the couple approves it.' : 'Gracias — tu mensaje aparecerá aquí en cuanto la pareja lo apruebe.'}</p>
+          ) : (
+            <div style={{ marginBottom: firmas.length > 0 ? 16 : 0 }}>
+              <input value={firmaNombreInput} onChange={e => setFirmaNombreInput(e.target.value)} placeholder={lang === 'en' ? 'Your name' : 'Tu nombre'} style={{ ...inputStyle, width: '100%' }} />
+              <textarea value={firmaMensajeInput} onChange={e => setFirmaMensajeInput(e.target.value)} rows={3} placeholder={lang === 'en' ? 'A wish, a memory, whatever comes to mind…' : 'Un deseo, un recuerdo, lo que el corazón te dicte…'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+              <button onClick={enviarFirma} disabled={!firmaNombreInput.trim() || !firmaMensajeInput.trim() || enviandoFirma} style={{ border: 'none', background: (!firmaNombreInput.trim() || !firmaMensajeInput.trim()) ? pillBg : 'linear-gradient(135deg,#534AB7,#D4537E)', color: (!firmaNombreInput.trim() || !firmaMensajeInput.trim()) ? txtSecundario : '#fff', fontSize: 13, fontWeight: 800, padding: '9px 18px', borderRadius: 99, cursor: 'pointer', fontFamily: F }}>
+                {enviandoFirma ? '...' : (lang === 'en' ? 'Sign the book' : 'Firmar el libro')}
+              </button>
+            </div>
+          )}
+
+          {firmas.length > 0 && (
+            <div>
+              {firmas.map((f, i) => (
+                <div key={i} style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,.06)' : 'none', paddingTop: i > 0 ? 12 : 0, marginTop: i > 0 ? 12 : 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: txtPrimario, marginBottom: 3 }}>{f.nombre}</div>
+                  <div style={{ fontSize: 13, color: txtSecundario, whiteSpace: 'pre-wrap' as const }}>{f.mensaje}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16 }}>
+          <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'Share your photos' : 'Comparte tus fotos'}</div>
+          <p style={{ fontSize: 12, color: txtSecundario, margin: '0 0 12px' }}>
+            {lang === 'en' ? 'Help us save every moment — upload your photos from the day.' : 'Ayúdanos a guardar cada instante — sube las fotos que tomes ese día.'}
+          </p>
+
+          {fotoRecienSubida ? (
+            <p style={{ fontSize: 13, color: txtSecundario, margin: '0 0 16px' }}>{lang === 'en' ? 'Thanks! Your photo will appear here once the couple approves it.' : '¡Gracias! Tu foto aparecerá aquí en cuanto la pareja la apruebe.'}</p>
+          ) : (
+            <label style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#fff', background: subiendoFoto ? pillBg : 'linear-gradient(135deg,#534AB7,#D4537E)', padding: '10px 20px', borderRadius: 99, cursor: 'pointer', marginBottom: 16 }}>
+              {subiendoFoto ? (lang === 'en' ? 'Uploading…' : 'Subiendo…') : (lang === 'en' ? 'Upload a photo' : 'Subir una foto')}
+              <input type="file" accept="image/*" capture="environment" onChange={e => e.target.files?.[0] && subirFoto(e.target.files[0])} disabled={subiendoFoto} style={{ display: 'none' }} />
+            </label>
+          )}
+
+          {fotos.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+              {fotos.map((f, i) => (
+                <img key={i} src={f.url} alt="" style={{ width: '100%', height: 90, objectFit: 'cover' as const, borderRadius: 8 }} />
+              ))}
+            </div>
+          )}
+        </div>
 
         {(invitado.info_viaje || invitado.faq) && (
           <div style={{ background: cardBg, borderRadius: 20, padding: '20px 22px', marginTop: 16 }}>
