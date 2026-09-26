@@ -3,6 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 
 const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 
+// Borra los archivos de Storage (fotos y contratos) de las bodas que creó este
+// usuario. Las filas de la base se borran solas en cascada al borrar la cuenta,
+// pero los archivos no — sin esto quedarían huérfanos (y con datos personales).
+async function borrarArchivosDeBodas(admin: any, userId: string) {
+  const { data: bodas } = await admin.from('proyectos_boda').select('id').eq('creador_id', userId)
+  for (const b of bodas || []) {
+    for (const bucket of ['fotos-boda', 'contratos-boda']) {
+      const { data: archivos } = await admin.storage.from(bucket).list(b.id, { limit: 1000 })
+      if (archivos?.length) await admin.storage.from(bucket).remove(archivos.map((a: any) => `${b.id}/${a.name}`))
+    }
+  }
+}
+
 export async function POST(req: Request) {
   const { accessToken, email, confirmar } = await req.json()
   if (!accessToken || !email) return NextResponse.json({ ok: false, error: 'datos_incompletos' }, { status: 400 })
@@ -59,6 +72,8 @@ export async function POST(req: Request) {
   await admin.from('rsvps').delete().eq('user_id', cuenta.id)
   await admin.from('invitados').update({ user_id: null }).eq('user_id', cuenta.id)
   await admin.from('perfiles').delete().eq('user_id', cuenta.id)
+
+  await borrarArchivosDeBodas(admin, cuenta.id)
 
   const { error: deleteError } = await admin.auth.admin.deleteUser(cuenta.id)
   if (deleteError) return NextResponse.json({ ok: false, error: 'error_borrando' }, { status: 500 })

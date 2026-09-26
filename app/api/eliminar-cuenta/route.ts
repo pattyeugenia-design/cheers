@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Borra los archivos de Storage (fotos y contratos) de las bodas que creó este
+// usuario. Las filas de la base se borran solas en cascada al borrar la cuenta,
+// pero los archivos no — sin esto quedarían huérfanos (y con datos personales).
+async function borrarArchivosDeBodas(admin: any, userId: string) {
+  const { data: bodas } = await admin.from('proyectos_boda').select('id').eq('creador_id', userId)
+  for (const b of bodas || []) {
+    for (const bucket of ['fotos-boda', 'contratos-boda']) {
+      const { data: archivos } = await admin.storage.from(bucket).list(b.id, { limit: 1000 })
+      if (archivos?.length) await admin.storage.from(bucket).remove(archivos.map((a: any) => `${b.id}/${a.name}`))
+    }
+  }
+}
+
 export async function POST(req: Request) {
   const { accessToken } = await req.json()
   if (!accessToken) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -46,6 +59,8 @@ export async function POST(req: Request) {
   await admin.from('perfiles').delete().eq('user_id', user.id)
 
   // Borrar la cuenta de autenticación
+  await borrarArchivosDeBodas(admin, user.id)
+
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id)
   if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
 
