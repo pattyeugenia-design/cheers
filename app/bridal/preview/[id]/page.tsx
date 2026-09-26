@@ -51,6 +51,56 @@ function estiloFotoConPosicion(pos: string | null | undefined) {
   return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
 }
 
+// Countdown en vivo (días/horas/min/seg) — mismo estilo visual que el resto de
+// tarjetas de la invitación, se actualiza solo cada segundo sin recargar nada.
+function Countdown({ fecha, hora, cardBg, txtPrimario, txtTerciario, acento, lang }: {
+  fecha: string; hora: string | null; cardBg: string; txtPrimario: string; txtTerciario: string; acento: string; lang: string
+}) {
+  const [restante, setRestante] = useState<{ dias: number; horas: number; min: number; seg: number } | null>(null)
+
+  useEffect(() => {
+    const objetivo = new Date(`${fecha}T${hora || '00:00'}:00`).getTime()
+    function actualizar() {
+      const diff = objetivo - Date.now()
+      if (diff <= 0) { setRestante({ dias: 0, horas: 0, min: 0, seg: 0 }); return }
+      setRestante({
+        dias: Math.floor(diff / 86400000),
+        horas: Math.floor((diff % 86400000) / 3600000),
+        min: Math.floor((diff % 3600000) / 60000),
+        seg: Math.floor((diff % 60000) / 1000),
+      })
+    }
+    actualizar()
+    const t = setInterval(actualizar, 1000)
+    return () => clearInterval(t)
+  }, [fecha, hora])
+
+  if (!restante) return null
+
+  const unidades = [
+    { valor: restante.dias, label: lang === 'en' ? 'days' : 'días' },
+    { valor: restante.horas, label: lang === 'en' ? 'hours' : 'horas' },
+    { valor: restante.min, label: lang === 'en' ? 'min' : 'min' },
+    { valor: restante.seg, label: lang === 'en' ? 'sec' : 'seg' },
+  ]
+
+  return (
+    <div style={{ background: cardBg, borderRadius: 20, padding: '18px 12px', marginBottom: 16 }}>
+      <p style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, textAlign: 'center' as const, margin: '0 0 12px', letterSpacing: '.5px' }}>
+        {lang === 'en' ? 'Time to go' : 'Faltan'}
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        {unidades.map((u, i) => (
+          <div key={i} style={{ textAlign: 'center' as const, minWidth: 52 }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: txtPrimario, fontVariantNumeric: 'tabular-nums' as const }}>{String(u.valor).padStart(2, '0')}</div>
+            <div style={{ fontSize: 9, color: txtTerciario, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '.3px' }}>{u.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const [lang, setLang] = useState('es')
@@ -138,6 +188,10 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
               <a href={`https://maps.google.com/?q=${encodeURIComponent(proyecto.lugar_nombre)}`} target="_blank" style={{ color: acento }}>{proyecto.lugar_nombre} ↗</a>
             )}
           </p>
+        )}
+
+        {proyecto?.fecha_boda && (
+          <Countdown fecha={proyecto.fecha_boda} hora={proyecto.hora_boda} cardBg={cardBg} txtPrimario={txtPrimario} txtTerciario={txtTerciario} acento={acento} lang={lang} />
         )}
 
         <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px' }}>
