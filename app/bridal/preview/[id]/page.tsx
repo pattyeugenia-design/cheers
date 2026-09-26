@@ -93,6 +93,19 @@ function Countdown({ fecha, hora, cardBg, txtPrimario, txtTerciario, acento, lan
   )
 }
 
+function formatICSDate(date: Date) {
+  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+}
+
+function calendarLinksBoda(nombre: string, fecha: string, hora: string | null, lugar: string | null) {
+  const inicio = new Date(`${fecha}T${hora || '12:00'}:00`)
+  const fin = new Date(inicio.getTime() + 5 * 60 * 60 * 1000)
+  const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(nombre)}&dates=${formatICSDate(inicio)}/${formatICSDate(fin)}&location=${encodeURIComponent(lugar || '')}`
+  const icsContent = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `DTSTART:${formatICSDate(inicio)}`, `DTEND:${formatICSDate(fin)}`, `SUMMARY:${nombre}`, `LOCATION:${lugar || ''}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
+  const icsUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
+  return { googleUrl, icsUrl }
+}
+
 export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const [lang, setLang] = useState('es')
@@ -172,7 +185,7 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
         </p>
         <h1 style={{ fontSize: 30, fontWeight: 900, color: txtPrimario, margin: '0 0 6px', textAlign: 'center' as const, letterSpacing: '-.5px', fontFamily: fInv }}>{nombreBoda || (lang === 'en' ? 'Your names' : 'Tus nombres')}</h1>
         {(proyecto?.fecha_boda || proyecto?.lugar_nombre) && (
-          <p style={{ fontSize: 13, color: txtTerciario, textAlign: 'center' as const, marginBottom: 28 }}>
+          <p style={{ fontSize: 13, color: txtTerciario, textAlign: 'center' as const, marginBottom: 8 }}>
             {fmtFechaBonita(proyecto?.fecha_boda, lang)}
             {proyecto?.fecha_boda && proyecto?.lugar_nombre && ' · '}
             {proyecto?.lugar_nombre && (
@@ -180,6 +193,16 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
             )}
           </p>
         )}
+
+        {proyecto?.fecha_boda && (() => {
+          const { googleUrl, icsUrl } = calendarLinksBoda(nombreBoda || 'Boda', proyecto.fecha_boda, proyecto.hora_boda, proyecto.lugar_nombre)
+          return (
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+              <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: txtPrimario, background: pillBg, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
+              <a href={icsUrl} download="boda.ics" style={{ fontSize: 11, fontWeight: 700, color: txtPrimario, background: pillBg, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
+            </div>
+          )
+        })()}
 
         {proyecto?.fecha_boda && (
           <Countdown fecha={proyecto.fecha_boda} hora={proyecto.hora_boda} cardBg={cardBg} txtPrimario={txtPrimario} txtTerciario={txtTerciario} acento={acento} lang={lang} />
