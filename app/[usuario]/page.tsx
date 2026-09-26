@@ -184,11 +184,21 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   const [username, setUsername] = useState('')
   const [mostrarPasadas, setMostrarPasadas] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [proyectosBoda, setProyectosBoda] = useState<any[]>([])
   const [mostrarBienvenidaBridal, setMostrarBienvenidaBridal] = useState(false)
 
+  // Acomodo personalizable del dashboard — cuántas columnas y en qué orden va
+  // cada bloque. Null hasta que perfiles.layout_dashboard cargue; mientras
+  // tanto se usa layoutPorDefecto() (1 columna, el orden de siempre).
+  const [layoutDashboard, setLayoutDashboard] = useState<{ columnas: number; bloques: { id: string; col: number; orden: number }[] } | null>(null)
+  const [personalizando, setPersonalizando] = useState(false)
+
   useEffect(() => {
     const l = getLang(); setLang(l); setTx(t[l])
+    const checkMobile = () => setIsMobile(window.innerWidth < 640)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
 
     // Separado en función aparte para poder llamarlo de nuevo cuando la pestaña
     // o el acceso directo instalado (home screen / shortcut de escritorio) vuelve
@@ -211,6 +221,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
         if (es) {
           const { data: perfilAuth } = await supabase.from('perfiles').select('*').eq('user_id', authUser.id).single()
           setPerfilAuth(perfilAuth)
+          if (perfilAuth?.layout_dashboard) setLayoutDashboard(perfilAuth.layout_dashboard)
 
           const { data: misInvitaciones } = await supabase.from('invitados').select('celebracion_slug, created_at').eq('user_id', authUser.id)
           const slugsInvitado = (misInvitaciones || []).map(i => i.celebracion_slug)
@@ -308,6 +319,7 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     return () => {
       document.removeEventListener('visibilitychange', alVolverAPrimerPlano)
       window.removeEventListener('focus', alVolverAPrimerPlano)
+      window.removeEventListener('resize', checkMobile)
     }
   }, [])
 
@@ -335,6 +347,54 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
   async function cerrarSesion() {
     await supabase.auth.signOut()
     router.push('/')
+  }
+
+  const BLOQUES_IDS = ['invitaciones_nuevas', 'calendario', 'nueva_celebracion', 'tu_boda', 'tus_invitaciones', 'celebraciones']
+
+  function layoutPorDefecto() {
+    return { columnas: 1, bloques: BLOQUES_IDS.map((id, i) => ({ id, col: 0, orden: i })) }
+  }
+
+  async function guardarLayout(nuevo: { columnas: number; bloques: { id: string; col: number; orden: number }[] }) {
+    setLayoutDashboard(nuevo)
+    if (!user) return
+    await supabase.from('perfiles').update({ layout_dashboard: nuevo }).eq('user_id', user.id)
+  }
+
+  function moverBloqueVertical(id: string, dir: -1 | 1) {
+    const actual = layoutDashboard || layoutPorDefecto()
+    const bloques = [...actual.bloques]
+    const idx = bloques.findIndex(b => b.id === id)
+    if (idx === -1) return
+    const mismaCol = bloques.filter(b => b.col === bloques[idx].col).sort((a, b) => a.orden - b.orden)
+    const posEnCol = mismaCol.findIndex(b => b.id === id)
+    const nuevaPos = posEnCol + dir
+    if (nuevaPos < 0 || nuevaPos >= mismaCol.length) return
+    const otro = mismaCol[nuevaPos]
+    const ordenPropio = bloques[idx].orden
+    const otroIdx = bloques.findIndex(b => b.id === otro.id)
+    bloques[idx] = { ...bloques[idx], orden: otro.orden }
+    bloques[otroIdx] = { ...bloques[otroIdx], orden: ordenPropio }
+    guardarLayout({ ...actual, bloques })
+  }
+
+  function moverBloqueColumna(id: string, dir: -1 | 1) {
+    const actual = layoutDashboard || layoutPorDefecto()
+    const bloques = [...actual.bloques]
+    const idx = bloques.findIndex(b => b.id === id)
+    if (idx === -1) return
+    const nuevaCol = bloques[idx].col + dir
+    if (nuevaCol < 0 || nuevaCol >= actual.columnas) return
+    const ordenesEnCol = bloques.filter(b => b.col === nuevaCol).map(b => b.orden)
+    const maxOrden = ordenesEnCol.length ? Math.max(...ordenesEnCol) : -1
+    bloques[idx] = { ...bloques[idx], col: nuevaCol, orden: maxOrden + 1 }
+    guardarLayout({ ...actual, bloques })
+  }
+
+  function cambiarColumnas(n: number) {
+    const actual = layoutDashboard || layoutPorDefecto()
+    const bloques = actual.bloques.map(b => b.col >= n ? { ...b, col: n - 1 } : b)
+    guardarLayout({ columnas: n, bloques })
   }
 
   async function cerrarBienvenidaBridal() {
@@ -451,9 +511,123 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
     </div>
   )
 
+  // Bloques del dashboard — el contenido de cada uno vive aquí, y layoutDashboard
+  // decide en qué columna y en qué orden se pinta cada quien. null = no hay nada
+  // que mostrar ese bloque ahorita (no ocupa espacio ni aparece al personalizar).
+  const bloquesContenido: Record<string, React.ReactNode> = {
+    invitaciones_nuevas: (esPropio && invitacionesNuevas.length > 0) ? (
+      <div style={{ background:'rgba(212,83,126,.15)', border:'1px solid rgba(212,83,126,.3)', borderRadius:14, padding:'12px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
+        <span style={{ fontSize:18 }}>🎉</span>
+        <p style={{ fontSize:13, color:'#fff', margin:0, fontWeight:600 }}>
+          {lang==='en'
+            ? `You were invited to ${invitacionesNuevas.length} new celebration${invitacionesNuevas.length > 1 ? 's' : ''}: ${invitacionesNuevas.map(c => c.nombre).join(', ')}`
+            : `Te invitaron a ${invitacionesNuevas.length} celebracion${invitacionesNuevas.length > 1 ? 'es' : ''} nueva${invitacionesNuevas.length > 1 ? 's' : ''}: ${invitacionesNuevas.map(c => c.nombre).join(', ')}`}
+        </p>
+      </div>
+    ) : null,
+
+    calendario: (esPropio && eventosCalendario.length > 0) ? (
+      <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
+    ) : null,
+
+    nueva_celebracion: esPropio ? (
+      <button onClick={() => router.push(`/${username}/nueva`)} style={{ width:'100%', padding:'1rem', background:'linear-gradient(135deg,#534AB7,#D4537E)', border:'none', borderRadius:16, color:'#fff', fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:'2rem', boxShadow:'0 8px 24px rgba(212,83,126,.3)', fontFamily:F }}>
+        {tx.new_celebration}
+      </button>
+    ) : null,
+
+    tu_boda: (esPropio && proyectosBoda.length > 0) ? (
+      <div style={{ marginBottom:24 }}>
+        <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#d8b3ba', textTransform:'uppercase', margin:'0 0 10px 4px' }}>
+          {lang==='en' ? 'Your wedding' : 'Tu boda'}
+        </p>
+        {proyectosBoda.map(p => <BodaCard key={p.id} p={p} />)}
+      </div>
+    ) : null,
+
+    tus_invitaciones: (esPropio && invitaciones.length > 0) ? (
+      <div style={{ marginBottom:24 }}>
+        <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>
+          {lang==='en' ? 'Your invitations' : 'Tus invitaciones'}
+        </p>
+        {[...invitaciones].sort((a,b) => new Date((a.fecha ? a.fecha + 'T00:00:00' : 0)).getTime() - new Date((b.fecha ? b.fecha + 'T00:00:00' : 0)).getTime()).map(cel => (
+          <CelCard key={cel.slug} cel={{ ...cel, esPropia:false }} />
+        ))}
+      </div>
+    ) : null,
+
+    celebraciones: (
+      <div>
+        {celebraciones.filter(c => !c.archivada).length === 0 && invitaciones.length === 0 && (
+          <div style={{ textAlign:'center', padding:'2rem', background:'rgba(255,255,255,.06)', borderRadius:16, marginBottom:16 }}>
+            <p style={{ color:'#AFA9EC', fontSize:15, margin:0 }}>{esPropio ? tx.no_celebrations : tx.no_public}</p>
+          </div>
+        )}
+
+        {sinFecha.length > 0 && (
+          <div style={{ marginBottom:24 }}>
+            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>{lang==='en'?'No date set':'Sin fecha'}</p>
+            {sinFecha.map(cel => <CelCard key={cel.slug} cel={cel} />)}
+          </div>
+        )}
+
+        {Object.keys(grupos).sort().map(key => (
+          <div key={key} style={{ marginBottom:24 }}>
+            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>{quarterLabel(key, lang)}</p>
+            {grupos[key].map(cel => <CelCard key={cel.slug} cel={cel} />)}
+          </div>
+        ))}
+
+        {(pasadas.length > 0 || pasadasBloqueadas.length > 0) && (
+          <div style={{ marginBottom:24 }}>
+            <button onClick={() => setMostrarPasadas(v => !v)} style={{ width:'100%', border:'none', background:'rgba(255,255,255,.04)', color:'#AFA9EC', fontSize:13, fontWeight:700, padding:'12px', borderRadius:12, cursor:'pointer', fontFamily:F, marginBottom:mostrarPasadas?12:0 }}>
+              {mostrarPasadas
+                ? (lang==='en'?'Hide past celebrations ↑':'Ocultar pasadas ↑')
+                : `${lang==='en'?'Show past celebrations':'Ver celebraciones pasadas'} (${pasadas.length + pasadasBloqueadas.length}) ↓`}
+            </button>
+            {mostrarPasadas && pasadas.map(cel => <CelCard key={cel.slug} cel={cel} />)}
+            {mostrarPasadas && pasadasBloqueadas.length > 0 && (
+              <div style={{ textAlign:'center', padding:'1rem', background:'rgba(83,74,183,.12)', borderRadius:12, marginTop:8 }}>
+                <p style={{ fontSize:13, color:'#AFA9EC', margin:'0 0 8px' }}>
+                  {lang==='en'
+                    ? `${pasadasBloqueadas.length} more celebration${pasadasBloqueadas.length > 1 ? 's' : ''} older than 3 months`
+                    : `${pasadasBloqueadas.length} celebracion${pasadasBloqueadas.length > 1 ? 'es' : ''} más antigua${pasadasBloqueadas.length > 1 ? 's' : ''} de 3 meses`}
+                </p>
+                {esPropio && <button onClick={() => router.push('/perfil')} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:12, fontWeight:800, padding:'8px 16px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
+                  {lang==='en' ? 'Upgrade to see full history →' : 'Mejora tu plan para verlas →'}
+                </button>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {esPropio && celebraciones.filter(c => c.archivada).length > 0 && (
+          <p style={{ textAlign:'center', fontSize:12, color:'rgba(255,255,255,.2)', marginTop:8 }}>
+            {celebraciones.filter(c => c.archivada).length} {lang==='en'?'archived':'archivadas'}
+          </p>
+        )}
+      </div>
+    ),
+  }
+
+  const layout = layoutDashboard || layoutPorDefecto()
+  const columnasEfectivas = isMobile ? 1 : layout.columnas
+  const anchoMax = columnasEfectivas === 1 ? 900 : columnasEfectivas === 2 ? 1200 : 1500
+  const idsConContenido = new Set(Object.keys(bloquesContenido).filter(id => bloquesContenido[id] !== null))
+  const columnasContenido: string[][] = Array.from({ length: columnasEfectivas }, () => [])
+  layout.bloques
+    .filter(b => idsConContenido.has(b.id))
+    .forEach(b => { columnasContenido[Math.min(b.col, columnasEfectivas - 1)].push(b.id) })
+  columnasContenido.forEach(col => col.sort((a, b) => {
+    const oa = layout.bloques.find(x => x.id === a)?.orden ?? 0
+    const ob = layout.bloques.find(x => x.id === b)?.orden ?? 0
+    return oa - ob
+  }))
+  const botonPersonalizar: React.CSSProperties = { border:'1px solid rgba(255,255,255,.12)', background:'rgba(255,255,255,.06)', color:'#AFA9EC', width:22, height:22, borderRadius:6, cursor:'pointer', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center' }
+
   return (
     <main style={{ minHeight:'100vh', background:BG, fontFamily:F, padding:'2rem 1.5rem' }}>
-      <div style={{ maxWidth:900, margin:'0 auto' }}>
+      <div style={{ maxWidth:anchoMax, margin:'0 auto', transition:'max-width .2s' }}>
 
         {esPropio && user
           ? <TopBanner userId={user.id} username={username} lang={lang} />
@@ -504,106 +678,45 @@ export default function Celebraciones({ params }: { params: Promise<{ usuario: s
           )}
         </div>
 
-        {/* Invitaciones nuevas */}
-        {esPropio && invitacionesNuevas.length > 0 && (
-          <div style={{ background:'rgba(212,83,126,.15)', border:'1px solid rgba(212,83,126,.3)', borderRadius:14, padding:'12px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
-            <span style={{ fontSize:18 }}>🎉</span>
-            <p style={{ fontSize:13, color:'#fff', margin:0, fontWeight:600 }}>
-              {lang==='en'
-                ? `You were invited to ${invitacionesNuevas.length} new celebration${invitacionesNuevas.length > 1 ? 's' : ''}: ${invitacionesNuevas.map(c => c.nombre).join(', ')}`
-                : `Te invitaron a ${invitacionesNuevas.length} celebracion${invitacionesNuevas.length > 1 ? 'es' : ''} nueva${invitacionesNuevas.length > 1 ? 's' : ''}: ${invitacionesNuevas.map(c => c.nombre).join(', ')}`}
-            </p>
-          </div>
-        )}
-
-        {/* Calendario — dos tarjetas de mes separadas, del mismo ancho que el
-            resto del dashboard (antes era angosto, un solo mes de 420px). */}
-        {esPropio && eventosCalendario.length > 0 && (
-          <MiniCalendario eventos={eventosCalendario} lang={lang} router={router} />
-        )}
-
-        {/* Botón nueva celebración */}
+        {/* Personalizar acomodo — solo para el dueño del dashboard */}
         {esPropio && (
-          <button onClick={() => router.push(`/${username}/nueva`)} style={{ width:'100%', padding:'1rem', background:'linear-gradient(135deg,#534AB7,#D4537E)', border:'none', borderRadius:16, color:'#fff', fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:'2rem', boxShadow:'0 8px 24px rgba(212,83,126,.3)', fontFamily:F }}>
-            {tx.new_celebration}
-          </button>
-        )}
-
-        {/* Tu boda (Cheers Bridal) — junto a las celebraciones sociales, no aparte */}
-        {esPropio && proyectosBoda.length > 0 && (
-          <div style={{ marginBottom:24 }}>
-            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#d8b3ba', textTransform:'uppercase', margin:'0 0 10px 4px' }}>
-              {lang==='en' ? 'Your wedding' : 'Tu boda'}
-            </p>
-            {proyectosBoda.map(p => <BodaCard key={p.id} p={p} />)}
-          </div>
-        )}
-
-        {/* Tus invitaciones (celebraciones donde eres invitada, no organizadora) */}
-        {esPropio && invitaciones.length > 0 && (
-          <div style={{ marginBottom:24 }}>
-            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>
-              {lang==='en' ? 'Your invitations' : 'Tus invitaciones'}
-            </p>
-            {[...invitaciones].sort((a,b) => new Date((a.fecha ? a.fecha + 'T00:00:00' : 0)).getTime() - new Date((b.fecha ? b.fecha + 'T00:00:00' : 0)).getTime()).map(cel => (
-              <CelCard key={cel.slug} cel={{ ...cel, esPropia:false }} />
-            ))}
-          </div>
-        )}
-
-        {/* Sin celebraciones */}
-        {celebraciones.filter(c => !c.archivada).length === 0 && invitaciones.length === 0 && (
-          <div style={{ textAlign:'center', padding:'2rem', background:'rgba(255,255,255,.06)', borderRadius:16, marginBottom:16 }}>
-            <p style={{ color:'#AFA9EC', fontSize:15, margin:0 }}>{esPropio ? tx.no_celebrations : tx.no_public}</p>
-          </div>
-        )}
-
-        {/* Sin fecha */}
-        {sinFecha.length > 0 && (
-          <div style={{ marginBottom:24 }}>
-            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>{lang==='en'?'No date set':'Sin fecha'}</p>
-            {sinFecha.map(cel => <CelCard key={cel.slug} cel={cel} />)}
-          </div>
-        )}
-
-        {/* Por trimestre */}
-        {Object.keys(grupos).sort().map(key => (
-          <div key={key} style={{ marginBottom:24 }}>
-            <p style={{ fontSize:11, fontWeight:800, letterSpacing:'1px', color:'#AFA9EC', textTransform:'uppercase', margin:'0 0 10px 4px' }}>{quarterLabel(key, lang)}</p>
-            {grupos[key].map(cel => <CelCard key={cel.slug} cel={cel} />)}
-          </div>
-        ))}
-
-        {/* Pasadas */}
-        {(pasadas.length > 0 || pasadasBloqueadas.length > 0) && (
-          <div style={{ marginBottom:24 }}>
-            <button onClick={() => setMostrarPasadas(v => !v)} style={{ width:'100%', border:'none', background:'rgba(255,255,255,.04)', color:'#AFA9EC', fontSize:13, fontWeight:700, padding:'12px', borderRadius:12, cursor:'pointer', fontFamily:F, marginBottom:mostrarPasadas?12:0 }}>
-              {mostrarPasadas
-                ? (lang==='en'?'Hide past celebrations ↑':'Ocultar pasadas ↑')
-                : `${lang==='en'?'Show past celebrations':'Ver celebraciones pasadas'} (${pasadas.length + pasadasBloqueadas.length}) ↓`}
-            </button>
-            {mostrarPasadas && pasadas.map(cel => <CelCard key={cel.slug} cel={cel} />)}
-            {mostrarPasadas && pasadasBloqueadas.length > 0 && (
-              <div style={{ textAlign:'center', padding:'1rem', background:'rgba(83,74,183,.12)', borderRadius:12, marginTop:8 }}>
-                <p style={{ fontSize:13, color:'#AFA9EC', margin:'0 0 8px' }}>
-                  {lang==='en'
-                    ? `${pasadasBloqueadas.length} more celebration${pasadasBloqueadas.length > 1 ? 's' : ''} older than 3 months`
-                    : `${pasadasBloqueadas.length} celebracion${pasadasBloqueadas.length > 1 ? 'es' : ''} más antigua${pasadasBloqueadas.length > 1 ? 's' : ''} de 3 meses`}
-                </p>
-                {esPropio && <button onClick={() => router.push('/perfil')} style={{ border:'none', background:'linear-gradient(135deg,#534AB7,#D4537E)', color:'#fff', fontSize:12, fontWeight:800, padding:'8px 16px', borderRadius:99, cursor:'pointer', fontFamily:F }}>
-                  {lang==='en' ? 'Upgrade to see full history →' : 'Mejora tu plan para verlas →'}
-                </button>}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8, marginBottom:14 }}>
+            {personalizando && !isMobile && (
+              <div style={{ display:'flex', gap:4, marginRight:8 }}>
+                {[1,2,3].map(n => (
+                  <button key={n} onClick={() => cambiarColumnas(n)} style={{ border:'1px solid rgba(255,255,255,.12)', background: layout.columnas===n ? 'linear-gradient(135deg,#534AB7,#D4537E)' : 'rgba(255,255,255,.06)', color:'#fff', fontSize:12, fontWeight:700, padding:'5px 10px', borderRadius:8, cursor:'pointer', fontFamily:F }}>
+                    {n} {lang==='en' ? (n===1?'col':'cols') : (n===1?'col':'cols')}
+                  </button>
+                ))}
               </div>
             )}
+            <button onClick={() => setPersonalizando(v => !v)} style={{ border:'1px solid rgba(255,255,255,.12)', background: personalizando ? 'rgba(212,83,126,.2)' : 'rgba(255,255,255,.06)', color:'#EEEDFE', fontSize:12, fontWeight:700, padding:'6px 12px', borderRadius:8, cursor:'pointer', fontFamily:F }}>
+              {personalizando ? (lang==='en' ? 'Done' : 'Listo') : (lang==='en' ? 'Customize layout' : 'Personalizar acomodo')}
+            </button>
           </div>
         )}
 
-        {/* Archivadas */}
-        {esPropio && celebraciones.filter(c => c.archivada).length > 0 && (
-          <p style={{ textAlign:'center', fontSize:12, color:'rgba(255,255,255,.2)', marginTop:8 }}>
-            {celebraciones.filter(c => c.archivada).length} {lang==='en'?'archived':'archivadas'}
-          </p>
-        )}
+        <div style={{ display:'grid', gridTemplateColumns:`repeat(${columnasEfectivas},1fr)`, gap:24 }}>
+          {columnasContenido.map((idsEnCol, colIdx) => (
+            <div key={colIdx} style={{ display:'flex', flexDirection:'column' as const, minWidth:0 }}>
+              {idsEnCol.map(idBloque => (
+                <div key={idBloque}>
+                  {personalizando && (
+                    <div style={{ display:'flex', gap:4, marginBottom:6, justifyContent:'flex-end' }}>
+                      <button onClick={() => moverBloqueVertical(idBloque,-1)} title={lang==='en'?'Move up':'Subir'} style={botonPersonalizar}>↑</button>
+                      <button onClick={() => moverBloqueVertical(idBloque,1)} title={lang==='en'?'Move down':'Bajar'} style={botonPersonalizar}>↓</button>
+                      {columnasEfectivas > 1 && <>
+                        <button onClick={() => moverBloqueColumna(idBloque,-1)} title={lang==='en'?'Move left':'Mover a la izquierda'} style={botonPersonalizar}>←</button>
+                        <button onClick={() => moverBloqueColumna(idBloque,1)} title={lang==='en'?'Move right':'Mover a la derecha'} style={botonPersonalizar}>→</button>
+                      </>}
+                    </div>
+                  )}
+                  {bloquesContenido[idBloque]}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
 
       </div>
     </main>

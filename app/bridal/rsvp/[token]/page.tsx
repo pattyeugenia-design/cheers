@@ -37,6 +37,69 @@ function estiloFotoConPosicion(pos: string | null | undefined) {
   return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
 }
 
+// Countdown en vivo (días/horas/min/seg) — mismo estilo visual que el resto de
+// tarjetas de la invitación, se actualiza solo cada segundo sin recargar nada.
+function Countdown({ fecha, hora, cardBg, txtPrimario, txtTerciario, acento, lang }: {
+  fecha: string; hora: string | null; cardBg: string; txtPrimario: string; txtTerciario: string; acento: string; lang: string
+}) {
+  const [restante, setRestante] = useState<{ dias: number; horas: number; min: number; seg: number } | null>(null)
+
+  useEffect(() => {
+    const objetivo = new Date(`${fecha}T${hora || '00:00'}:00`).getTime()
+    function actualizar() {
+      const diff = objetivo - Date.now()
+      if (diff <= 0) { setRestante({ dias: 0, horas: 0, min: 0, seg: 0 }); return }
+      setRestante({
+        dias: Math.floor(diff / 86400000),
+        horas: Math.floor((diff % 86400000) / 3600000),
+        min: Math.floor((diff % 3600000) / 60000),
+        seg: Math.floor((diff % 60000) / 1000),
+      })
+    }
+    actualizar()
+    const t = setInterval(actualizar, 1000)
+    return () => clearInterval(t)
+  }, [fecha, hora])
+
+  if (!restante) return null
+
+  const unidades = [
+    { valor: restante.dias, label: lang === 'en' ? 'days' : 'días' },
+    { valor: restante.horas, label: lang === 'en' ? 'hours' : 'horas' },
+    { valor: restante.min, label: lang === 'en' ? 'min' : 'min' },
+    { valor: restante.seg, label: lang === 'en' ? 'sec' : 'seg' },
+  ]
+
+  return (
+    <div style={{ background: cardBg, borderRadius: 20, padding: '18px 12px', marginBottom: 16 }}>
+      <p style={{ fontSize: 10, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, textAlign: 'center' as const, margin: '0 0 12px', letterSpacing: '.5px' }}>
+        {lang === 'en' ? 'Time to go' : 'Faltan'}
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        {unidades.map((u, i) => (
+          <div key={i} style={{ textAlign: 'center' as const, minWidth: 52 }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: txtPrimario, fontVariantNumeric: 'tabular-nums' as const }}>{String(u.valor).padStart(2, '0')}</div>
+            <div style={{ fontSize: 9, color: txtTerciario, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '.3px' }}>{u.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function formatICSDate(date: Date) {
+  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+}
+
+function calendarLinksBoda(nombre: string, fecha: string, hora: string | null, lugar: string | null) {
+  const inicio = new Date(`${fecha}T${hora || '12:00'}:00`)
+  const fin = new Date(inicio.getTime() + 5 * 60 * 60 * 1000) // 5 horas por default (ceremonia + recepción)
+  const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(nombre)}&dates=${formatICSDate(inicio)}/${formatICSDate(fin)}&location=${encodeURIComponent(lugar || '')}`
+  const icsContent = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `DTSTART:${formatICSDate(inicio)}`, `DTEND:${formatICSDate(fin)}`, `SUMMARY:${nombre}`, `LOCATION:${lugar || ''}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
+  const icsUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
+  return { googleUrl, icsUrl }
+}
+
 const MENU_OPCIONES = ['res', 'pollo', 'vegetariano', 'vegano'] as const
 const MENU_LABEL: Record<string, { es: string; en: string }> = {
   res: { es: 'Res', en: 'Beef' },
@@ -155,13 +218,33 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
         </p>
         <h1 style={{ fontSize: 30, fontWeight: 900, color: txtPrimario, margin: '0 0 6px', textAlign: 'center' as const, letterSpacing: '-.5px', fontFamily: fInv }}>{nombreBoda}</h1>
         {(invitado.fecha_boda || invitado.lugar_nombre) && (
-          <p style={{ fontSize: 13, color: txtTerciario, textAlign: 'center' as const, marginBottom: 28 }}>
+          <p style={{ fontSize: 13, color: txtTerciario, textAlign: 'center' as const, marginBottom: 8 }}>
             {invitado.fecha_boda}
             {invitado.fecha_boda && invitado.lugar_nombre && ' · '}
             {invitado.lugar_nombre && (
               <a href={`https://maps.google.com/?q=${encodeURIComponent(invitado.lugar_nombre)}`} target="_blank" style={{ color: acento }}>{invitado.lugar_nombre} ↗</a>
             )}
           </p>
+        )}
+
+        {invitado.acompanantes_permitidos > 0 && (
+          <p style={{ fontSize: 12, color: acento, fontWeight: 700, textAlign: 'center' as const, marginBottom: 20 }}>
+            {lang === 'en' ? `This invitation is for up to ${invitado.acompanantes_permitidos + 1} people` : `Esta invitación es para hasta ${invitado.acompanantes_permitidos + 1} personas`}
+          </p>
+        )}
+
+        {invitado.fecha_boda && (() => {
+          const { googleUrl, icsUrl } = calendarLinksBoda(nombreBoda, invitado.fecha_boda, invitado.hora_boda, invitado.lugar_nombre)
+          return (
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+              <a href={googleUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: txtPrimario, background: pillBg, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Google Calendar</a>
+              <a href={icsUrl} download={`boda-${invitado.slug || 'evento'}.ics`} style={{ fontSize: 11, fontWeight: 700, color: txtPrimario, background: pillBg, padding: '6px 12px', borderRadius: 99, textDecoration: 'none' }}>+ Apple/Outlook</a>
+            </div>
+          )
+        })()}
+
+        {invitado.fecha_boda && (
+          <Countdown fecha={invitado.fecha_boda} hora={invitado.hora_boda} cardBg={cardBg} txtPrimario={txtPrimario} txtTerciario={txtTerciario} acento={acento} lang={lang} />
         )}
 
         <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px' }}>
@@ -226,6 +309,90 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
           </button>
         </div>
 
+        {invitado.itinerario && invitado.itinerario.length > 0 && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16 }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 14 }}>{lang === 'en' ? 'Itinerary' : 'Itinerario'}</div>
+            {invitado.itinerario.map((it: any, i: number) => (
+              <div key={i} style={{ display: 'flex', gap: 12, marginBottom: i < invitado.itinerario.length - 1 ? 14 : 0 }}>
+                <div style={{ fontSize: 20, lineHeight: 1 }}>{it.icono || '⏰'}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: acento, fontWeight: 800 }}>{it.hora}</div>
+                  <div style={{ fontSize: 14, color: txtPrimario, fontWeight: 700 }}>{it.titulo}</div>
+                  {it.lugar && <div style={{ fontSize: 12, color: txtSecundario }}>{it.lugar}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {invitado.vestimenta_tipo && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16, textAlign: 'center' as const }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'Dress code' : 'Vestimenta'}</div>
+            <div style={{ fontSize: 16, color: txtPrimario, fontWeight: 700, marginBottom: invitado.vestimenta_colores?.length > 0 ? 12 : 0 }}>{invitado.vestimenta_tipo}</div>
+            {invitado.vestimenta_colores?.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: invitado.vestimenta_nota ? 10 : 0 }}>
+                {invitado.vestimenta_colores.map((c: any, i: number) => (
+                  <div key={i} style={{ textAlign: 'center' as const }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: c.hex, border: '1px solid rgba(0,0,0,.1)', margin: '0 auto 4px' }} />
+                    <div style={{ fontSize: 9, color: txtTerciario }}>{c.nombre}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {invitado.vestimenta_nota && <p style={{ fontSize: 12, color: txtSecundario, fontStyle: 'italic', margin: 0 }}>{invitado.vestimenta_nota}</p>}
+          </div>
+        )}
+
+        {invitado.lugar2_nombre && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16 }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 10 }}>{lang === 'en' ? 'Locations' : 'Ubicaciones'}</div>
+            {invitado.lugar_nombre && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: txtTerciario, fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Ceremony' : 'Ceremonia'}</div>
+                <a href={`https://maps.google.com/?q=${encodeURIComponent(invitado.lugar_nombre)}`} target="_blank" style={{ fontSize: 14, color: txtPrimario, fontWeight: 700, textDecoration: 'none' }}>{invitado.lugar_nombre} ↗</a>
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: 10, color: txtTerciario, fontWeight: 700, textTransform: 'uppercase' as const }}>{lang === 'en' ? 'Reception' : 'Recepción'}</div>
+              <a href={`https://maps.google.com/?q=${encodeURIComponent(invitado.lugar2_nombre)}`} target="_blank" style={{ fontSize: 14, color: txtPrimario, fontWeight: 700, textDecoration: 'none' }}>{invitado.lugar2_nombre} ↗</a>
+            </div>
+          </div>
+        )}
+
+        {invitado.hoteles && invitado.hoteles.length > 0 && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16 }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 12 }}>{lang === 'en' ? 'Where to stay' : 'Hospedaje'}</div>
+            {invitado.hoteles.map((h: any, i: number) => (
+              <div key={i} style={{ marginBottom: i < invitado.hoteles.length - 1 ? 14 : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, color: txtPrimario, fontWeight: 700 }}>{h.nombre}</span>
+                  {h.tarifa_especial && <span style={{ fontSize: 9, fontWeight: 800, color: acento, background: pillBg, padding: '2px 8px', borderRadius: 99 }}>{lang === 'en' ? 'SPECIAL RATE' : 'TARIFA ESPECIAL'}</span>}
+                </div>
+                {h.direccion && (
+                  <a href={h.link || `https://maps.google.com/?q=${encodeURIComponent(h.direccion)}`} target="_blank" style={{ fontSize: 12, color: txtSecundario, textDecoration: 'none' }}>{h.direccion} ↗</a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(invitado.mesa_regalos_link || invitado.mesa_regalos_nota || invitado.lluvia_sobres) && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '22px 20px', marginTop: 16, textAlign: 'center' as const }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 10 }}>{lang === 'en' ? 'Gift registry' : 'Mesa de regalos'}</div>
+            {invitado.mesa_regalos_nota && <p style={{ fontSize: 13, color: txtSecundario, margin: '0 0 12px', lineHeight: 1.5 }}>{invitado.mesa_regalos_nota}</p>}
+            {invitado.mesa_regalos_link && (
+              <a href={invitado.mesa_regalos_link} target="_blank" style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg,#534AB7,#D4537E)', padding: '10px 20px', borderRadius: 99, textDecoration: 'none', marginBottom: invitado.lluvia_sobres ? 12 : 0 }}>
+                {lang === 'en' ? 'See registry' : 'Ver mesa de regalos'} ↗
+              </a>
+            )}
+            {invitado.lluvia_sobres && (
+              <p style={{ fontSize: 12, color: txtTerciario, margin: 0 }}>
+                {lang === 'en' ? 'There will be an envelope box at the entrance on the day of the event.' : 'El día del evento habrá un buzón en la entrada para recibir tu sobre.'}
+              </p>
+            )}
+          </div>
+        )}
+
         {(invitado.info_viaje || invitado.faq) && (
           <div style={{ background: cardBg, borderRadius: 20, padding: '20px 22px', marginTop: 16 }}>
             {invitado.info_viaje && (
@@ -240,6 +407,35 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
                 <p style={{ fontSize: 13, color: txtSecundario, whiteSpace: 'pre-wrap' as const, lineHeight: 1.5 }}>{invitado.faq}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {invitado.solo_adultos && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '20px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <div style={{ fontSize: 11, color: acento, fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>{lang === 'en' ? 'A note with love' : 'Una nota con cariño'}</div>
+            <p style={{ fontSize: 13, color: txtSecundario, lineHeight: 1.5, margin: 0 }}>
+              {lang === 'en' ? 'We love the little ones, but this event is adults-only. Thank you for understanding!' : 'Adoramos a los más pequeños, sin embargo este evento está destinado solo para adultos. ¡Esperamos tu comprensión!'}
+            </p>
+          </div>
+        )}
+
+        {invitado.versiculo && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 15, color: txtPrimario, lineHeight: 1.6, fontStyle: 'italic', margin: '0 0 10px', fontFamily: fInv }}>{invitado.versiculo}</p>
+            {invitado.versiculo_autor && <p style={{ fontSize: 12, color: txtTerciario, fontWeight: 700, margin: 0 }}>{invitado.versiculo_autor}</p>}
+          </div>
+        )}
+
+        {invitado.mensaje_padres && (
+          <div style={{ background: cardBg, borderRadius: 20, padding: '24px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 14, color: txtPrimario, lineHeight: 1.6, whiteSpace: 'pre-wrap' as const, margin: 0, fontFamily: fInv }}>{invitado.mensaje_padres}</p>
+          </div>
+        )}
+
+        {invitado.frase_cierre && (
+          <div style={{ padding: '28px 22px', marginTop: 16, textAlign: 'center' as const }}>
+            <p style={{ fontSize: 16, color: txtPrimario, lineHeight: 1.6, fontStyle: 'italic', margin: 0, fontFamily: fInv }}>{invitado.frase_cierre}</p>
+            {nombreBoda && <p style={{ fontSize: 13, color: txtTerciario, marginTop: 10 }}>— {nombreBoda}</p>}
           </div>
         )}
         </div>

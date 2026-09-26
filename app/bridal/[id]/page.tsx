@@ -105,6 +105,76 @@ function estiloFotoConPosicion(pos: string | null | undefined) {
   return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
 }
 
+// Íconos automáticos por palabra clave — el organizador nunca elige un ícono a
+// mano, solo escribe el nombre del momento y aquí se adivina el más parecido.
+const ICONOS_ITINERARIO: [string, string][] = [
+  ['ceremonia', '⛪'], ['iglesia', '⛪'], ['boda civil', '💍'],
+  ['coctel', '🥂'], ['cóctel', '🥂'], ['brindis', '🥂'],
+  ['cena', '🍽️'], ['comida', '🍽️'], ['banquete', '🍽️'],
+  ['baile', '💃'], ['primer baile', '💃'],
+  ['fiesta', '🪩'], ['dj', '🪩'],
+  ['recepcion', '🎉'], ['recepción', '🎉'],
+  ['foto', '📸'],
+]
+function adivinarIcono(titulo: string) {
+  const t = titulo.toLowerCase()
+  const match = ICONOS_ITINERARIO.find(([palabra]) => t.includes(palabra))
+  return match ? match[1] : '⏰'
+}
+
+// Itinerario: una línea por evento, "hora | título | lugar opcional"
+function itinerarioATexto(items: any[]) {
+  return (items || []).map(it => [it.hora, it.titulo, it.lugar].filter(Boolean).join(' | ')).join('\n')
+}
+function textoAItinerario(texto: string) {
+  return texto.split('\n').map(l => l.trim()).filter(Boolean).map(linea => {
+    const [hora, titulo, lugar] = linea.split('|').map(p => p?.trim() || '')
+    return { hora: hora || '', titulo: titulo || hora, lugar: lugar || null, icono: adivinarIcono(titulo || hora) }
+  })
+}
+
+// Hoteles: una línea por hotel, "nombre | dirección | especial(si/no) | link opcional"
+function hotelesATexto(items: any[]) {
+  return (items || []).map(h => [h.nombre, h.direccion, h.tarifa_especial ? 'si' : 'no', h.link].filter(v => v !== null && v !== undefined && v !== '').join(' | ')).join('\n')
+}
+function textoAHoteles(texto: string) {
+  return texto.split('\n').map(l => l.trim()).filter(Boolean).map(linea => {
+    const [nombre, direccion, especial, link] = linea.split('|').map(p => p?.trim() || '')
+    return { nombre: nombre || '', direccion: direccion || null, tarifa_especial: (especial || '').toLowerCase().startsWith('s'), link: link || null }
+  })
+}
+
+// Colores de vestimenta: nombres o hex separados por coma. Si no reconocemos
+// el nombre, usamos un gris neutro en vez de fallar — nunca rompe el guardado.
+const COLORES_CONOCIDOS: Record<string, string> = {
+  aqua: '#7FCDCD', turquesa: '#40B5AD', 'azul bebe': '#B8D4E8', 'azul bebé': '#B8D4E8',
+  'azul cielo': '#8CB4D8', 'azul noche': '#1B2A4A', 'azul marino': '#1B2A4A', 'azul rey': '#2E4C9B',
+  'gris perla': '#D6D6D6', gris: '#9E9E9E', plata: '#C0C0C0',
+  blanco: '#FFFFFF', 'blanco roto': '#F5F0E8', marfil: '#FFFFF0', crema: '#FFF8E7',
+  negro: '#000000', carbon: '#2B2B2B', carbón: '#2B2B2B',
+  rosa: '#E8A0BF', 'rosa pastel': '#F4C2D7', fucsia: '#D6336C', magenta: '#C2185B',
+  dorado: '#C9A876', oro: '#D4AF37', bronce: '#8C6B4F', champan: '#F0DFC8', 'champán': '#F0DFC8',
+  vino: '#722F37', borgoña: '#5C1A24', rojo: '#C0392B', coral: '#FF7F6B', salmon: '#FA8072', 'salmón': '#FA8072',
+  verde: '#4A7C59', 'verde botella': '#0B3D2E', 'verde olivo': '#6B8E23', 'verde menta': '#98D8C8', esmeralda: '#2E8B57', sage: '#B2AC88', salvia: '#B2AC88',
+  morado: '#6A4C93', lavanda: '#B8B0F0', lila: '#C8A2C8', purpura: '#800080', 'púrpura': '#800080',
+  amarillo: '#F4D35E', mostaza: '#D4A017', durazno: '#FFCBA4',
+  cafe: '#6F4E37', 'café': '#6F4E37', chocolate: '#3D2817', beige: '#E8DCC4', arena: '#DCC9A3', terracota: '#C1440E',
+  naranja: '#E67E22',
+}
+function vestimentaColoresATexto(items: any[]) {
+  return (items || []).map((c: any) => c.nombre || c.hex).join(', ')
+}
+function textoAVestimentaColores(texto: string) {
+  return texto.split(',').map(s => s.trim()).filter(Boolean).map(nombre => {
+    const reconocido = nombre.startsWith('#') || !!COLORES_CONOCIDOS[nombre.toLowerCase()]
+    return {
+      nombre,
+      hex: nombre.startsWith('#') ? nombre : (COLORES_CONOCIDOS[nombre.toLowerCase()] || '#B8B0C8'),
+      reconocido,
+    }
+  })
+}
+
 export default function ProyectoBoda({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const [lang, setLang] = useState('es')
@@ -164,6 +234,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [editandoLugar, setEditandoLugar] = useState(false)
   const [lugarInput, setLugarInput] = useState('')
   const lugarRef = useRef<HTMLInputElement>(null)
+  const lugar2Ref = useRef<HTMLInputElement>(null)
 
   const [editandoFecha, setEditandoFecha] = useState(false)
   const [fechaInput, setFechaInput] = useState('')
@@ -179,6 +250,26 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [editandoInfo, setEditandoInfo] = useState(false)
   const [infoViajeInput, setInfoViajeInput] = useState('')
   const [faqInput, setFaqInput] = useState('')
+  const [editandoContenido, setEditandoContenido] = useState(false)
+  const [versiculoInput, setVersiculoInput] = useState('')
+  const [versiculoAutorInput, setVersiculoAutorInput] = useState('')
+  const [mensajePadresInput, setMensajePadresInput] = useState('')
+  const [soloAdultosInput, setSoloAdultosInput] = useState(false)
+  const [fraseCierreInput, setFraseCierreInput] = useState('')
+
+  // Fase 3: todo se edita como texto simple (una línea por elemento) y se
+  // convierte a JSON al guardar — así el organizador nunca ve un formulario
+  // con botones de "agregar renglón", solo escribe como en las demás cajas.
+  const [editandoFase3, setEditandoFase3] = useState(false)
+  const [itinerarioInput, setItinerarioInput] = useState('')
+  const [vestimentaTipoInput, setVestimentaTipoInput] = useState('')
+  const [vestimentaColoresInput, setVestimentaColoresInput] = useState('')
+  const [vestimentaNotaInput, setVestimentaNotaInput] = useState('')
+  const [lugar2Input, setLugar2Input] = useState('')
+  const [hotelesInput, setHotelesInput] = useState('')
+  const [mesaRegalosLinkInput, setMesaRegalosLinkInput] = useState('')
+  const [mesaRegalosNotaInput, setMesaRegalosNotaInput] = useState('')
+  const [lluviaSobresInput, setLluviaSobresInput] = useState(false)
 
   const [recordando, setRecordando] = useState(false)
   const [ultimoRecordatorio, setUltimoRecordatorio] = useState<string | null>(null)
@@ -275,6 +366,20 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       setLugarInput(proy.lugar_nombre || '')
       setInfoViajeInput(proy.info_viaje || '')
       setFaqInput(proy.faq || '')
+      setVersiculoInput(proy.versiculo || '')
+      setVersiculoAutorInput(proy.versiculo_autor || '')
+      setMensajePadresInput(proy.mensaje_padres || '')
+      setSoloAdultosInput(!!proy.solo_adultos)
+      setFraseCierreInput(proy.frase_cierre || '')
+      setItinerarioInput(itinerarioATexto(proy.itinerario))
+      setVestimentaTipoInput(proy.vestimenta_tipo || '')
+      setVestimentaColoresInput(vestimentaColoresATexto(proy.vestimenta_colores))
+      setVestimentaNotaInput(proy.vestimenta_nota || '')
+      setLugar2Input(proy.lugar2_nombre || '')
+      setHotelesInput(hotelesATexto(proy.hoteles))
+      setMesaRegalosLinkInput(proy.mesa_regalos_link || '')
+      setMesaRegalosNotaInput(proy.mesa_regalos_nota || '')
+      setLluviaSobresInput(!!proy.lluvia_sobres)
       setSlugInput(proy.slug || '')
       await cargarTodo(id)
       setCargando(false)
@@ -290,6 +395,16 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     })
     lugarRef.current.dataset.init = 'true'
   }, [mapsListo, editandoLugar])
+
+  useEffect(() => {
+    if (!mapsListo || !editandoFase3 || !lugar2Ref.current || lugar2Ref.current.dataset.init) return
+    const ac = new window.google.maps.places.Autocomplete(lugar2Ref.current, { fields: ['name', 'formatted_address'] })
+    ac.addListener('place_changed', () => {
+      const p = ac.getPlace()
+      if (p) setLugar2Input(lugar2Ref.current?.value || p.name || '')
+    })
+    lugar2Ref.current.dataset.init = 'true'
+  }, [mapsListo, editandoFase3])
 
   async function agregarPresupuesto() {
     if (!nuevoNombre.trim()) return
@@ -562,6 +677,36 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('proyectos_boda').update({ info_viaje, faq }).eq('id', id)
     setProyecto((prev: any) => ({ ...prev, info_viaje, faq }))
     setEditandoInfo(false)
+  }
+
+  async function guardarContenidoAdicional() {
+    const cambios = {
+      versiculo: versiculoInput.trim() || null,
+      versiculo_autor: versiculoAutorInput.trim() || null,
+      mensaje_padres: mensajePadresInput.trim() || null,
+      solo_adultos: soloAdultosInput,
+      frase_cierre: fraseCierreInput.trim() || null,
+    }
+    await supabase.from('proyectos_boda').update(cambios).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, ...cambios }))
+    setEditandoContenido(false)
+  }
+
+  async function guardarFase3() {
+    const cambios = {
+      itinerario: textoAItinerario(itinerarioInput),
+      vestimenta_tipo: vestimentaTipoInput.trim() || null,
+      vestimenta_colores: textoAVestimentaColores(vestimentaColoresInput),
+      vestimenta_nota: vestimentaNotaInput.trim() || null,
+      lugar2_nombre: lugar2Input.trim() || null,
+      hoteles: textoAHoteles(hotelesInput),
+      mesa_regalos_link: mesaRegalosLinkInput.trim() || null,
+      mesa_regalos_nota: mesaRegalosNotaInput.trim() || null,
+      lluvia_sobres: lluviaSobresInput,
+    }
+    await supabase.from('proyectos_boda').update(cambios).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, ...cambios }))
+    setEditandoFase3(false)
   }
 
   async function guardarTema(k: string) {
@@ -951,6 +1096,128 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               ) : (
                 <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>
                   {(proyecto?.info_viaje || proyecto?.faq) ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.') : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
+                </p>
+              )}
+            </div>
+
+            {/* Fase 1: versículo, padres, solo adultos, frase de cierre */}
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editandoContenido ? 10 : 0 }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
+                  {lang === 'en' ? 'Extra touches (verse, parents, closing note)' : 'Detalles extra (versículo, padres, nota de cierre)'}
+                </div>
+                {!editandoContenido && (
+                  <button onClick={() => setEditandoContenido(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                )}
+              </div>
+              {editandoContenido ? (
+                <div>
+                  <textarea value={versiculoInput} onChange={e => setVersiculoInput(e.target.value)} rows={2} placeholder={lang === 'en' ? 'Verse or quote (optional)' : 'Versículo o frase (opcional)'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+                  <input value={versiculoAutorInput} onChange={e => setVersiculoAutorInput(e.target.value)} placeholder={lang === 'en' ? 'Citation, e.g. 1 Corinthians 13:4-8' : 'Cita, ej. 1 Corintios 13:4-8'} style={{ ...inputStyle, width: '100%' }} />
+                  <textarea value={mensajePadresInput} onChange={e => setMensajePadresInput(e.target.value)} rows={3} placeholder={lang === 'en' ? 'Any message about family (optional, write it exactly as you want it — mention whoever you want, or skip this entirely)' : 'Mensaje sobre la familia (opcional, escríbelo tal como lo quieras — menciona a quien quieras, o déjalo vacío)'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#3D2B2E', marginBottom: 10, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={soloAdultosInput} onChange={e => setSoloAdultosInput(e.target.checked)} />
+                    {lang === 'en' ? 'Adults-only event (leave unchecked if kids are welcome)' : 'Evento solo para adultos (déjalo sin marcar si sí quieres niños)'}
+                  </label>
+                  <textarea value={fraseCierreInput} onChange={e => setFraseCierreInput(e.target.value)} rows={2} placeholder={lang === 'en' ? 'Closing phrase, e.g. "Choosing you every day..."' : 'Frase de cierre, ej. "Elegirte cada día fue..."'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+                  <button onClick={guardarContenidoAdicional} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+                </div>
+              ) : (
+                <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>
+                  {(proyecto?.versiculo || proyecto?.mensaje_padres || proyecto?.frase_cierre || proyecto?.solo_adultos)
+                    ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.')
+                    : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
+                </p>
+              )}
+            </div>
+
+            {/* Fase 3: itinerario, vestimenta, segunda ubicación, hospedaje */}
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editandoFase3 ? 10 : 0 }}>
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
+                  {lang === 'en' ? 'Itinerary, dress code, second venue & hotels' : 'Itinerario, vestimenta, segunda ubicación y hoteles'}
+                </div>
+                {!editandoFase3 && (
+                  <button onClick={() => setEditandoFase3(true)} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.4)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'edit' : 'editar'}</button>
+                )}
+              </div>
+              {editandoFase3 ? (
+                <div>
+                  <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                    {lang === 'en' ? 'Itinerary — one per line: time | title | place (optional)' : 'Itinerario — uno por línea: hora | título | lugar (opcional)'}
+                  </label>
+                  <textarea value={itinerarioInput} onChange={e => setItinerarioInput(e.target.value)} rows={4} placeholder={'17:30 | Ceremonia religiosa | Parroquia de San Miguel\n19:00 | Cóctel de bienvenida\n20:30 | Cena'} style={{ ...inputStyle, width: '100%', resize: 'none' as const, fontFamily: 'monospace' }} />
+                  {itinerarioInput.trim() && (
+                    <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, marginBottom: 6 }}>{lang === 'en' ? 'Preview:' : 'Así se va a ver:'}</div>
+                      {textoAItinerario(itinerarioInput).map((it, i) => (
+                        <div key={i} style={{ fontSize: 12, color: '#3D2B2E', marginBottom: 3 }}>{it.icono} <b>{it.hora}</b> — {it.titulo}{it.lugar ? ` (${it.lugar})` : ''}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
+                    {lang === 'en' ? 'Dress code' : 'Vestimenta'}
+                  </label>
+                  <input value={vestimentaTipoInput} onChange={e => setVestimentaTipoInput(e.target.value)} placeholder={lang === 'en' ? 'e.g. Formal, Casual, Black tie' : 'ej. Formal, Casual, Etiqueta rigurosa'} style={{ ...inputStyle, width: '100%' }} />
+                  <input value={vestimentaColoresInput} onChange={e => setVestimentaColoresInput(e.target.value)} placeholder={lang === 'en' ? 'Suggested colors, comma separated (optional): aqua, azul cielo, gris perla' : 'Colores sugeridos, separados por coma (opcional): aqua, azul cielo, gris perla'} style={{ ...inputStyle, width: '100%' }} />
+                  {vestimentaColoresInput.trim() && (
+                    <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, marginBottom: 8 }}>{lang === 'en' ? 'Preview:' : 'Así se va a ver:'}</div>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
+                        {textoAVestimentaColores(vestimentaColoresInput).map((c, i) => (
+                          <div key={i} style={{ textAlign: 'center' as const }}>
+                            <div style={{ width: 22, height: 22, borderRadius: '50%', background: c.hex, border: '1px solid rgba(0,0,0,.15)', margin: '0 auto 3px' }} />
+                            <div style={{ fontSize: 9, color: c.reconocido ? '#3D2B2E' : '#B45309' }}>{c.nombre}{!c.reconocido && ' ⚠'}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {textoAVestimentaColores(vestimentaColoresInput).some(c => !c.reconocido) && (
+                        <div style={{ fontSize: 10, color: '#B45309', marginTop: 6 }}>
+                          {lang === 'en' ? '⚠ Colors marked with a warning weren\u2019t recognized and show as gray — try a hex code like #A9D6E5 instead.' : '⚠ Los colores marcados no se reconocieron y se ven grises — prueba con un código hex como #A9D6E5.'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <input value={vestimentaNotaInput} onChange={e => setVestimentaNotaInput(e.target.value)} placeholder={lang === 'en' ? 'e.g. Please avoid white' : 'ej. Evita el blanco, reservado para la novia'} style={{ ...inputStyle, width: '100%' }} />
+
+                  <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
+                    {lang === 'en' ? 'Second venue (e.g. reception, if different from the main one)' : 'Segunda ubicación (ej. recepción, si es distinta a la principal)'}
+                  </label>
+                  <input ref={lugar2Ref} value={lugar2Input} onChange={e => setLugar2Input(e.target.value)} placeholder={lang === 'en' ? 'Search venue…' : 'Buscar lugar…'} style={{ ...inputStyle, width: '100%' }} />
+
+                  <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
+                    {lang === 'en' ? 'Hotels — one per line: name | address | special rate? si/no | map link (optional)' : 'Hoteles — uno por línea: nombre | dirección | tarifa especial? si/no | link de mapa (opcional)'}
+                  </label>
+                  <textarea value={hotelesInput} onChange={e => setHotelesInput(e.target.value)} rows={3} placeholder={'Hotel Casa Pilar | Calle Recreo 38, Centro | si\nCasa Aldama | Calle Aldama 21, Centro | si'} style={{ ...inputStyle, width: '100%', resize: 'none' as const, fontFamily: 'monospace' }} />
+                  {hotelesInput.trim() && (
+                    <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, marginBottom: 6 }}>{lang === 'en' ? 'Preview:' : 'Así se va a ver:'}</div>
+                      {textoAHoteles(hotelesInput).map((h, i) => (
+                        <div key={i} style={{ fontSize: 12, color: '#3D2B2E', marginBottom: 3 }}>
+                          <b>{h.nombre}</b>{h.tarifa_especial ? ' 🏷️' : ''}{h.direccion ? ` — ${h.direccion}` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
+                    {lang === 'en' ? 'Gift registry (external link, optional)' : 'Mesa de regalos (link externo, opcional)'}
+                  </label>
+                  <input value={mesaRegalosLinkInput} onChange={e => setMesaRegalosLinkInput(e.target.value)} placeholder={lang === 'en' ? 'https://...' : 'https://... (Liverpool, Amazon, etc.)'} style={{ ...inputStyle, width: '100%' }} />
+                  <input value={mesaRegalosNotaInput} onChange={e => setMesaRegalosNotaInput(e.target.value)} placeholder={lang === 'en' ? 'e.g. Your presence is the best gift, but if you\u2019d like...' : 'ej. Tu presencia es el mejor regalo, pero si deseas obsequiarnos algo...'} style={{ ...inputStyle, width: '100%' }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#3D2B2E', marginBottom: 10, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={lluviaSobresInput} onChange={e => setLluviaSobresInput(e.target.checked)} />
+                    {lang === 'en' ? 'Mention an envelope box at the entrance' : 'Mencionar buzón de sobres en la entrada'}
+                  </label>
+
+                  <button onClick={guardarFase3} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F, marginTop: 6 }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
+                </div>
+              ) : (
+                <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>
+                  {((proyecto?.itinerario?.length > 0) || proyecto?.vestimenta_tipo || proyecto?.lugar2_nombre || (proyecto?.hoteles?.length > 0) || proyecto?.mesa_regalos_link || proyecto?.mesa_regalos_nota || proyecto?.lluvia_sobres)
+                    ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.')
+                    : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
                 </p>
               )}
             </div>
