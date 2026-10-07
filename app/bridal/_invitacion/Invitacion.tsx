@@ -17,7 +17,7 @@ import { DefsBotanicos, Peonia, RamaEucalipto, Ramillete } from './Botanicos'
 import { IconoItinerario } from './iconos'
 import Sobre from './Sobre'
 import { enlacesCalendario } from './calendario'
-import { paletaDe, urlEnlaceSegura, urlImagenSegura, fechaCorta, fechaLarga, fechaPuntos, horaBonita, type Paleta } from './tema'
+import { paletaDe, urlEnlaceSegura, urlImagenSegura, fechaCorta, fechaLarga, fechaPuntos, horaBonita, hora12, partirHora, type Paleta } from './tema'
 
 export const MENU_OPCIONES = ['res', 'pollo', 'vegetariano', 'vegano'] as const
 const MENU_LABEL: Record<string, { es: string; en: string }> = {
@@ -88,15 +88,15 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const lugar1 = (d.lugar_nombre || '').trim()
   const [lugar1Nombre, ...lugar1Resto] = lugar1.split(',')
   const permitidos = Math.max(0, Number(d.acompanantes_permitidos) || 0)
-  const cal = d.fecha_boda ? enlacesCalendario(nombreBoda || 'Boda', d.fecha_boda, d.hora_boda, lugar1 || null, String(d.slug || d.token || nombreBoda || 'boda')) : null
+  const ultimoItem = Array.isArray(d.itinerario) && d.itinerario.length ? d.itinerario[d.itinerario.length - 1] : null
+  const cal = d.fecha_boda ? enlacesCalendario(nombreBoda || 'Boda', d.fecha_boda, d.hora_boda, lugar1 || null, String(d.slug || d.token || nombreBoda || 'boda'), ultimoItem ? partirHora(ultimoItem.hora).fin : null) : null
   const portada = urlImagenSegura(d.portada_url)
   const historia: any[] = (Array.isArray(d.historia) ? d.historia : []).filter((h: any) => urlImagenSegura(h?.url))
-  const estiloImg = urlImagenSegura(d.estilo_url)
-  const estiloPaleta: any[] = Array.isArray(d.estilo_paleta) ? d.estilo_paleta : []
   const itinerario: any[] = Array.isArray(d.itinerario) ? d.itinerario : []
   const colores: any[] = Array.isArray(d.vestimenta_colores) ? d.vestimenta_colores : []
   const hoteles: any[] = Array.isArray(d.hoteles) ? d.hoteles : []
   const linkRegalos = urlEnlaceSegura(d.mesa_regalos_link)
+  const mesas: any[] = (Array.isArray(d.mesas_regalos) ? d.mesas_regalos : []).filter((m: any) => m && String(m.nombre || '').trim()).slice(0, 4)
   const limite = d.fecha_limite_rsvp as string | undefined
   const limitePasado = !!limite && new Date(limite + 'T23:59:59') < new Date()
 
@@ -134,9 +134,9 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
     return () => window.removeEventListener('keydown', h)
   }, [visor])
 
-  const etiqueta: React.CSSProperties = { fontFamily: p.etiqueta, fontSize: 10.5, fontWeight: 500, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }
-  const titulo: React.CSSProperties = { fontFamily: p.serif, fontSize: 34, fontWeight: 400, fontStyle: 'italic', lineHeight: 1.1, color: p.txt, margin: '10px 0 0' }
-  const parrafo: React.CSSProperties = { fontFamily: p.serif, fontSize: 18.5, lineHeight: 1.55, color: p.txt2, margin: 0 }
+  const etiqueta: React.CSSProperties = { fontFamily: p.etiqueta, fontSize: 11, fontWeight: 500, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }
+  const titulo: React.CSSProperties = { fontFamily: p.serif, fontSize: 36, fontWeight: 400, fontStyle: 'italic', lineHeight: 1.1, color: p.txt, margin: '10px 0 0' }
+  const parrafo: React.CSSProperties = { fontFamily: p.serif, fontSize: 19.5, lineHeight: 1.55, color: p.txt2, margin: 0 }
 
   const irA = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
@@ -147,11 +147,13 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
     <div className="cw-raiz" style={{ background: p.bg, backgroundColor: p.papel, color: p.txt, minHeight: '100vh', position: 'relative', overflowX: 'hidden', fontFamily: p.serif }}>
       <DefsBotanicos />
       <Estilos p={p} />
+      <Ambiente p={p} />
 
       {!sobreAbierto && (
         <Sobre p={p} lang={lang} para={invitado || t('ti', 'you')} iniciales={iniciales(d)} etiqueta={t('Nos casamos', "We're getting married")} fecha={fechaPuntos(d.fecha_boda, lang)} hint={t('Toca el sobre para abrirlo', 'Tap the envelope to open it')} onAbierto={() => setSobreAbierto(true)} />
       )}
 
+      <div className="cw-pagina">
       {preview && (
         <div style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(60,40,36,.92)', color: '#fff', padding: '9px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase' }}>
           <span>{t('Vista previa — nada se manda', 'Preview — nothing is sent')}</span>
@@ -161,8 +163,6 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── PORTADA ───────── */}
       <header style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
-        {p.botanicos && <div style={{ position: 'absolute', top: -10, left: -28, opacity: .9, pointerEvents: 'none' }}><RamaEucalipto ancho={118} rotar={118} hojas={8} /></div>}
-        {p.botanicos && <div style={{ position: 'absolute', top: 38, right: -8, opacity: .8, pointerEvents: 'none' }}><RamaEucalipto ancho={92} rotar={-24} espejo hojas={7} /></div>}
         <div style={etiqueta}>{t('Nos casamos', "We're getting married")}</div>
         <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: 'clamp(58px,19vw,92px)', lineHeight: .95, color: p.acento, margin: '14px 0 0' }}>
           {d.nombre_novia}
@@ -170,7 +170,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           {d.nombre_novio}
         </h1>
         <div style={{ ...etiqueta, color: p.txt2, marginTop: 20, letterSpacing: '.34em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
-        {lugar1Nombre && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, color: p.txt3, marginTop: 8 }}>{lugar1Nombre}</div>}
+        {lugar1Nombre && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{lugar1Nombre}</div>}
 
         <div style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: -11, border: `1px solid ${p.linea}`, borderRadius: '999px 999px 22px 22px' }} />
@@ -253,10 +253,13 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         {itinerario.length > 0 && (
           <div style={{ marginTop: 44, textAlign: 'left', position: 'relative' }}>
             <div style={{ ...etiqueta, textAlign: 'center', marginBottom: 26 }}>{t('Así será nuestro día', 'How our day will unfold')}</div>
-            <div aria-hidden="true" style={{ position: 'absolute', left: 78, top: 56, bottom: 14, width: 1, background: p.linea }} />
+            <div aria-hidden="true" style={{ position: 'absolute', left: 112, top: 56, bottom: 14, width: 1, background: p.linea }} />
             {itinerario.map((it, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '60px 36px 1fr', alignItems: 'start', marginBottom: 26, position: 'relative' }}>
-                <div style={{ fontFamily: p.serif, fontSize: 21, fontWeight: 500, color: p.acento, textAlign: 'right', lineHeight: '26px', fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>{(it.hora || '').slice(0, 5)}</div>
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '98px 30px 1fr', alignItems: 'start', marginBottom: 28, position: 'relative' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: p.serif, fontSize: 21, fontWeight: 500, color: p.acento, lineHeight: '26px', fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>{hora12(partirHora(it.hora).ini)}</div>
+                  {partirHora(it.hora).fin && <div style={{ fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: p.txt3, marginTop: 3 }}>{t('hasta', 'until')} {hora12(partirHora(it.hora).fin)}</div>}
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 7.5 }}><span style={{ width: 11, height: 11, borderRadius: '50%', background: p.papel, border: `1.5px solid ${p.acento}`, boxSizing: 'border-box' }} /></div>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <span style={{ color: p.acento, marginTop: 0, flexShrink: 0 }}><IconoItinerario emoji={it.icono} titulo={it.titulo} /></span>
@@ -310,23 +313,6 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         </Sec>
       )}
 
-      {/* ───────── ASÍ LO SOÑAMOS ───────── */}
-      {(estiloImg || d.estilo_titulo || estiloPaleta.length > 0) && (
-        <Sec p={p} ancho={600}>
-          <div style={etiqueta}>{t('Nuestro estilo', 'Our style')}</div>
-          <h2 style={titulo}>{t('Así lo soñamos', 'How we dreamed it')}</h2>
-          {estiloImg && (
-            <button type="button" onClick={() => setVisor(estiloImg)} style={{ all: 'unset', display: 'block', width: '100%', cursor: 'zoom-in', marginTop: 28 }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={estiloImg} alt={d.estilo_titulo || ''} loading="lazy" decoding="async" style={{ display: 'block', width: '100%', aspectRatio: '4/3.2', objectFit: 'cover', borderRadius: 160, boxShadow: '0 24px 40px -24px rgba(90,60,55,.5)' }} />
-            </button>
-          )}
-          {d.estilo_titulo && <div style={{ ...etiqueta, color: p.txt2, marginTop: 28, letterSpacing: '.28em' }}>{d.estilo_titulo}</div>}
-          {d.estilo_texto && <p style={{ ...parrafo, fontStyle: 'italic', marginTop: 12, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>{d.estilo_texto}</p>}
-          {estiloPaleta.length > 0 && <CirculosColor colores={estiloPaleta} p={p} />}
-        </Sec>
-      )}
-
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
         <Sec p={p}>
@@ -339,8 +325,14 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
               <div key={i} style={{ marginTop: 26, padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
                 <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt }}>{h.nombre}</div>
                 {h.tarifa_especial && <span style={{ display: 'inline-block', marginTop: 8, fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '4px 11px' }}>{t('Tarifa especial de boda', 'Special wedding rate')}</span>}
-                {h.direccion && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.txt3, marginTop: 10 }}>{h.direccion}</div>}
-                {enlace && <div style={{ marginTop: 14 }}><Boton p={p} href={enlace}>{t('Ver ubicación', 'View location')}</Boton></div>}
+                {h.direccion && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 10 }}>{h.direccion}</div>}
+                {h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700)}</p>}
+                {h.traslado && (
+                  <div style={{ marginTop: 14, padding: '10px 14px', border: `1px solid ${p.linea}`, borderRadius: 12, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.acento, lineHeight: 1.6 }}>
+                    {String(h.traslado).slice(0, 160)}
+                  </div>
+                )}
+                {enlace && <div style={{ marginTop: 16 }}><Boton p={p} href={enlace}>{t('Ver ubicación', 'View location')}</Boton></div>}
               </div>
             )
           })}
@@ -348,17 +340,29 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       )}
 
       {/* ───────── REGALOS ───────── */}
-      {(linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
-        <Sec p={p} ancho={480}>
+      {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
+        <Sec p={p} ancho={520}>
           <Orn p={p} />
           <div style={{ ...etiqueta, marginTop: 34 }}>{t('Si deseas obsequiarnos algo', 'If you wish to give us something')}</div>
           <h2 style={titulo}>{t('Mesa de regalos', 'Gift registry')}</h2>
           {d.mesa_regalos_nota && <p style={{ ...parrafo, marginTop: 14 }}>{d.mesa_regalos_nota}</p>}
-          {linkRegalos && <div style={{ marginTop: 22 }}><Boton p={p} href={linkRegalos}>{t('Ver mesa de regalos', 'View registry')}</Boton></div>}
+          {mesas.map((m, i) => {
+            const enlace = urlEnlaceSegura(m.link)
+            return (
+              <div key={i} style={{ marginTop: 24, padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+                <div style={{ fontFamily: p.serif, fontSize: 26, color: p.txt }}>{String(m.nombre).slice(0, 60)}</div>
+                {m.nota && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 6 }}>{String(m.nota).slice(0, 120)}</div>}
+                {enlace
+                  ? <div style={{ marginTop: 16 }}><Boton p={p} href={enlace}>{t('Ver mesa de regalos', 'View registry')}</Boton></div>
+                  : <div style={{ ...etiqueta, color: p.txt3, marginTop: 14, letterSpacing: '.22em' }}>{t('Próximamente', 'Coming soon')}</div>}
+              </div>
+            )
+          })}
+          {mesas.length === 0 && linkRegalos && <div style={{ marginTop: 22 }}><Boton p={p} href={linkRegalos}>{t('Ver mesa de regalos', 'View registry')}</Boton></div>}
           {d.lluvia_sobres && (
             <div style={{ marginTop: 24, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', color: p.txt2 }}>
               <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><rect x="1" y="1" width="28" height="20" rx="2" fill="none" stroke={p.acento} strokeWidth="1.2" /><path d="m1.5 2 13.5 10L28.5 2" fill="none" stroke={p.acento} strokeWidth="1.2" /></svg>
-              <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17 }}>{t('El día del evento habrá un buzón para recibir tu sobre.', 'On the day there will be a box to receive your envelope.')}</span>
+              <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 18 }}>{t('El día del evento habrá un buzón para recibir tu sobre.', 'On the day there will be a box to receive your envelope.')}</span>
             </div>
           )}
         </Sec>
@@ -501,23 +505,30 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       </Sec>
 
       {/* ───────── CIERRE ───────── */}
-      <footer style={{ position: 'relative', textAlign: 'center', padding: '30px 20px 70px' }}>
-        <div className="cw-aparece" style={{ position: 'relative', width: 'min(86vw,330px)', aspectRatio: '1', margin: '0 auto', borderRadius: '50%', border: `1px solid ${p.linea}`, background: 'rgba(255,255,255,.6)', boxShadow: '0 30px 50px -30px rgba(90,60,55,.4)', overflow: 'hidden' }}>
-          <div aria-hidden="true" style={{ position: 'absolute', inset: 9, borderRadius: '50%', border: `1px solid ${p.linea}` }} />
-          <div style={{ position: 'absolute', top: 14, left: '50%', width: 11, height: 11, marginLeft: -5.5, borderRadius: '50%', background: p.acento2 }} />
-          <div style={{ position: 'relative', paddingTop: '24%' }}>
-            <div style={{ fontFamily: p.script, fontSize: 'clamp(34px,10.4vw,46px)', color: p.acento, lineHeight: 1 }}>{nombreBoda}</div>
-            <div style={{ ...etiqueta, color: p.txt2, marginTop: 14, letterSpacing: '.24em' }}>{t('Gracias por acompañarnos', 'Thank you for celebrating with us')}</div>
-            <div style={{ ...etiqueta, color: p.txt3, marginTop: 6, letterSpacing: '.24em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
+      <footer style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
+        <div className="cw-aparece" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', borderRadius: 26, overflow: 'hidden', border: `1px solid ${p.linea}`, background: 'linear-gradient(180deg, rgba(255,255,255,.78), rgba(250,236,231,.78))', boxShadow: '0 30px 50px -34px rgba(90,60,55,.45)', padding: '60px 24px 180px' }}>
+          <div aria-hidden="true" style={{ position: 'absolute', inset: 10, borderRadius: 18, border: `1px solid ${p.linea}`, pointerEvents: 'none' }} />
+          {p.botanicos && <div style={{ position: 'absolute', top: -20, left: -34, opacity: .92, pointerEvents: 'none' }}><RamaEucalipto ancho={86} rotar={125} hojas={6} /></div>}
+          {p.botanicos && <div style={{ position: 'absolute', top: -16, right: -30, opacity: .88, pointerEvents: 'none' }}><RamaEucalipto ancho={78} rotar={-125} espejo hojas={6} /></div>}
+          <div style={{ position: 'relative' }}>
+            <div style={etiqueta}>{t('Con todo nuestro amor', 'With all our love')}</div>
+            <div style={{ fontFamily: p.script, fontSize: 'clamp(52px,14vw,66px)', color: p.acento, lineHeight: .98, marginTop: 14 }}>{d.nombre_novia}<span style={{ display: 'block', fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.34em', color: p.acento2, lineHeight: 1.3 }}>&amp;</span>{d.nombre_novio}</div>
+            <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em' }}>{t('Gracias por acompañarnos', 'Thank you for celebrating with us')}</div>
+            <div style={{ ...etiqueta, color: p.txt3, marginTop: 8, letterSpacing: '.26em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
+            {d.frase_cierre && <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 21, marginTop: 28 }}>{d.frase_cierre}</p>}
           </div>
-          {p.botanicos && <div style={{ position: 'absolute', left: '50%', bottom: -16, marginLeft: -120, pointerEvents: 'none' }}><Ramillete ancho={240} /></div>}
+          {p.botanicos && <div style={{ position: 'absolute', left: '50%', bottom: -24, marginLeft: -175, pointerEvents: 'none' }}><Ramillete ancho={350} /></div>}
         </div>
-        {d.frase_cierre && <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 21, marginTop: 38 }}>{d.frase_cierre}</p>}
         <div style={{ marginTop: 40 }}><Orn p={p} /></div>
-        <a href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 18, fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.24em', textTransform: 'uppercase', color: p.txt3, textDecoration: 'none' }}>
-          {t('Invitación creada con', 'Invitation made with')} <span style={{ color: p.acento }}>Cheers Bridal</span>
+        <a href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 18, textDecoration: 'none' }}>
+          <span style={{ display: 'block', fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.24em', textTransform: 'uppercase', color: p.txt3 }}>
+            {t('Invitación creada por', 'Invitation created by')} <span style={{ color: p.acento }}>Cheers Bridal</span>
+          </span>
+          <span style={{ display: 'block', fontFamily: p.script, fontSize: 30, color: p.acento, lineHeight: 1.1, marginTop: 6 }}>Patty Eugenia</span>
         </a>
       </footer>
+
+      </div>{/* /cw-pagina */}
 
       {/* Botón flotante */}
       {flota && !preview && !r.enviado && (
@@ -532,6 +543,40 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           <button type="button" aria-label={t('Cerrar', 'Close')} onClick={() => setVisor(null)}>×</button>
         </div>
       )}
+    </div>
+  )
+}
+
+// Pétalos cayendo, destellos y ramas fijas con vaivén. Todo decorativo, sin
+// aleatoriedad (los valores son fijos, así se ve igual en servidor y teléfono)
+// y se apaga solo si el invitado tiene activado "reducir movimiento".
+const PETALOS: [number, number, number, number, number, number, number][] = [
+  [6, 15, 17, 0, 60, 280, 0], [14, 11, 21, 6, -40, 200, 1], [23, 17, 19, 12, 50, 320, 0], [31, 12, 23, 3, -60, 240, 1],
+  [40, 14, 18, 9, 40, 300, 0], [49, 10, 24, 15, -30, 180, 1], [57, 16, 20, 2, 70, 340, 0], [65, 12, 22, 11, -50, 260, 1],
+  [73, 15, 18, 7, 45, 290, 0], [81, 11, 25, 14, -45, 210, 1], [88, 17, 19, 4, 55, 330, 0], [94, 12, 21, 10, -35, 230, 1],
+]
+const BRILLOS: [number, number, number, number][] = [
+  [8, 18, 12, 0], [22, 64, 10, 1.4], [37, 28, 13, 2.8], [52, 78, 11, 0.7], [63, 14, 10, 2.1],
+  [78, 52, 13, 3.5], [90, 30, 11, 1.1], [16, 86, 12, 3.1], [44, 92, 10, 0.3], [85, 84, 12, 2.4],
+]
+function Ambiente({ p }: { p: Paleta }) {
+  if (!p.botanicos) return null
+  return (
+    <div aria-hidden="true">
+      <div className="cw-rama cw-rama-i"><div className="cw-brisa"><RamaEucalipto ancho={116} rotar={128} hojas={8} /></div></div>
+      <div className="cw-rama cw-rama-d"><div className="cw-brisa cw-brisa-b"><RamaEucalipto ancho={104} rotar={-128} espejo hojas={7} /></div></div>
+      <div className="cw-capa-ligera">
+        {PETALOS.map(([x, tam, dur, del, der, giro, tono], i) => (
+          <svg key={'p' + i} className="cw-petalo" viewBox="-12 -25 24 27" width={tam} height={Math.round(tam * 1.1)} style={{ left: `${x}%`, animationDuration: `${dur}s`, animationDelay: `-${del}s`, ['--der' as string]: `${der}px`, ['--giro' as string]: `${giro}deg` } as React.CSSProperties}>
+            <path d="M0 0 C-8 -6 -9 -18 0 -23 C 9 -18 8 -6 0 0Z" fill={tono ? 'url(#cw-pet-rosa)' : 'url(#cw-pet-marfil)'} />
+          </svg>
+        ))}
+        {BRILLOS.map(([x, y, tam, del], i) => (
+          <svg key={'b' + i} className="cw-brillo" viewBox="-10 -10 20 20" width={tam} height={tam} style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${del}s` }}>
+            <path d="M0 -9 C1 -3 3 -1 9 0 C3 1 1 3 0 9 C-1 3 -3 1 -9 0 C-3 -1 -1 -3 0 -9Z" fill="#E7CE9B" />
+          </svg>
+        ))}
+      </div>
     </div>
   )
 }
@@ -581,6 +626,22 @@ function Estilos({ p }: { p: Paleta }) {
   return (
     <style>{`
       .cw-raiz { -webkit-font-smoothing: antialiased; }
+      .cw-pagina { position: relative; z-index: 2; }
+      /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
+      .cw-rama { position: fixed; z-index: 1; pointer-events: none; }
+      .cw-rama-i { top: -34px; left: -46px; opacity: .92; }
+      .cw-rama-d { top: -22px; right: -44px; opacity: .88; }
+      .cw-brisa { transform-origin: 0 0; animation: cw-brisa 9s ease-in-out infinite; }
+      .cw-brisa-b { transform-origin: 100% 0; animation-duration: 11s; animation-delay: -3s; }
+      @keyframes cw-brisa { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(2.8deg); } }
+      .cw-capa-ligera { position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+      .cw-petalo { position: absolute; top: -30px; opacity: 0; will-change: transform, opacity; animation: cw-cae linear infinite; filter: drop-shadow(0 1px 1.5px rgba(150,105,98,.28)); }
+      @keyframes cw-cae { 0% { transform: translate3d(0,-6vh,0) rotate(0deg); opacity: 0; } 8% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translate3d(var(--der),108vh,0) rotate(var(--giro)); opacity: 0; } }
+      .cw-brillo { position: absolute; opacity: 0; animation: cw-brilla 5.5s ease-in-out infinite; filter: drop-shadow(0 0 4px rgba(231,206,155,.95)); }
+      @keyframes cw-brilla { 0%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 50% { opacity: .95; transform: scale(1) rotate(45deg); } }
+      /* Pantallas grandes: todo el contenido crece junto (texto, fotos y márgenes) para leerse cómodo */
+      @media (min-width: 820px) { .cw-pagina { zoom: 1.15; } .cw-sobre-wrap { zoom: 1.25; } .cw-rama-i { left: -24px; } .cw-rama-d { right: -20px; } }
+      @media (min-width: 1180px) { .cw-pagina { zoom: 1.3; } .cw-sobre-wrap { zoom: 1.4; } .cw-rama-i { transform: scale(1.25); transform-origin: 0 0; } .cw-rama-d { transform: scale(1.25); transform-origin: 100% 0; } }
       .cw-raiz *, .cw-raiz *::before, .cw-raiz *::after { box-sizing: border-box; }
       .cw-aparece { transition: opacity .9s ease, transform .9s ease; }
       .cw-js .cw-aparece:not(.cw-in) { opacity: 0; transform: translateY(20px); }
@@ -625,6 +686,8 @@ function Estilos({ p }: { p: Paleta }) {
         .cw-sobre-carta, .cw-sobre-solapa, .cw-sello { transition-duration: .01s !important; transition-delay: 0s !important; animation-duration: .01s !important; }
         .cw-sobre-capa.cw-abriendo { animation-delay: .3s; animation-duration: .3s; }
         .cw-hint, .cw-flota { animation: none; }
+        .cw-capa-ligera { display: none; }
+        .cw-brisa { animation: none; }
       }
     `}</style>
   )

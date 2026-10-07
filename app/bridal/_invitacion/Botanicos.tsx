@@ -27,6 +27,14 @@ export function DefsBotanicos() {
           <stop offset="50%" stopColor="#C78890" />
           <stop offset="100%" stopColor="#E3B3B7" />
         </radialGradient>
+        <linearGradient id="cw-pet-marfil" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#F2E3DC" />
+        </linearGradient>
+        <linearGradient id="cw-pet-rosa" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FCEEEE" />
+          <stop offset="100%" stopColor="#E9BFC1" />
+        </linearGradient>
         <radialGradient id="cw-hoja" cx="40%" cy="38%" r="75%">
           <stop offset="0%" stopColor="#C3CEC1" />
           <stop offset="62%" stopColor="#A4B4A8" />

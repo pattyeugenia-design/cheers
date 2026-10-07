@@ -120,10 +120,20 @@ export function fechaPuntos(fecha: string | null | undefined, lang: string) {
   const mes = d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long' }).toUpperCase()
   return `${d.getDate()} · ${mes} · ${d.getFullYear()}`
 }
+// "19:30" -> "7:30 pm"; "02:00" -> "2:00 am". Si ya viene con am/pm se respeta.
+export function hora12(h?: string | null) {
+  const m = /^\s*(\d{1,2}):(\d{2})\s*(am|pm)?\s*$/i.exec(h || '')
+  if (!m) return (h || '').trim()
+  let hh = Number(m[1])
+  const suf = (m[3] || (hh >= 12 ? 'pm' : 'am')).toLowerCase()
+  hh = hh % 12 || 12
+  return `${hh}:${m[2]} ${suf}`
+}
 export function horaBonita(hora?: string | null) {
-  if (!hora) return ''
-  const [h, m] = hora.split(':')
-  const hh = Number(h)
-  if (isNaN(hh)) return hora
-  return `${hh}:${(m || '00').slice(0, 2)} h`
+  return hora12(hora)
+}
+// "19:30 - 20:30" (o "7:30 pm a 8:30 pm") -> { ini: "19:30", fin: "20:30" }
+export function partirHora(h?: string | null): { ini: string; fin: string | null } {
+  const partes = String(h || '').split(/\s*(?:-|–|—|\ba\b|\bto\b)\s*/i).map(s => s.trim()).filter(Boolean)
+  return { ini: partes[0] || '', fin: partes[1] || null }
 }

@@ -33,7 +33,7 @@ export default function Sobre({ p, para, iniciales, etiqueta, fecha, hint, onAbi
           <div style={{ position: 'absolute', top: 44, right: -30, opacity: .75, pointerEvents: 'none' }}><Peonia ancho={96} tono="oscuro" rotar={20} /></div>
         </>
       )}
-      <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '0 24px' }}>
+      <div className="cw-sobre-wrap" style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '0 24px' }}>
         <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: p.tracking, color: p.acento, textTransform: 'uppercase', marginBottom: 26 }}>{etiqueta}</div>
 
         <button type="button" onClick={abrir} aria-label={lang === 'en' ? 'Open invitation' : 'Abrir invitación'} className="cw-sobre">

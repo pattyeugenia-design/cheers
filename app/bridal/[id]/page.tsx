@@ -134,15 +134,49 @@ function textoAItinerario(texto: string) {
   })
 }
 
-// Hoteles: una línea por hotel, "nombre | dirección | especial(si/no) | link opcional"
+// Hoteles: una línea por hotel, "nombre | dirección | especial(si/no) | link | reseña | traslado".
+// Los campos vacíos se conservan en su lugar para que al volver a editar nada se recorra.
 function hotelesATexto(items: any[]) {
-  return (items || []).map(h => [h.nombre, h.direccion, h.tarifa_especial ? 'si' : 'no', h.link].filter(v => v !== null && v !== undefined && v !== '').join(' | ')).join('\n')
+  return (items || []).map(h => {
+    const campos = [h.nombre, h.direccion, h.tarifa_especial ? 'si' : 'no', h.link, h.resena, h.traslado].map(v => (v ?? '').toString())
+    while (campos.length > 3 && campos[campos.length - 1] === '') campos.pop()
+    return campos.join(' | ')
+  }).join('\n')
 }
 function textoAHoteles(texto: string) {
-  return texto.split('\n').map(l => l.trim()).filter(Boolean).map(linea => {
-    const [nombre, direccion, especial, link] = linea.split('|').map(p => p?.trim() || '')
-    return { nombre: nombre || '', direccion: direccion || null, tarifa_especial: (especial || '').toLowerCase().startsWith('s'), link: link || null }
+  return texto.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 6).map(linea => {
+    const [nombre, direccion, especial, link, resena, traslado] = linea.split('|').map(p => p?.trim() || '')
+    return {
+      nombre: (nombre || '').slice(0, 80),
+      direccion: direccion ? direccion.slice(0, 160) : null,
+      tarifa_especial: (especial || '').toLowerCase().startsWith('s'),
+      link: link ? link.slice(0, 500) : null,
+      resena: resena ? resena.slice(0, 700) : null,
+      traslado: traslado ? traslado.slice(0, 160) : null,
+    }
   })
+}
+
+// Mesas de regalos: una línea por tienda, "nombre | link (opcional) | nota (opcional)".
+// Sin link = "Próximamente". Los links solo pueden ser web (http/https).
+function mesasATexto(items: any[]) {
+  return (items || []).map(m => {
+    const campos = [m.nombre, m.link, m.nota].map(v => (v ?? '').toString())
+    while (campos.length > 1 && campos[campos.length - 1] === '') campos.pop()
+    return campos.join(' | ')
+  }).join('\n')
+}
+function textoAMesas(texto: string): { mesas: any[]; error: string | null } {
+  const mesas: any[] = []
+  for (const linea of texto.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 4)) {
+    const [nombre, linkCrudo, nota] = linea.split('|').map(p => p?.trim() || '')
+    if (!nombre) continue
+    let link = linkCrudo
+    if (link && !/^https?:\/\//i.test(link) && /^[a-z0-9.-]+\.[a-z]{2,}(\/\S*)?$/i.test(link)) link = 'https://' + link
+    if (link && (!/^https?:\/\/\S+$/i.test(link) || link.length > 500)) return { mesas: [], error: nombre }
+    mesas.push({ nombre: nombre.slice(0, 60), link: link || null, nota: nota ? nota.slice(0, 120) : null })
+  }
+  return { mesas, error: null }
 }
 
 // Colores de vestimenta: nombres o hex separados por coma. Si no reconocemos
@@ -273,12 +307,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   // Personalización de la invitación: fecha límite, historia (fotos de la pareja) y estilo
   const [fechaLimiteInput, setFechaLimiteInput] = useState('')
   const [historiaItems, setHistoriaItems] = useState<any[]>([])
-  const [estiloTituloInput, setEstiloTituloInput] = useState('')
-  const [estiloTextoInput, setEstiloTextoInput] = useState('')
-  const [estiloPaletaInput, setEstiloPaletaInput] = useState('')
   const [subiendoMedia, setSubiendoMedia] = useState<string | null>(null)
   const [personalGuardado, setPersonalGuardado] = useState(false)
-  const [mesaRegalosLinkInput, setMesaRegalosLinkInput] = useState('')
+  const [mesasRegalosInput, setMesasRegalosInput] = useState('')
   const [mesaRegalosNotaInput, setMesaRegalosNotaInput] = useState('')
   const [lluviaSobresInput, setLluviaSobresInput] = useState(false)
 
@@ -394,10 +425,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       setHotelesInput(hotelesATexto(proy.hoteles))
       setFechaLimiteInput(proy.fecha_limite_rsvp || '')
       setHistoriaItems(Array.isArray(proy.historia) ? proy.historia : [])
-      setEstiloTituloInput(proy.estilo_titulo || '')
-      setEstiloTextoInput(proy.estilo_texto || '')
-      setEstiloPaletaInput(vestimentaColoresATexto(proy.estilo_paleta))
-      setMesaRegalosLinkInput(proy.mesa_regalos_link || '')
+      // Si la boda traía un solo link de regalos (versión anterior), se muestra como primera mesa para editarlo.
+      setMesasRegalosInput(Array.isArray(proy.mesas_regalos) && proy.mesas_regalos.length > 0 ? mesasATexto(proy.mesas_regalos) : (proy.mesa_regalos_link ? `Mesa de regalos | ${proy.mesa_regalos_link}` : ''))
       setMesaRegalosNotaInput(proy.mesa_regalos_nota || '')
       setLluviaSobresInput(!!proy.lluvia_sobres)
       setSlugInput(proy.slug || '')
@@ -713,15 +742,12 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   }
 
   async function guardarFase3() {
-    // Link de mesa de regalos: solo se aceptan links web reales (http/https).
-    // Si la pareja escribe "liverpool.com.mx/..." sin https, se lo agregamos;
-    // cualquier otra cosa (espacios, "javascript:", etc.) se rechaza con aviso.
-    let linkRegalos = mesaRegalosLinkInput.trim()
-    if (linkRegalos && !/^https?:\/\//i.test(linkRegalos) && /^[a-z0-9.-]+\.[a-z]{2,}(\/\S*)?$/i.test(linkRegalos)) {
-      linkRegalos = 'https://' + linkRegalos
-    }
-    if (linkRegalos && (!/^https?:\/\/\S+$/i.test(linkRegalos) || linkRegalos.length > 500)) {
-      alert(lang === 'en' ? 'The gift registry link must be a web address (https://...).' : 'El link de la mesa de regalos debe ser una dirección web (https://...).')
+    // Mesas de regalos: solo se aceptan links web reales (http/https). Si la pareja
+    // escribe "liverpool.com.mx/..." sin https, se lo agregamos; cualquier otra cosa
+    // ("javascript:", espacios, etc.) se rechaza con aviso y no se guarda nada.
+    const { mesas, error: mesaMala } = textoAMesas(mesasRegalosInput)
+    if (mesaMala) {
+      alert(lang === 'en' ? `The link for "${mesaMala}" must be a web address (https://...).` : `El link de "${mesaMala}" debe ser una dirección web (https://...).`)
       return
     }
     const cambios = {
@@ -731,7 +757,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       vestimenta_nota: vestimentaNotaInput.trim() || null,
       lugar2_nombre: lugar2Input.trim() || null,
       hoteles: textoAHoteles(hotelesInput),
-      mesa_regalos_link: linkRegalos || null,
+      mesa_regalos_link: null,
+      mesas_regalos: mesas,
       mesa_regalos_nota: mesaRegalosNotaInput.trim() || null,
       lluvia_sobres: lluviaSobresInput,
     }
@@ -740,7 +767,6 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       alert(lang === 'en' ? 'Could not save, please try again.' : 'No se pudo guardar, intenta de nuevo.')
       return
     }
-    setMesaRegalosLinkInput(linkRegalos)
     setProyecto((prev: any) => ({ ...prev, ...cambios }))
     setEditandoFase3(false)
   }
@@ -763,21 +789,21 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     }
   }
 
-  async function subirMedia(file: File, tipo: 'historia' | 'estilo') {
+  async function subirMedia(file: File) {
     if (!file || !file.type.startsWith('image/')) return
     if (file.size > 25 * 1024 * 1024) {
       alert(lang === 'en' ? 'That photo is too big (max 25MB).' : 'Esa foto pesa demasiado (máx. 25MB).')
       return
     }
-    if (tipo === 'historia' && historiaItems.length >= 6) return
-    setSubiendoMedia(tipo)
+    if (historiaItems.length >= 6) return
+    setSubiendoMedia('historia')
     const blob = await reducirImagen(file)
     if (!blob) {
       setSubiendoMedia(null)
       alert(lang === 'en' ? "We couldn't read that photo. Please use a JPG, PNG or WebP image." : 'No pudimos leer esa foto. Usa una imagen JPG, PNG o WebP.')
       return
     }
-    const ruta = `${id}/${tipo}-${crypto.randomUUID()}.jpg`
+    const ruta = `${id}/historia-${crypto.randomUUID()}.jpg`
     const { error } = await supabase.storage.from('bodas-media').upload(ruta, blob, { contentType: 'image/jpeg', upsert: false })
     if (error) {
       setSubiendoMedia(null)
@@ -785,26 +811,14 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       return
     }
     const { data: { publicUrl } } = supabase.storage.from('bodas-media').getPublicUrl(ruta)
-    if (tipo === 'historia') {
-      const nuevos = [...historiaItems, { url: publicUrl, ruta, pie: '' }]
-      const { error: e2 } = await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
-      if (e2) {
-        await supabase.storage.from('bodas-media').remove([ruta])
-        alert(lang === 'en' ? "Couldn't save the photo." : 'No se pudo guardar la foto.')
-      } else {
-        setHistoriaItems(nuevos)
-        setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
-      }
+    const nuevos = [...historiaItems, { url: publicUrl, ruta, pie: '' }]
+    const { error: e2 } = await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
+    if (e2) {
+      await supabase.storage.from('bodas-media').remove([ruta])
+      alert(lang === 'en' ? "Couldn't save the photo." : 'No se pudo guardar la foto.')
     } else {
-      const anterior: string | null = proyecto?.estilo_ruta || null
-      const { error: e2 } = await supabase.from('proyectos_boda').update({ estilo_url: publicUrl, estilo_ruta: ruta }).eq('id', id)
-      if (e2) {
-        await supabase.storage.from('bodas-media').remove([ruta])
-        alert(lang === 'en' ? "Couldn't save the photo." : 'No se pudo guardar la foto.')
-      } else {
-        if (anterior && anterior.startsWith(`${id}/`)) await supabase.storage.from('bodas-media').remove([anterior])
-        setProyecto((prev: any) => ({ ...prev, estilo_url: publicUrl, estilo_ruta: ruta }))
-      }
+      setHistoriaItems(nuevos)
+      setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
     }
     setSubiendoMedia(null)
   }
@@ -828,19 +842,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
   }
 
-  async function quitarEstilo() {
-    const ruta: string | null = proyecto?.estilo_ruta || null
-    if (ruta && ruta.startsWith(`${id}/`)) await supabase.storage.from('bodas-media').remove([ruta])
-    await supabase.from('proyectos_boda').update({ estilo_url: null, estilo_ruta: null }).eq('id', id)
-    setProyecto((prev: any) => ({ ...prev, estilo_url: null, estilo_ruta: null }))
-  }
-
   async function guardarPersonalizacion() {
     const cambios = {
       fecha_limite_rsvp: /^\d{4}-\d{2}-\d{2}$/.test(fechaLimiteInput) ? fechaLimiteInput : null,
-      estilo_titulo: estiloTituloInput.trim().slice(0, 120) || null,
-      estilo_texto: estiloTextoInput.trim().slice(0, 400) || null,
-      estilo_paleta: textoAVestimentaColores(estiloPaletaInput).slice(0, 8),
     }
     await supabase.from('proyectos_boda').update(cambios).eq('id', id)
     setProyecto((prev: any) => ({ ...prev, ...cambios }))
@@ -1306,7 +1310,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', marginBottom: 4 }}>
                     {lang === 'en' ? 'Itinerary — one per line: time | title | place (optional)' : 'Itinerario — uno por línea: hora | título | lugar (opcional)'}
                   </label>
-                  <textarea value={itinerarioInput} onChange={e => setItinerarioInput(e.target.value)} rows={4} placeholder={'17:30 | Ceremonia religiosa | Parroquia de San Miguel\n19:00 | Cóctel de bienvenida\n20:30 | Cena'} style={{ ...inputStyle, width: '100%', resize: 'none' as const, fontFamily: 'monospace' }} />
+                  <textarea value={itinerarioInput} onChange={e => setItinerarioInput(e.target.value)} rows={4} placeholder={'19:30 - 20:30 | Ceremonia religiosa | Nombre del lugar\n21:00 - 02:00 | Recepción | Nombre del lugar'} style={{ ...inputStyle, width: '100%', resize: 'none' as const, fontFamily: 'monospace' }} />
                   {itinerarioInput.trim() && (
                     <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
                       <div style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, marginBottom: 6 }}>{lang === 'en' ? 'Preview:' : 'Así se va a ver:'}</div>
@@ -1347,9 +1351,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   <input ref={lugar2Ref} value={lugar2Input} onChange={e => setLugar2Input(e.target.value)} placeholder={lang === 'en' ? 'Search venue…' : 'Buscar lugar…'} style={{ ...inputStyle, width: '100%' }} />
 
                   <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
-                    {lang === 'en' ? 'Hotels — one per line: name | address | special rate? si/no | map link (optional)' : 'Hoteles — uno por línea: nombre | dirección | tarifa especial? si/no | link de mapa (opcional)'}
+                    {lang === 'en' ? 'Hotels — one per line: name | address | special wedding rate? yes/no | map link | short review | travel time (leave blanks between bars if you skip one)' : 'Hoteles — uno por línea: nombre | dirección | ¿tarifa especial de boda? si/no | link de mapa | reseña breve | traslado (si te saltas uno, deja las barras vacías)'}
                   </label>
-                  <textarea value={hotelesInput} onChange={e => setHotelesInput(e.target.value)} rows={3} placeholder={'Hotel Casa Pilar | Calle Recreo 38, Centro | si\nCasa Aldama | Calle Aldama 21, Centro | si'} style={{ ...inputStyle, width: '100%', resize: 'none' as const, fontFamily: 'monospace' }} />
+                  <textarea value={hotelesInput} onChange={e => setHotelesInput(e.target.value)} rows={5} placeholder={'Hotel Ejemplo | Av. Principal 100, Zona Centro | no | | Una frase sobre por qué lo elegimos | Aprox. 20 min en Uber'} style={{ ...inputStyle, width: '100%', resize: 'vertical' as const, fontFamily: 'monospace' }} />
                   {hotelesInput.trim() && (
                     <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
                       <div style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, marginBottom: 6 }}>{lang === 'en' ? 'Preview:' : 'Así se va a ver:'}</div>
@@ -1362,9 +1366,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   )}
 
                   <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
-                    {lang === 'en' ? 'Gift registry (external link, optional)' : 'Mesa de regalos (link externo, opcional)'}
+                    {lang === 'en' ? 'Gift registries — one per line: store | link (optional) | note (optional). No link = "Coming soon"' : 'Mesas de regalos — una por línea: tienda | link (opcional) | nota (opcional). Sin link aparece "Próximamente"'}
                   </label>
-                  <input value={mesaRegalosLinkInput} onChange={e => setMesaRegalosLinkInput(e.target.value)} placeholder={lang === 'en' ? 'https://...' : 'https://... (Liverpool, Amazon, etc.)'} style={{ ...inputStyle, width: '100%' }} />
+                  <textarea value={mesasRegalosInput} onChange={e => setMesasRegalosInput(e.target.value)} rows={3} placeholder={'El Palacio de Hierro\nLiverpool | https://... | Número de evento 12345'} style={{ ...inputStyle, width: '100%', resize: 'vertical' as const, fontFamily: 'monospace' }} />
                   <input value={mesaRegalosNotaInput} onChange={e => setMesaRegalosNotaInput(e.target.value)} placeholder={lang === 'en' ? 'e.g. Your presence is the best gift, but if you\u2019d like...' : 'ej. Tu presencia es el mejor regalo, pero si deseas obsequiarnos algo...'} style={{ ...inputStyle, width: '100%' }} />
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#3D2B2E', marginBottom: 10, cursor: 'pointer' }}>
                     <input type="checkbox" checked={lluviaSobresInput} onChange={e => setLluviaSobresInput(e.target.checked)} />
@@ -1375,7 +1379,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 </div>
               ) : (
                 <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>
-                  {((proyecto?.itinerario?.length > 0) || proyecto?.vestimenta_tipo || proyecto?.lugar2_nombre || (proyecto?.hoteles?.length > 0) || proyecto?.mesa_regalos_link || proyecto?.mesa_regalos_nota || proyecto?.lluvia_sobres)
+                  {((proyecto?.itinerario?.length > 0) || proyecto?.vestimenta_tipo || proyecto?.lugar2_nombre || (proyecto?.hoteles?.length > 0) || proyecto?.mesa_regalos_link || (proyecto?.mesas_regalos?.length > 0) || proyecto?.mesa_regalos_nota || proyecto?.lluvia_sobres)
                     ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.')
                     : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
                 </p>
@@ -1385,7 +1389,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             {/* Personalización: fecha límite, Nuestra historia y Así lo soñamos */}
             <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 12 }}>
-                {lang === 'en' ? 'Make it yours: deadline, story & style' : 'Hazla tuya: fecha límite, historia y estilo'}
+                {lang === 'en' ? 'Make it yours: deadline & our story' : 'Hazla tuya: fecha límite y nuestra historia'}
               </div>
 
               <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', marginBottom: 4 }}>
@@ -1410,40 +1414,11 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 {historiaItems.length < 6 && (
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '4/5', border: '1.5px dashed rgba(183,110,121,.45)', borderRadius: 8, cursor: subiendoMedia ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, color: '#B76E79', textAlign: 'center' as const, padding: 6, opacity: subiendoMedia === 'historia' ? .5 : 1 }}>
                     {subiendoMedia === 'historia' ? (lang === 'en' ? 'Uploading…' : 'Subiendo…') : (lang === 'en' ? '+ Add photo' : '+ Agregar foto')}
-                    <input type="file" accept="image/jpeg,image/png,image/webp,image/*" disabled={!!subiendoMedia} onChange={e => { const f = e.target.files?.[0]; if (f) subirMedia(f, 'historia'); e.target.value = '' }} style={{ display: 'none' }} />
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/*" disabled={!!subiendoMedia} onChange={e => { const f = e.target.files?.[0]; if (f) subirMedia(f); e.target.value = '' }} style={{ display: 'none' }} />
                   </label>
                 )}
               </div>
 
-              <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '16px 0 6px' }}>
-                {lang === 'en' ? 'How we dreamed it — your mood photo, flowers, decor…' : 'Así lo soñamos — tu foto de inspiración, flores, decoración…'}
-              </label>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-                {proyecto?.estilo_url ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={proyecto.estilo_url} alt="" style={{ width: 84, height: 66, objectFit: 'cover' as const, borderRadius: 33 }} />
-                    <button onClick={quitarEstilo} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.45)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'remove' : 'quitar'}</button>
-                  </>
-                ) : null}
-                <label style={{ border: '1.5px dashed rgba(183,110,121,.45)', borderRadius: 8, cursor: subiendoMedia ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, color: '#B76E79', padding: '8px 12px', opacity: subiendoMedia === 'estilo' ? .5 : 1 }}>
-                  {subiendoMedia === 'estilo' ? (lang === 'en' ? 'Uploading…' : 'Subiendo…') : (proyecto?.estilo_url ? (lang === 'en' ? 'Change photo' : 'Cambiar foto') : (lang === 'en' ? '+ Add photo' : '+ Agregar foto'))}
-                  <input type="file" accept="image/jpeg,image/png,image/webp,image/*" disabled={!!subiendoMedia} onChange={e => { const f = e.target.files?.[0]; if (f) subirMedia(f, 'estilo'); e.target.value = '' }} style={{ display: 'none' }} />
-                </label>
-              </div>
-              <input value={estiloTituloInput} maxLength={120} onChange={e => setEstiloTituloInput(e.target.value)} placeholder={lang === 'en' ? 'e.g. Natural · Sophisticated · Timeless' : 'ej. Natural · Sofisticado · Atemporal'} style={{ ...inputStyle, width: '100%' }} />
-              <textarea value={estiloTextoInput} maxLength={400} onChange={e => setEstiloTextoInput(e.target.value)} rows={2} placeholder={lang === 'en' ? 'A line about the atmosphere you imagine' : 'Una línea sobre la atmósfera que imaginan'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
-              <input value={estiloPaletaInput} onChange={e => setEstiloPaletaInput(e.target.value)} placeholder={lang === 'en' ? 'Palette, comma separated: ivory, blush, #C8A69B' : 'Paleta, separada por coma: ivory, blush, #C8A69B'} style={{ ...inputStyle, width: '100%' }} />
-              {estiloPaletaInput.trim() && (
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const, marginBottom: 10 }}>
-                  {textoAVestimentaColores(estiloPaletaInput).slice(0, 8).map((c, i) => (
-                    <div key={i} style={{ textAlign: 'center' as const }}>
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: c.hex, border: '1px solid rgba(0,0,0,.15)', margin: '0 auto 3px' }} />
-                      <div style={{ fontSize: 9, color: c.reconocido ? '#3D2B2E' : '#B45309' }}>{c.nombre}{!c.reconocido && ' ⚠'}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
               <button onClick={guardarPersonalizacion} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F, marginTop: 4 }}>{personalGuardado ? (lang === 'en' ? 'Saved ✓' : 'Guardado ✓') : (lang === 'en' ? 'Save' : 'Guardar')}</button>
             </div>
 
