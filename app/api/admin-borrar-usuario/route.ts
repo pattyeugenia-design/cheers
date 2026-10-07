@@ -9,10 +9,13 @@ const ADMIN_EMAIL = 'patty.eugenia@gmail.com'
 async function borrarArchivosDeBodas(admin: any, userId: string) {
   const { data: bodas } = await admin.from('proyectos_boda').select('id').eq('creador_id', userId)
   for (const b of bodas || []) {
-    for (const bucket of ['fotos-boda', 'contratos-boda']) {
+    for (const bucket of ['fotos-boda', 'contratos-boda', 'bodas-media']) {
       const { data: archivos } = await admin.storage.from(bucket).list(b.id, { limit: 1000 })
       if (archivos?.length) await admin.storage.from(bucket).remove(archivos.map((a: any) => `${b.id}/${a.name}`))
     }
+    // La foto de portada de la boda vive en otro bucket, con el id en el nombre del archivo.
+    const { data: portadasBoda } = await admin.storage.from('portadas').list('', { search: `boda-${b.id}-portada`, limit: 20 })
+    if (portadasBoda?.length) await admin.storage.from('portadas').remove(portadasBoda.map((a: any) => a.name))
   }
 }
 

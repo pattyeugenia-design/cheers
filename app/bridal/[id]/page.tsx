@@ -16,6 +16,7 @@ const BG = 'linear-gradient(160deg,#FFFDFB,#FBF1E7 55%,#F6E4DC)'
 // — así la invitación de boda se ve consistente con el resto de la app en vez de
 // inventar un sistema de diseño aparte.
 const TEMAS: Record<string, { label_es: string; label_en: string; bg: string; dark: boolean }> = {
+  rosapolvo: { label_es: 'Rosa polvo', label_en: 'Dusty rose', bg: 'linear-gradient(160deg,#F8F4EE,#EBD8D0 70%,#DAC2B8)', dark: false },
   morado:  { label_es: 'Morado',  label_en: 'Purple', bg: 'radial-gradient(circle at 18% 16%,#7b6fd0,transparent 46%),linear-gradient(160deg,#534AB7,#7b46a8 58%,#D4537E)', dark: true },
   rosa:    { label_es: 'Rosa',    label_en: 'Pink',   bg: 'linear-gradient(155deg,#D4537E,#a14b9c)', dark: true },
   noche:   { label_es: 'Noche',   label_en: 'Night',  bg: 'linear-gradient(160deg,#0f0c29,#302b63,#24243e)', dark: true },
@@ -25,7 +26,7 @@ const TEMAS: Record<string, { label_es: string; label_en: string; bg: string; da
   lavanda: { label_es: 'Lavanda', label_en: 'Lavender', bg: '#B8B0F0', dark: false },
   crema:   { label_es: 'Crema',   label_en: 'Cream',  bg: '#FBF4EC', dark: false },
 }
-const TEMA_ORDER = ['morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
+const TEMA_ORDER = ['rosapolvo', 'morado', 'rosa', 'noche', 'bosque', 'ambar', 'carbon', 'lavanda', 'crema']
 
 const FUENTES: Record<string, { label: string; font: string }> = {
   system:  { label: 'SF Pro',       font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif' },
@@ -269,6 +270,14 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [vestimentaNotaInput, setVestimentaNotaInput] = useState('')
   const [lugar2Input, setLugar2Input] = useState('')
   const [hotelesInput, setHotelesInput] = useState('')
+  // Personalización de la invitación: fecha límite, historia (fotos de la pareja) y estilo
+  const [fechaLimiteInput, setFechaLimiteInput] = useState('')
+  const [historiaItems, setHistoriaItems] = useState<any[]>([])
+  const [estiloTituloInput, setEstiloTituloInput] = useState('')
+  const [estiloTextoInput, setEstiloTextoInput] = useState('')
+  const [estiloPaletaInput, setEstiloPaletaInput] = useState('')
+  const [subiendoMedia, setSubiendoMedia] = useState<string | null>(null)
+  const [personalGuardado, setPersonalGuardado] = useState(false)
   const [mesaRegalosLinkInput, setMesaRegalosLinkInput] = useState('')
   const [mesaRegalosNotaInput, setMesaRegalosNotaInput] = useState('')
   const [lluviaSobresInput, setLluviaSobresInput] = useState(false)
@@ -383,6 +392,11 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       setVestimentaNotaInput(proy.vestimenta_nota || '')
       setLugar2Input(proy.lugar2_nombre || '')
       setHotelesInput(hotelesATexto(proy.hoteles))
+      setFechaLimiteInput(proy.fecha_limite_rsvp || '')
+      setHistoriaItems(Array.isArray(proy.historia) ? proy.historia : [])
+      setEstiloTituloInput(proy.estilo_titulo || '')
+      setEstiloTextoInput(proy.estilo_texto || '')
+      setEstiloPaletaInput(vestimentaColoresATexto(proy.estilo_paleta))
       setMesaRegalosLinkInput(proy.mesa_regalos_link || '')
       setMesaRegalosNotaInput(proy.mesa_regalos_nota || '')
       setLluviaSobresInput(!!proy.lluvia_sobres)
@@ -729,6 +743,109 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setMesaRegalosLinkInput(linkRegalos)
     setProyecto((prev: any) => ({ ...prev, ...cambios }))
     setEditandoFase3(false)
+  }
+
+  // ── Personalización de la invitación ─────────────────────────────────────
+  // Reduce la foto en el celular antes de subirla (máx. 1600px, JPG). Si el
+  // formato no se puede leer (por ejemplo HEIC en algunos navegadores) NO se
+  // sube el original: se avisa para que la pareja use JPG, PNG o WebP.
+  async function reducirImagen(archivo: File, maximo = 1600): Promise<Blob | null> {
+    try {
+      const bitmap = await createImageBitmap(archivo)
+      const escala = Math.min(1, maximo / Math.max(bitmap.width, bitmap.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(bitmap.width * escala)
+      canvas.height = Math.round(bitmap.height * escala)
+      canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      return await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.86))
+    } catch {
+      return null
+    }
+  }
+
+  async function subirMedia(file: File, tipo: 'historia' | 'estilo') {
+    if (!file || !file.type.startsWith('image/')) return
+    if (file.size > 25 * 1024 * 1024) {
+      alert(lang === 'en' ? 'That photo is too big (max 25MB).' : 'Esa foto pesa demasiado (máx. 25MB).')
+      return
+    }
+    if (tipo === 'historia' && historiaItems.length >= 6) return
+    setSubiendoMedia(tipo)
+    const blob = await reducirImagen(file)
+    if (!blob) {
+      setSubiendoMedia(null)
+      alert(lang === 'en' ? "We couldn't read that photo. Please use a JPG, PNG or WebP image." : 'No pudimos leer esa foto. Usa una imagen JPG, PNG o WebP.')
+      return
+    }
+    const ruta = `${id}/${tipo}-${crypto.randomUUID()}.jpg`
+    const { error } = await supabase.storage.from('bodas-media').upload(ruta, blob, { contentType: 'image/jpeg', upsert: false })
+    if (error) {
+      setSubiendoMedia(null)
+      alert(lang === 'en' ? "Couldn't upload the photo. Please try again." : 'No se pudo subir la foto. Intenta de nuevo.')
+      return
+    }
+    const { data: { publicUrl } } = supabase.storage.from('bodas-media').getPublicUrl(ruta)
+    if (tipo === 'historia') {
+      const nuevos = [...historiaItems, { url: publicUrl, ruta, pie: '' }]
+      const { error: e2 } = await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
+      if (e2) {
+        await supabase.storage.from('bodas-media').remove([ruta])
+        alert(lang === 'en' ? "Couldn't save the photo." : 'No se pudo guardar la foto.')
+      } else {
+        setHistoriaItems(nuevos)
+        setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
+      }
+    } else {
+      const anterior: string | null = proyecto?.estilo_ruta || null
+      const { error: e2 } = await supabase.from('proyectos_boda').update({ estilo_url: publicUrl, estilo_ruta: ruta }).eq('id', id)
+      if (e2) {
+        await supabase.storage.from('bodas-media').remove([ruta])
+        alert(lang === 'en' ? "Couldn't save the photo." : 'No se pudo guardar la foto.')
+      } else {
+        if (anterior && anterior.startsWith(`${id}/`)) await supabase.storage.from('bodas-media').remove([anterior])
+        setProyecto((prev: any) => ({ ...prev, estilo_url: publicUrl, estilo_ruta: ruta }))
+      }
+    }
+    setSubiendoMedia(null)
+  }
+
+  async function quitarHistoria(i: number) {
+    const item = historiaItems[i]
+    if (!item) return
+    if (typeof item.ruta === 'string' && item.ruta.startsWith(`${id}/`)) await supabase.storage.from('bodas-media').remove([item.ruta])
+    const nuevos = historiaItems.filter((_, j) => j !== i)
+    await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
+    setHistoriaItems(nuevos)
+    setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
+  }
+
+  async function guardarPieHistoria(i: number, pie: string) {
+    const limpio = pie.trim().slice(0, 80)
+    if ((historiaItems[i]?.pie || '') === limpio) return
+    const nuevos = historiaItems.map((h, j) => (j === i ? { ...h, pie: limpio } : h))
+    await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
+    setHistoriaItems(nuevos)
+    setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
+  }
+
+  async function quitarEstilo() {
+    const ruta: string | null = proyecto?.estilo_ruta || null
+    if (ruta && ruta.startsWith(`${id}/`)) await supabase.storage.from('bodas-media').remove([ruta])
+    await supabase.from('proyectos_boda').update({ estilo_url: null, estilo_ruta: null }).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, estilo_url: null, estilo_ruta: null }))
+  }
+
+  async function guardarPersonalizacion() {
+    const cambios = {
+      fecha_limite_rsvp: /^\d{4}-\d{2}-\d{2}$/.test(fechaLimiteInput) ? fechaLimiteInput : null,
+      estilo_titulo: estiloTituloInput.trim().slice(0, 120) || null,
+      estilo_texto: estiloTextoInput.trim().slice(0, 400) || null,
+      estilo_paleta: textoAVestimentaColores(estiloPaletaInput).slice(0, 8),
+    }
+    await supabase.from('proyectos_boda').update(cambios).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, ...cambios }))
+    setPersonalGuardado(true)
+    setTimeout(() => setPersonalGuardado(false), 2500)
   }
 
   async function aprobarFirma(firmaId: string) {
@@ -1265,6 +1382,71 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               )}
             </div>
 
+            {/* Personalización: fecha límite, Nuestra historia y Así lo soñamos */}
+            <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 12 }}>
+                {lang === 'en' ? 'Make it yours: deadline, story & style' : 'Hazla tuya: fecha límite, historia y estilo'}
+              </div>
+
+              <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                {lang === 'en' ? 'Reply deadline (optional)' : 'Fecha límite para confirmar (opcional)'}
+              </label>
+              <input type="date" value={fechaLimiteInput} onChange={e => setFechaLimiteInput(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+
+              <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '12px 0 6px' }}>
+                {lang === 'en' ? `Our story — up to 6 photos (${historiaItems.length}/6)` : `Nuestra historia — hasta 6 fotos (${historiaItems.length}/6)`}
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
+                {historiaItems.map((h, i) => (
+                  <div key={h.ruta || i}>
+                    <div style={{ position: 'relative' as const }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={h.url} alt="" style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover' as const, borderRadius: 8, display: 'block' }} />
+                      <button onClick={() => quitarHistoria(i)} aria-label={lang === 'en' ? 'Remove photo' : 'Quitar foto'} style={{ position: 'absolute' as const, top: 4, right: 4, border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                    </div>
+                    <input defaultValue={h.pie || ''} maxLength={80} onBlur={e => guardarPieHistoria(i, e.target.value)} placeholder={lang === 'en' ? 'Caption' : 'Pie de foto'} style={{ ...inputStyle, width: '100%', fontSize: 11, padding: '6px 8px', marginTop: 4, marginBottom: 0 }} />
+                  </div>
+                ))}
+                {historiaItems.length < 6 && (
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '4/5', border: '1.5px dashed rgba(183,110,121,.45)', borderRadius: 8, cursor: subiendoMedia ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, color: '#B76E79', textAlign: 'center' as const, padding: 6, opacity: subiendoMedia === 'historia' ? .5 : 1 }}>
+                    {subiendoMedia === 'historia' ? (lang === 'en' ? 'Uploading…' : 'Subiendo…') : (lang === 'en' ? '+ Add photo' : '+ Agregar foto')}
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/*" disabled={!!subiendoMedia} onChange={e => { const f = e.target.files?.[0]; if (f) subirMedia(f, 'historia'); e.target.value = '' }} style={{ display: 'none' }} />
+                  </label>
+                )}
+              </div>
+
+              <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '16px 0 6px' }}>
+                {lang === 'en' ? 'How we dreamed it — your mood photo, flowers, decor…' : 'Así lo soñamos — tu foto de inspiración, flores, decoración…'}
+              </label>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                {proyecto?.estilo_url ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={proyecto.estilo_url} alt="" style={{ width: 84, height: 66, objectFit: 'cover' as const, borderRadius: 33 }} />
+                    <button onClick={quitarEstilo} style={{ border: 'none', background: 'transparent', color: 'rgba(61,43,46,.45)', fontSize: 11, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'remove' : 'quitar'}</button>
+                  </>
+                ) : null}
+                <label style={{ border: '1.5px dashed rgba(183,110,121,.45)', borderRadius: 8, cursor: subiendoMedia ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, color: '#B76E79', padding: '8px 12px', opacity: subiendoMedia === 'estilo' ? .5 : 1 }}>
+                  {subiendoMedia === 'estilo' ? (lang === 'en' ? 'Uploading…' : 'Subiendo…') : (proyecto?.estilo_url ? (lang === 'en' ? 'Change photo' : 'Cambiar foto') : (lang === 'en' ? '+ Add photo' : '+ Agregar foto'))}
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/*" disabled={!!subiendoMedia} onChange={e => { const f = e.target.files?.[0]; if (f) subirMedia(f, 'estilo'); e.target.value = '' }} style={{ display: 'none' }} />
+                </label>
+              </div>
+              <input value={estiloTituloInput} maxLength={120} onChange={e => setEstiloTituloInput(e.target.value)} placeholder={lang === 'en' ? 'e.g. Natural · Sophisticated · Timeless' : 'ej. Natural · Sofisticado · Atemporal'} style={{ ...inputStyle, width: '100%' }} />
+              <textarea value={estiloTextoInput} maxLength={400} onChange={e => setEstiloTextoInput(e.target.value)} rows={2} placeholder={lang === 'en' ? 'A line about the atmosphere you imagine' : 'Una línea sobre la atmósfera que imaginan'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+              <input value={estiloPaletaInput} onChange={e => setEstiloPaletaInput(e.target.value)} placeholder={lang === 'en' ? 'Palette, comma separated: ivory, blush, #C8A69B' : 'Paleta, separada por coma: ivory, blush, #C8A69B'} style={{ ...inputStyle, width: '100%' }} />
+              {estiloPaletaInput.trim() && (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const, marginBottom: 10 }}>
+                  {textoAVestimentaColores(estiloPaletaInput).slice(0, 8).map((c, i) => (
+                    <div key={i} style={{ textAlign: 'center' as const }}>
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: c.hex, border: '1px solid rgba(0,0,0,.15)', margin: '0 auto 3px' }} />
+                      <div style={{ fontSize: 9, color: c.reconocido ? '#3D2B2E' : '#B45309' }}>{c.nombre}{!c.reconocido && ' ⚠'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button onClick={guardarPersonalizacion} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F, marginTop: 4 }}>{personalGuardado ? (lang === 'en' ? 'Saved ✓' : 'Guardado ✓') : (lang === 'en' ? 'Save' : 'Guardar')}</button>
+            </div>
+
             {/* Libro de firmas: los invitados escriben, la pareja aprueba antes de que se vuelva público */}
             <div style={{ background: 'rgba(183,110,121,.06)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 10 }}>
@@ -1456,6 +1638,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 </div>
               </div>
 
+              {(proyecto?.tema || 'morado') === 'rosapolvo' ? (
+                <div style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontStyle: 'italic' }}>{lang === 'en' ? 'This theme comes with its own calligraphy and fonts.' : 'Este tema ya trae su propia caligrafía y tipografías.'}</div>
+              ) : (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
                 {FUENTE_ORDER.map(k => (
                   <button key={k} onClick={() => guardarFuente(k)} style={{
@@ -1465,6 +1650,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   }}>{FUENTES[k].label}</button>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Métricas por módulo */}
