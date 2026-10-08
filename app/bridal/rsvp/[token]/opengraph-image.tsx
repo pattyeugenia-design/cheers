@@ -59,7 +59,6 @@ export default async function Image({ params }: { params: Promise<{ token: strin
   const novio = String(inv?.nombre_novio || '').slice(0, 24)
   const foto = await fotoSegura(inv?.portada_url || null)
   const fecha = fechaPuntos(inv?.fecha_boda, 'es')
-  const invitado = String(inv?.nombre || '').trim().slice(0, 40)
   const iniciales = [novia[0], novio[0]].filter(Boolean).join(' & ').toUpperCase()
   const largo = Math.max(novia.length, novio.length)
   const tamNombres = largo <= 7 ? 124 : largo <= 10 ? 104 : largo <= 14 ? 84 : 66
@@ -89,12 +88,6 @@ export default async function Image({ params }: { params: Promise<{ token: strin
             {novio && <div style={{ display: 'flex', fontSize: tamNombres }}>{novio}</div>}
           </div>
           {fecha && <div style={{ display: 'flex', fontSize: 25, letterSpacing: 5, color: '#6E5A55', marginTop: 30 }}>{fecha}</div>}
-          {invitado && (
-            <div style={{ display: 'flex', alignItems: 'center', marginTop: 26, fontSize: 38, fontFamily: 'Allura', color: ROSA }}>
-              <div style={{ display: 'flex', fontFamily: 'Cormorant', fontSize: 22, letterSpacing: 4, color: '#9C8780', marginRight: 14 }}>PARA</div>
-              {invitado}
-            </div>
-          )}
         </div>
       </div>
       </div>
