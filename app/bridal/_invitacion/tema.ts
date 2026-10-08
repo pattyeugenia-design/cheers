@@ -112,13 +112,15 @@ export function fechaCorta(fecha: string | null | undefined, lang: string) {
   if (isNaN(d.getTime())) return fecha
   return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
-// "13 · FEBRERO · 2027"
+// "SÁBADO · 13 · FEBRERO · 2027": el día de la semana siempre va incluido.
 export function fechaPuntos(fecha: string | null | undefined, lang: string) {
   if (!fecha) return ''
   const d = new Date(fecha + 'T12:00:00')
   if (isNaN(d.getTime())) return fecha
-  const mes = d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { month: 'long' }).toUpperCase()
-  return `${d.getDate()} · ${mes} · ${d.getFullYear()}`
+  const loc = lang === 'en' ? 'en-US' : 'es-MX'
+  const dia = d.toLocaleDateString(loc, { weekday: 'long' }).toUpperCase()
+  const mes = d.toLocaleDateString(loc, { month: 'long' }).toUpperCase()
+  return `${dia} · ${d.getDate()} · ${mes} · ${d.getFullYear()}`
 }
 // "19:30" -> "7:30 pm"; "02:00" -> "2:00 am". Si ya viene con am/pm se respeta.
 export function hora12(h?: string | null) {

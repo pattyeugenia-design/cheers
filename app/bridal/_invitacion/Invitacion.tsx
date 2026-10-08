@@ -39,15 +39,15 @@ export type Control = {
   fotos: { lista: any[]; subiendo: boolean; recienSubida: boolean; subir: (f: File) => void }
 }
 
-const ORIGEN: Record<string, string> = { top: '50% 0%', center: '50% 50%', bottom: '50% 100%' }
+// Sin zoom: la foto se ve completa (solo se recorta lo que sobra a los lados).
+// "Centro" apunta un poco arriba del medio, que es donde suelen estar las caras.
+const POSICION_FOTO: Record<string, string> = { top: '50% 0%', center: '50% 28%', bottom: '50% 100%' }
 function fotoPos(pos?: string | null) {
-  const p = pos || 'center'
-  return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN[p] || '50% 50%' }
+  return { objectFit: 'cover' as const, objectPosition: POSICION_FOTO[pos || 'center'] || POSICION_FOTO.center }
 }
 
-
-function Sec({ p, id, children, innerRef, ancho, arriba }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number }) {
-  return <section id={id} ref={innerRef} className="cw-aparece" style={{ padding: `${arriba ?? 46}px 26px 46px`, maxWidth: ancho || 560, margin: '0 auto', textAlign: 'center', position: 'relative' }}>{children}</section>
+function Sec({ p, id, children, innerRef, ancho, arriba, abajo }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number }) {
+  return <section id={id} ref={innerRef} className="cw-aparece" style={{ padding: `${arriba ?? 42}px 26px ${abajo ?? 42}px`, maxWidth: ancho || 560, margin: '0 auto', textAlign: 'center', position: 'relative' }}>{children}</section>
 }
 function Orn({ p }: { p: Paleta }) {
   return (
@@ -69,6 +69,19 @@ function Boton({ p, children, onClick, href, relleno, deshabilitado, ancho }: { 
     : <button className="cw-btn" type="button" onClick={deshabilitado ? undefined : onClick} disabled={deshabilitado} style={st}>{children}</button>
 }
 
+// "Cómo llegar": una etiqueta (no botón) y dos botones iguales.
+function ComoLlegar({ p, lugar, google, t }: { p: Paleta; lugar: string; google?: string | null; t: (es: string, en: string) => string }) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase', color: p.txt3, marginBottom: 10 }}>{t('Cómo llegar', 'Directions')}</div>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho href={google || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`}>Google Maps</Boton></div>
+        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho href={`https://waze.com/ul?q=${encodeURIComponent(lugar)}&navigate=yes`}>Waze</Boton></div>
+      </div>
+    </div>
+  )
+}
+
 function iniciales(d: any) {
   const a = (d.nombre_novia || '').trim()[0]; const b = (d.nombre_novio || '').trim()[0]
   return [a, b].filter(Boolean).join(' & ').toUpperCase() || '♡'
@@ -84,6 +97,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const rsvpRef = useRef<HTMLElement>(null)
 
   const nombreBoda = [d.nombre_novia, d.nombre_novio].filter(Boolean).join(' & ')
+  const largoNombres = String(d.nombre_novia || '').length + String(d.nombre_novio || '').length
+  const factorNombres = Math.min(1, 15 / Math.max(1, largoNombres))   // nombres largos se achican para seguir en un renglón
   const invitado = (d.nombre || '').trim()
   const lugar1 = (d.lugar_nombre || '').trim()
   const [lugar1Nombre, ...lugar1Resto] = lugar1.split(',')
@@ -164,12 +179,12 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── PORTADA ───────── */}
       <header style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
         <div style={etiqueta}>{t('Nos casamos', "We're getting married")}</div>
-        <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: 'clamp(58px,19vw,92px)', lineHeight: .95, color: p.acento, margin: '14px 0 0' }}>
+        <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: `calc(clamp(42px, 12.4vw, 80px) * ${factorNombres})`, lineHeight: 1.1, color: p.acento, margin: '16px auto 0', padding: '0 10px', whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
           {d.nombre_novia}
-          <span style={{ display: 'block', fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.36em', color: p.acento2, lineHeight: 1.35 }}>&amp;</span>
+          <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.5em', color: p.acento2, margin: '0 .26em', verticalAlign: '.22em' }}>&amp;</span>
           {d.nombre_novio}
         </h1>
-        <div style={{ ...etiqueta, color: p.txt2, marginTop: 20, letterSpacing: '.34em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
+        <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em', padding: '0 14px' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
         {lugar1Nombre && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{lugar1Nombre}</div>}
 
         <div style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
@@ -190,37 +205,52 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       </header>
 
       {/* ───────── PARA TI ───────── */}
-      <Sec p={p}>
-        <div style={etiqueta}>{preview ? t('Tu invitación', 'Your invitation') : t('Tu invitación', 'Your invitation')}</div>
+      <Sec p={p} arriba={34} abajo={20}>
+        <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
         <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
         <p style={{ ...parrafo, marginTop: 14 }}>
-          {permitidos > 0
-            ? t(`Guardamos un lugar para ti y hasta ${permitidos} ${permitidos === 1 ? 'persona más' : 'personas más'}.`, `We saved a seat for you and up to ${permitidos} more ${permitidos === 1 ? 'guest' : 'guests'}.`)
-            : t('Guardamos un lugar especial para ti.', 'We saved a special seat for you.')}
+          {permitidos === 0
+            ? t('Guardamos un lugar especial para ti.', 'We saved a special seat for you.')
+            : permitidos === 1
+              ? t('Guardamos un lugar para ti y para tu acompañante.', 'We saved seats for you and your guest.')
+              : t(`Guardamos un lugar para ti y hasta ${permitidos} personas más.`, `We saved a seat for you and up to ${permitidos} more guests.`)}
         </p>
         <div style={{ marginTop: 24 }}><Boton p={p} relleno onClick={() => irA('confirmar')}>{r.enviado || d.ya_respondio ? t('Ver mi respuesta', 'See my reply') : t('Confirmar asistencia', 'RSVP')}</Boton></div>
         {limite && <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginTop: 16 }}>{t('Responde antes del', 'Reply by')} {fechaCorta(limite, lang)}</div>}
       </Sec>
 
-      {/* ───────── FRASE ───────── */}
+      {/* ───────── FRASE Y FAMILIAS ───────── */}
+      {(d.versiculo || d.mensaje_padres) && <div style={{ padding: '14px 0 0' }}><Orn p={p} /></div>}
       {d.versiculo && (
-        <Sec p={p} ancho={480}>
-          <Orn p={p} />
-          <p style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 25, lineHeight: 1.42, color: p.txt, margin: '30px 0 0' }}>“{d.versiculo}”</p>
+        <Sec p={p} ancho={480} arriba={32} abajo={d.mensaje_padres ? 26 : 42}>
+          <p style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 26, lineHeight: 1.4, color: p.txt, margin: 0 }}>“{d.versiculo}”</p>
           {d.versiculo_autor && <div style={{ ...etiqueta, color: p.txt3, marginTop: 16 }}>{d.versiculo_autor}</div>}
         </Sec>
       )}
-
       {d.mensaje_padres && (
-        <Sec p={p} ancho={460} arriba={d.versiculo ? 0 : undefined}>
-          {!d.versiculo && <Orn p={p} />}
-          <p style={{ ...parrafo, whiteSpace: 'pre-wrap', marginTop: d.versiculo ? 0 : 28 }}>{d.mensaje_padres}</p>
+        <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32}>
+          <div style={etiqueta}>{t('Con la bendición de nuestras familias', 'With the blessing of our families')}</div>
+          <div style={{ marginTop: 20 }}>
+            {String(d.mensaje_padres).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 12).map((linea, i) => {
+              // "Padres de la novia: José y Patricia" -> etiqueta chica arriba y los nombres abajo
+              const k = linea.indexOf(':')
+              const conEtiqueta = k > 0 && k < 40
+              const etq = conEtiqueta ? linea.slice(0, k).trim() : ''
+              const nombres = conEtiqueta ? linea.slice(k + 1).trim() : linea
+              return (
+                <div key={i} style={{ marginTop: i ? 22 : 0 }}>
+                  {etq && <div style={{ ...etiqueta, color: p.txt3, fontSize: 10, letterSpacing: '.24em' }}>{etq}</div>}
+                  <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt, lineHeight: 1.3, marginTop: etq ? 6 : 0 }}>{nombres}</div>
+                </div>
+              )
+            })}
+          </div>
         </Sec>
       )}
 
       {/* ───────── NUESTRA HISTORIA ───────── */}
       {historia.length > 0 && (
-        <Sec p={p} ancho={600}>
+        <Sec p={p} ancho={600} abajo={26}>
           <div style={etiqueta}>{t('Momentos que nos trajeron aquí', 'Moments that brought us here')}</div>
           <h2 style={titulo}>{t('Nuestra historia', 'Our story')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px 16px', marginTop: 32, textAlign: 'center' }}>
@@ -242,7 +272,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <div style={etiqueta}>{t('Aparta la fecha', 'Save the date')}</div>
         <h2 style={titulo}>{t('El gran día', 'The big day')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{(() => { const f = fechaLarga(d.fecha_boda, lang); return f.charAt(0).toUpperCase() + f.slice(1) })()}</p>
-        {d.hora_boda && <p style={{ ...parrafo, fontSize: 17, color: p.txt3 }}>{horaBonita(d.hora_boda)}</p>}
+        {d.hora_boda && <p style={{ ...parrafo, fontSize: 19, color: p.acento, fontWeight: 500, marginTop: 2 }}>{horaBonita(d.hora_boda)}</p>}
+        {lugar1Nombre && <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 18, color: p.txt3, margin: '4px auto 0', maxWidth: 400 }}>{lugar1Nombre}</p>}
         {cal && (
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
             <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>
@@ -255,7 +286,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             <div style={{ ...etiqueta, textAlign: 'center', marginBottom: 26 }}>{t('Así será nuestro día', 'How our day will unfold')}</div>
             <div aria-hidden="true" style={{ position: 'absolute', left: 112, top: 56, bottom: 14, width: 1, background: p.linea }} />
             {itinerario.map((it, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '98px 30px 1fr', alignItems: 'start', marginBottom: 28, position: 'relative' }}>
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '98px 30px 1fr', alignItems: 'start', marginBottom: i === itinerario.length - 1 ? 0 : 28, position: 'relative' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontFamily: p.serif, fontSize: 21, fontWeight: 500, color: p.acento, lineHeight: '26px', fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>{hora12(partirHora(it.hora).ini)}</div>
                   {partirHora(it.hora).fin && <div style={{ fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: p.txt3, marginTop: 3 }}>{t('hasta', 'until')} {hora12(partirHora(it.hora).fin)}</div>}
@@ -286,10 +317,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
                 {x.etq && <div style={{ ...etiqueta, color: p.txt3 }}>{x.etq}</div>}
                 <div style={{ fontFamily: p.serif, fontSize: 28, color: p.txt, marginTop: 8, lineHeight: 1.15 }}>{nom}</div>
                 {resto.length > 0 && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.txt3, marginTop: 6 }}>{resto.join(',').trim()}</div>}
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 16 }}>
-                  <Boton p={p} href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.lugar)}`}>{t('Cómo llegar', 'Directions')}</Boton>
-                  <a className="cw-chip" href={`https://waze.com/ul?q=${encodeURIComponent(x.lugar)}&navigate=yes`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}`, alignSelf: 'center' }}>Waze</a>
-                </div>
+                <ComoLlegar p={p} lugar={x.lugar} t={t} />
               </div>
             )
           })}
@@ -298,12 +326,14 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── VESTIMENTA ───────── */}
       {(d.vestimenta_tipo || colores.length > 0) && (
-        <Sec p={p}>
-          <div style={etiqueta}>{t('Para lucir radiantes', 'Dress to impress')}</div>
-          <h2 style={titulo}>{t('Vestimenta', 'Dress code')}</h2>
-          {d.vestimenta_tipo && <div style={{ fontFamily: p.serif, fontSize: 26, color: p.txt, marginTop: 16 }}>{d.vestimenta_tipo}</div>}
+        <Sec p={p} ancho={460}>
+          <svg width="40" height="30" viewBox="0 0 40 30" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
+            <path d="M20 9.5a3.2 3.2 0 1 1 3.2 3.2c-1.8 0-3.2 1.2-3.2 3v1.6L3 26.2a1.4 1.4 0 0 0 .7 2.6h32.6a1.4 1.4 0 0 0 .7-2.6L20 17.3" fill="none" stroke={p.acento} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div style={{ ...etiqueta, marginTop: 14 }}>{t('Código de vestimenta', 'Dress code')}</div>
+          {d.vestimenta_tipo && <div style={{ fontFamily: p.script, fontSize: 'clamp(54px,15vw,68px)', color: p.acento, lineHeight: 1.05, marginTop: 6 }}>{d.vestimenta_tipo}</div>}
           {colores.length > 0 && <CirculosColor colores={colores} p={p} />}
-          {d.vestimenta_nota && <p style={{ ...parrafo, fontStyle: 'italic', marginTop: 22, fontSize: 17 }}>{d.vestimenta_nota}</p>}
+          {d.vestimenta_nota && <p style={{ ...parrafo, fontStyle: 'italic', marginTop: 14, fontSize: 18 }}>{d.vestimenta_nota}</p>}
           {d.solo_adultos && (
             <div style={{ marginTop: 30, padding: '18px 20px', border: `1px solid ${p.linea}`, borderRadius: 14, background: p.card }}>
               <div style={{ ...etiqueta, color: p.txt3 }}>{t('Una nota con cariño', 'A note with love')}</div>
@@ -332,7 +362,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
                     {String(h.traslado).slice(0, 160)}
                   </div>
                 )}
-                {enlace && <div style={{ marginTop: 16 }}><Boton p={p} href={enlace}>{t('Ver ubicación', 'View location')}</Boton></div>}
+                <ComoLlegar p={p} lugar={`${h.nombre} ${h.direccion || ''}`.trim()} google={enlace} t={t} />
               </div>
             )
           })}
@@ -342,8 +372,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── REGALOS ───────── */}
       {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
         <Sec p={p} ancho={520}>
-          <Orn p={p} />
-          <div style={{ ...etiqueta, marginTop: 34 }}>{t('Si deseas obsequiarnos algo', 'If you wish to give us something')}</div>
+          <div style={etiqueta}>{t('Si deseas obsequiarnos algo', 'If you wish to give us something')}</div>
           <h2 style={titulo}>{t('Mesa de regalos', 'Gift registry')}</h2>
           {d.mesa_regalos_nota && <p style={{ ...parrafo, marginTop: 14 }}>{d.mesa_regalos_nota}</p>}
           {mesas.map((m, i) => {
@@ -400,7 +429,17 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
                   {MENU_OPCIONES.map(m => <option key={m} value={m}>{lang === 'en' ? MENU_LABEL[m].en : MENU_LABEL[m].es}</option>)}
                 </select>
 
-                {permitidos > 0 && (
+                {permitidos === 1 && (
+                  <div style={{ marginTop: 22 }}>
+                    <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginBottom: 10 }}>{t('¿Vienes acompañado?', 'Are you bringing a guest?')}</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {([[0, t('No, solo yo', 'No, just me')], [1, t('Sí, con mi acompañante', 'Yes, with my guest')]] as [number, string][]).map(([n, label]) => (
+                        <button key={n} type="button" onClick={() => r.setNum(n)} className="cw-opcion" style={{ flex: 1, fontFamily: p.etiqueta, border: `1px solid ${r.numAcompanantes === n ? p.acento : p.linea}`, background: r.numAcompanantes === n ? p.acento : 'transparent', color: r.numAcompanantes === n ? p.botonTxt : p.txt2, letterSpacing: '.1em', padding: '13px 8px' }}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {permitidos > 1 && (
                   <div style={{ marginTop: 22 }}>
                     <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginBottom: 10 }}>{t(`¿Cuántos acompañantes traes? (hasta ${permitidos})`, `How many guests are you bringing? (up to ${permitidos})`)}</label>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -413,7 +452,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
                 {r.acompanantes.map((a, i) => (
                   <div key={i} style={{ marginTop: 20 }}>
-                    <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t(`Acompañante ${i + 1}`, `Guest ${i + 1}`)}</label>
+                    <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{permitidos === 1 ? t('Tu acompañante', 'Your guest') : t(`Acompañante ${i + 1}`, `Guest ${i + 1}`)}</label>
                     <input className="cw-campo" maxLength={100} value={a.nombre} onChange={e => r.setAcompanante(i, 'nombre', e.target.value)} placeholder={t('Nombre completo', 'Full name')} style={{ fontFamily: p.serif, color: p.txt }} />
                     <select className="cw-campo" value={a.menu} onChange={e => r.setAcompanante(i, 'menu', e.target.value)} style={{ fontFamily: p.serif, color: p.txt, colorScheme: p.dark ? 'dark' : 'light' }}>
                       <option value="">{t('Platillo', 'Meal')}</option>
@@ -440,9 +479,10 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             <div style={{ ...etiqueta, textAlign: 'center', marginBottom: 14 }}>{t('Preguntas frecuentes', 'FAQ')}</div>
             {String(d.faq).split('\n').map(l => l.trim()).filter(Boolean).map((linea, i) => {
               const q = linea.indexOf('?')
+              const ultima = i === String(d.faq).split('\n').map(l => l.trim()).filter(Boolean).length - 1
               return q > 0 && q < linea.length - 1
-                ? <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: 10 }}><b style={{ fontWeight: 600, color: p.txt }}>{linea.slice(0, q + 1)}</b>{linea.slice(q + 1)}</p>
-                : <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: 10 }}>{linea}</p>
+                ? <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: ultima ? 0 : 10 }}><b style={{ fontWeight: 600, color: p.txt }}>{linea.slice(0, q + 1)}</b>{linea.slice(q + 1)}</p>
+                : <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: ultima ? 0 : 10 }}>{linea}</p>
             })}
           </div>
         )}
@@ -512,7 +552,9 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           {p.botanicos && <div style={{ position: 'absolute', top: -16, right: -30, opacity: .88, pointerEvents: 'none' }}><RamaEucalipto ancho={78} rotar={-125} espejo hojas={6} /></div>}
           <div style={{ position: 'relative' }}>
             <div style={etiqueta}>{t('Con todo nuestro amor', 'With all our love')}</div>
-            <div style={{ fontFamily: p.script, fontSize: 'clamp(52px,14vw,66px)', color: p.acento, lineHeight: .98, marginTop: 14 }}>{d.nombre_novia}<span style={{ display: 'block', fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.34em', color: p.acento2, lineHeight: 1.3 }}>&amp;</span>{d.nombre_novio}</div>
+            <div style={{ fontFamily: p.script, fontSize: `calc(clamp(38px, 11.4vw, 58px) * ${factorNombres})`, color: p.acento, lineHeight: 1.1, marginTop: 14, whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
+              {d.nombre_novia}<span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.4em', color: p.acento2, margin: '0 .32em', verticalAlign: '.34em' }}>&amp;</span>{d.nombre_novio}
+            </div>
             <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em' }}>{t('Gracias por acompañarnos', 'Thank you for celebrating with us')}</div>
             <div style={{ ...etiqueta, color: p.txt3, marginTop: 8, letterSpacing: '.26em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
             {d.frase_cierre && <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 21, marginTop: 28 }}>{d.frase_cierre}</p>}
@@ -563,8 +605,8 @@ function Ambiente({ p }: { p: Paleta }) {
   if (!p.botanicos) return null
   return (
     <div aria-hidden="true">
-      <div className="cw-rama cw-rama-i"><div className="cw-brisa"><RamaEucalipto ancho={116} rotar={128} hojas={8} /></div></div>
-      <div className="cw-rama cw-rama-d"><div className="cw-brisa cw-brisa-b"><RamaEucalipto ancho={104} rotar={-128} espejo hojas={7} /></div></div>
+      <div className="cw-rama cw-rama-i"><div className="cw-brisa"><RamaEucalipto ancho={112} rotar={128} hojas={8} /></div></div>
+      <div className="cw-rama cw-rama-d"><div className="cw-brisa cw-brisa-b"><RamaEucalipto ancho={100} rotar={-128} espejo hojas={7} /></div></div>
       <div className="cw-capa-ligera">
         {PETALOS.map(([x, tam, dur, del, der, giro, tono], i) => (
           <svg key={'p' + i} className="cw-petalo" viewBox="-12 -25 24 27" width={tam} height={Math.round(tam * 1.1)} style={{ left: `${x}%`, animationDuration: `${dur}s`, animationDelay: `-${del}s`, ['--der' as string]: `${der}px`, ['--giro' as string]: `${giro}deg` } as React.CSSProperties}>
@@ -629,8 +671,8 @@ function Estilos({ p }: { p: Paleta }) {
       .cw-pagina { position: relative; z-index: 2; }
       /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
       .cw-rama { position: fixed; z-index: 1; pointer-events: none; }
-      .cw-rama-i { top: -34px; left: -46px; opacity: .92; }
-      .cw-rama-d { top: -22px; right: -44px; opacity: .88; }
+      .cw-rama-i { top: -44px; left: -52px; opacity: .92; }
+      .cw-rama-d { top: -32px; right: -50px; opacity: .88; }
       .cw-brisa { transform-origin: 0 0; animation: cw-brisa 9s ease-in-out infinite; }
       .cw-brisa-b { transform-origin: 100% 0; animation-duration: 11s; animation-delay: -3s; }
       @keyframes cw-brisa { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(2.8deg); } }

@@ -903,9 +903,12 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       alert(lang === 'en' ? "Couldn't upload the photo. Try a smaller file." : 'No se pudo subir la foto. Intenta con un archivo más chico.')
       return
     }
-    const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
-    await supabase.from('proyectos_boda').update({ portada_url: publicUrl }).eq('id', id)
-    setProyecto((prev: any) => ({ ...prev, portada_url: publicUrl }))
+    const { data: { publicUrl: urlBase } } = supabase.storage.from('portadas').getPublicUrl(path)
+    // La foto nueva usa el mismo nombre de archivo que la anterior: sin esta marca de versión,
+    // el navegador y el servidor de imágenes podían seguir mostrando la foto vieja.
+    const publicUrl = `${urlBase}?v=${Date.now()}`
+    await supabase.from('proyectos_boda').update({ portada_url: publicUrl, portada_posicion: 'center' }).eq('id', id)
+    setProyecto((prev: any) => ({ ...prev, portada_url: publicUrl, portada_posicion: 'center' }))
     setSubiendoPortada(false)
   }
 
@@ -1278,7 +1281,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <div>
                   <textarea value={versiculoInput} onChange={e => setVersiculoInput(e.target.value)} rows={2} placeholder={lang === 'en' ? 'Verse or quote (optional)' : 'Versículo o frase (opcional)'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
                   <input value={versiculoAutorInput} onChange={e => setVersiculoAutorInput(e.target.value)} placeholder={lang === 'en' ? 'Citation, e.g. 1 Corinthians 13:4-8' : 'Cita, ej. 1 Corintios 13:4-8'} style={{ ...inputStyle, width: '100%' }} />
-                  <textarea value={mensajePadresInput} onChange={e => setMensajePadresInput(e.target.value)} rows={3} placeholder={lang === 'en' ? 'Any message about family (optional, write it exactly as you want it — mention whoever you want, or skip this entirely)' : 'Mensaje sobre la familia (opcional, escríbelo tal como lo quieras — menciona a quien quieras, o déjalo vacío)'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
+                  <textarea value={mensajePadresInput} onChange={e => setMensajePadresInput(e.target.value)} rows={3} placeholder={lang === 'en' ? 'Parents (optional), one line each. You can add a title before a colon, e.g. Parents of the bride: John and Mary. Shown under "With the blessing of our families".' : 'Padres (opcional), una línea por familia. Puedes poner un título antes de los dos puntos, ej. Padres de la novia: José y Patricia. Sale bajo "Con la bendición de nuestras familias".'} style={{ ...inputStyle, width: '100%', resize: 'none' as const }} />
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#3D2B2E', marginBottom: 10, cursor: 'pointer' }}>
                     <input type="checkbox" checked={soloAdultosInput} onChange={e => setSoloAdultosInput(e.target.checked)} />
                     {lang === 'en' ? 'Adults-only event (leave unchecked if kids are welcome)' : 'Evento solo para adultos (déjalo sin marcar si sí quieres niños)'}
