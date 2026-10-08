@@ -607,6 +607,10 @@ function Ambiente({ p }: { p: Paleta }) {
     <div aria-hidden="true">
       <div className="cw-rama cw-rama-i"><div className="cw-brisa"><RamaEucalipto ancho={112} rotar={128} hojas={8} /></div></div>
       <div className="cw-rama cw-rama-d"><div className="cw-brisa cw-brisa-b"><RamaEucalipto ancho={100} rotar={-128} espejo hojas={7} /></div></div>
+      <div className="cw-flor cw-flor-i1"><div className="cw-mece"><Peonia ancho={80} tono="claro" rotar={-12} /></div></div>
+      <div className="cw-flor cw-flor-i2"><div className="cw-mece" style={{ animationDelay: '-4s' }}><Peonia ancho={46} tono="oscuro" rotar={18} /></div></div>
+      <div className="cw-flor cw-flor-d1"><div className="cw-mece" style={{ animationDelay: '-2s' }}><Peonia ancho={74} tono="claro" rotar={14} /></div></div>
+      <div className="cw-flor cw-flor-d2"><div className="cw-mece" style={{ animationDelay: '-6s' }}><Peonia ancho={44} tono="oscuro" rotar={-16} /></div></div>
       <div className="cw-capa-ligera">
         {PETALOS.map(([x, tam, dur, del, der, giro, tono], i) => (
           <svg key={'p' + i} className="cw-petalo" viewBox="-12 -25 24 27" width={tam} height={Math.round(tam * 1.1)} style={{ left: `${x}%`, animationDuration: `${dur}s`, animationDelay: `-${del}s`, ['--der' as string]: `${der}px`, ['--giro' as string]: `${giro}deg` } as React.CSSProperties}>
@@ -676,6 +680,13 @@ function Estilos({ p }: { p: Paleta }) {
       .cw-brisa { transform-origin: 0 0; animation: cw-brisa 9s ease-in-out infinite; }
       .cw-brisa-b { transform-origin: 100% 0; animation-duration: 11s; animation-delay: -3s; }
       @keyframes cw-brisa { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(2.8deg); } }
+      .cw-flor { position: fixed; z-index: 1; pointer-events: none; }
+      .cw-flor-i1 { top: 34px; left: -30px; }
+      .cw-flor-i2 { top: 4px; left: 38px; }
+      .cw-flor-d1 { top: 46px; right: -28px; }
+      .cw-flor-d2 { top: 12px; right: 34px; }
+      .cw-mece { animation: cw-mece 10s ease-in-out infinite; }
+      @keyframes cw-mece { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(2.2deg); } }
       .cw-capa-ligera { position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
       .cw-petalo { position: absolute; top: -30px; opacity: 0; will-change: transform, opacity; animation: cw-cae linear infinite; filter: drop-shadow(0 1px 1.5px rgba(150,105,98,.28)); }
       @keyframes cw-cae { 0% { transform: translate3d(0,-6vh,0) rotate(0deg); opacity: 0; } 8% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translate3d(var(--der),108vh,0) rotate(var(--giro)); opacity: 0; } }
@@ -683,7 +694,7 @@ function Estilos({ p }: { p: Paleta }) {
       @keyframes cw-brilla { 0%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 50% { opacity: .95; transform: scale(1) rotate(45deg); } }
       /* Pantallas grandes: todo el contenido crece junto (texto, fotos y márgenes) para leerse cómodo */
       @media (min-width: 820px) { .cw-pagina { zoom: 1.15; } .cw-sobre-wrap { zoom: 1.25; } .cw-rama-i { left: -24px; } .cw-rama-d { right: -20px; } }
-      @media (min-width: 1180px) { .cw-pagina { zoom: 1.3; } .cw-sobre-wrap { zoom: 1.4; } .cw-rama-i { transform: scale(1.25); transform-origin: 0 0; } .cw-rama-d { transform: scale(1.25); transform-origin: 100% 0; } }
+      @media (min-width: 1180px) { .cw-pagina { zoom: 1.3; } .cw-sobre-wrap { zoom: 1.4; } .cw-rama-i { transform: scale(1.25); transform-origin: 0 0; } .cw-rama-d { transform: scale(1.25); transform-origin: 100% 0; } .cw-flor-i1, .cw-flor-i2 { transform: scale(1.25); transform-origin: 0 0; } .cw-flor-d1, .cw-flor-d2 { transform: scale(1.25); transform-origin: 100% 0; } }
       .cw-raiz *, .cw-raiz *::before, .cw-raiz *::after { box-sizing: border-box; }
       .cw-aparece { transition: opacity .9s ease, transform .9s ease; }
       .cw-js .cw-aparece:not(.cw-in) { opacity: 0; transform: translateY(20px); }
@@ -729,7 +740,7 @@ function Estilos({ p }: { p: Paleta }) {
         .cw-sobre-capa.cw-abriendo { animation-delay: .3s; animation-duration: .3s; }
         .cw-hint, .cw-flota { animation: none; }
         .cw-capa-ligera { display: none; }
-        .cw-brisa { animation: none; }
+        .cw-brisa, .cw-mece { animation: none; }
       }
     `}</style>
   )
