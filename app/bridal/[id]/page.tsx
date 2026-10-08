@@ -310,6 +310,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [subiendoMedia, setSubiendoMedia] = useState<string | null>(null)
   const [personalGuardado, setPersonalGuardado] = useState(false)
   const [mesasRegalosInput, setMesasRegalosInput] = useState('')
+  const [ayudaWhatsappInput, setAyudaWhatsappInput] = useState('')
+  const [ayudaMensajeInput, setAyudaMensajeInput] = useState('')
   const [mesaRegalosNotaInput, setMesaRegalosNotaInput] = useState('')
   const [lluviaSobresInput, setLluviaSobresInput] = useState(false)
 
@@ -424,6 +426,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       setLugar2Input(proy.lugar2_nombre || '')
       setHotelesInput(hotelesATexto(proy.hoteles))
       setFechaLimiteInput(proy.fecha_limite_rsvp || '')
+      setAyudaWhatsappInput(proy.ayuda_whatsapp || '')
+      setAyudaMensajeInput(proy.ayuda_mensaje || '')
       setHistoriaItems(Array.isArray(proy.historia) ? proy.historia : [])
       // Si la boda traía un solo link de regalos (versión anterior), se muestra como primera mesa para editarlo.
       setMesasRegalosInput(Array.isArray(proy.mesas_regalos) && proy.mesas_regalos.length > 0 ? mesasATexto(proy.mesas_regalos) : (proy.mesa_regalos_link ? `Mesa de regalos | ${proy.mesa_regalos_link}` : ''))
@@ -745,6 +749,11 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     // Mesas de regalos: solo se aceptan links web reales (http/https). Si la pareja
     // escribe "liverpool.com.mx/..." sin https, se lo agregamos; cualquier otra cosa
     // ("javascript:", espacios, etc.) se rechaza con aviso y no se guarda nada.
+    const waDigitos = ayudaWhatsappInput.replace(/\D/g, '')
+    if (waDigitos && !/^\d{10,15}$/.test(waDigitos)) {
+      alert(lang === 'en' ? 'The WhatsApp number must have 10 to 15 digits.' : 'El número de WhatsApp debe tener de 10 a 15 dígitos.')
+      return
+    }
     const { mesas, error: mesaMala } = textoAMesas(mesasRegalosInput)
     if (mesaMala) {
       alert(lang === 'en' ? `The link for "${mesaMala}" must be a web address (https://...).` : `El link de "${mesaMala}" debe ser una dirección web (https://...).`)
@@ -759,6 +768,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       hoteles: textoAHoteles(hotelesInput),
       mesa_regalos_link: null,
       mesas_regalos: mesas,
+      ayuda_whatsapp: waDigitos || null,
+      ayuda_mensaje: ayudaMensajeInput.trim().slice(0, 300) || null,
       mesa_regalos_nota: mesaRegalosNotaInput.trim() || null,
       lluvia_sobres: lluviaSobresInput,
     }
@@ -983,8 +994,17 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   // WhatsApp no se puede mandar solo desde el servidor sin la API de negocio de
   // pago — así que en vez de "todo de un jalón", esto abre WhatsApp con el
   // siguiente pendiente cada vez que le das clic, uno a la vez.
+  // WhatsApp necesita el número con clave de país. En México son 10 dígitos: se antepone 52
+  // (y el viejo formato 521 + 10 dígitos se convierte a 52 + 10).
+  function telefonoWA(tel: string) {
+    let d = (tel || '').replace(/\D/g, '')
+    if (d.length === 10) d = '52' + d
+    else if (d.length === 13 && d.startsWith('521')) d = '52' + d.slice(3)
+    return d.length >= 11 ? d : ''
+  }
+
   function recordarSiguientePorWA() {
-    const pendientesConTel = invitadosBoda.filter(inv => !rsvpsBoda.find(r => r.invitado_id === inv.id) && inv.telefono)
+    const pendientesConTel = invitadosBoda.filter(inv => !rsvpsBoda.find(r => r.invitado_id === inv.id) && telefonoWA(inv.telefono))
     if (pendientesConTel.length === 0) return
     const inv = pendientesConTel[waPendienteIdx % pendientesConTel.length]
     const url = `https://joincheers.app/bridal/rsvp/${inv.token}`
@@ -994,7 +1014,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
         ? `Hi ${inv.nombre}! Just checking — we haven't gotten your RSVP yet for ${nombreBoda}'s wedding. Can you confirm here? ${url}`
         : `¡Hola ${inv.nombre}! Todavía no nos llega tu confirmación para la boda de ${nombreBoda}. ¿Nos confirmas aquí? ${url}`
     )
-    const destino = inv.telefono.replace(/[^\d+]/g, '')
+    const destino = telefonoWA(inv.telefono)
     window.open(`https://wa.me/${destino}?text=${msg}`, '_blank')
     setWaPendienteIdx(prev => prev + 1)
   }
@@ -1007,7 +1027,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
         ? `Hi ${inv.nombre}! You're invited to ${nombreBoda}'s wedding. Please RSVP here: ${url}`
         : `¡Hola ${inv.nombre}! Estás invitad@ a la boda de ${nombreBoda}. Confirma tu asistencia aquí: ${url}`
     )
-    const destino = inv.telefono ? inv.telefono.replace(/[^\d+]/g, '') : ''
+    const destino = telefonoWA(inv.telefono || '')
     window.open(`https://wa.me/${destino}?text=${msg}`, '_blank')
   }
 
@@ -1378,11 +1398,16 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                     {lang === 'en' ? 'Mention an envelope box at the entrance' : 'Mencionar buzón de sobres en la entrada'}
                   </label>
 
+                  <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
+                    {lang === 'en' ? 'Hair & makeup help button (WhatsApp, optional): your number and the message guests send' : 'Botón "¿Buscas quién te arregle?" (WhatsApp, opcional): tu número y el mensaje que les llega a ti'}
+                  </label>
+                  <input value={ayudaWhatsappInput} onChange={e => setAyudaWhatsappInput(e.target.value)} inputMode="tel" placeholder={lang === 'en' ? 'WhatsApp number, 10 digits' : 'Número de WhatsApp, 10 dígitos'} style={{ ...inputStyle, width: '100%' }} />
+                  <input value={ayudaMensajeInput} maxLength={300} onChange={e => setAyudaMensajeInput(e.target.value)} placeholder={lang === 'en' ? 'Message (you can use {nombre} for the guest name)' : 'Mensaje (puedes usar {nombre} para el nombre del invitado)'} style={{ ...inputStyle, width: '100%' }} />
                   <button onClick={guardarFase3} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F, marginTop: 6 }}>{lang === 'en' ? 'Save' : 'Guardar'}</button>
                 </div>
               ) : (
                 <p style={{ fontSize: 12, color: 'rgba(61,43,46,.4)', margin: 0 }}>
-                  {((proyecto?.itinerario?.length > 0) || proyecto?.vestimenta_tipo || proyecto?.lugar2_nombre || (proyecto?.hoteles?.length > 0) || proyecto?.mesa_regalos_link || (proyecto?.mesas_regalos?.length > 0) || proyecto?.mesa_regalos_nota || proyecto?.lluvia_sobres)
+                  {((proyecto?.itinerario?.length > 0) || proyecto?.vestimenta_tipo || proyecto?.lugar2_nombre || (proyecto?.hoteles?.length > 0) || proyecto?.mesa_regalos_link || (proyecto?.mesas_regalos?.length > 0) || proyecto?.ayuda_whatsapp || proyecto?.mesa_regalos_nota || proyecto?.lluvia_sobres)
                     ? (lang === 'en' ? 'Saved — visible on the RSVP page.' : 'Guardado — visible en la página de RSVP.')
                     : (lang === 'en' ? 'Nothing yet.' : 'Todavía nada.')}
                 </p>

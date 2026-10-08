@@ -58,10 +58,10 @@ function Orn({ p }: { p: Paleta }) {
     </div>
   )
 }
-function Boton({ p, children, onClick, href, relleno, deshabilitado, ancho }: { p: Paleta; children: React.ReactNode; onClick?: () => void; href?: string; relleno?: boolean; deshabilitado?: boolean; ancho?: boolean }) {
+function Boton({ p, children, onClick, href, relleno, deshabilitado, ancho, compacto }: { p: Paleta; children: React.ReactNode; onClick?: () => void; href?: string; relleno?: boolean; deshabilitado?: boolean; ancho?: boolean; compacto?: boolean }) {
   const st: React.CSSProperties = {
     display: ancho ? 'block' : 'inline-block', width: ancho ? '100%' : undefined, boxSizing: 'border-box', textDecoration: 'none', cursor: deshabilitado ? 'default' : 'pointer',
-    fontFamily: p.etiqueta, fontSize: 11, fontWeight: 500, letterSpacing: '.22em', textTransform: 'uppercase', padding: '14px 26px', borderRadius: 999,
+    fontFamily: p.etiqueta, fontSize: 11, fontWeight: 500, letterSpacing: compacto ? '.14em' : '.22em', textTransform: 'uppercase', padding: compacto ? '14px 8px' : '14px 26px', borderRadius: 999, whiteSpace: 'nowrap', textAlign: 'center',
     border: `1px solid ${p.acento}`, background: relleno ? p.acento : 'transparent', color: relleno ? p.botonTxt : p.acento, opacity: deshabilitado ? .5 : 1,
   }
   return href
@@ -75,8 +75,8 @@ function ComoLlegar({ p, lugar, google, t }: { p: Paleta; lugar: string; google?
     <div style={{ marginTop: 18 }}>
       <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase', color: p.txt3, marginBottom: 10 }}>{t('Cómo llegar', 'Directions')}</div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho href={google || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`}>Google Maps</Boton></div>
-        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho href={`https://waze.com/ul?q=${encodeURIComponent(lugar)}&navigate=yes`}>Waze</Boton></div>
+        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho compacto href={google || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`}>Google Maps</Boton></div>
+        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho compacto href={`https://waze.com/ul?q=${encodeURIComponent(lugar)}&navigate=yes`}>Waze</Boton></div>
       </div>
     </div>
   )
@@ -111,6 +111,11 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const colores: any[] = Array.isArray(d.vestimenta_colores) ? d.vestimenta_colores : []
   const hoteles: any[] = Array.isArray(d.hoteles) ? d.hoteles : []
   const linkRegalos = urlEnlaceSegura(d.mesa_regalos_link)
+  // WhatsApp de ayuda (peinado y maquillaje): solo dígitos y largo válido; en México se agrega 52.
+  const waDigitos = String(d.ayuda_whatsapp || '').replace(/\D/g, '')
+  const waNumero = /^\d{10}$/.test(waDigitos) ? '52' + waDigitos : (/^\d{11,15}$/.test(waDigitos) ? waDigitos : '')
+  const waMensaje = String(d.ayuda_mensaje || t('Hola, ¿me puedes ayudar a conseguir cita para maquillaje y/o peinado?', 'Hi! Could you help me book hair and/or makeup?')).replace(/\{nombre\}/g, invitado).slice(0, 300)
+  const linkAyuda = waNumero ? `https://wa.me/${waNumero}?text=${encodeURIComponent(waMensaje)}` : null
   const mesas: any[] = (Array.isArray(d.mesas_regalos) ? d.mesas_regalos : []).filter((m: any) => m && String(m.nombre || '').trim()).slice(0, 4)
   const limite = d.fecha_limite_rsvp as string | undefined
   const limitePasado = !!limite && new Date(limite + 'T23:59:59') < new Date()
@@ -221,30 +226,52 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── FRASE Y FAMILIAS ───────── */}
       {(d.versiculo || d.mensaje_padres) && <div style={{ padding: '14px 0 0' }}><Orn p={p} /></div>}
-      {d.versiculo && (
-        <Sec p={p} ancho={480} arriba={32} abajo={d.mensaje_padres ? 26 : 42}>
-          <p style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 26, lineHeight: 1.4, color: p.txt, margin: 0 }}>“{d.versiculo}”</p>
-          {d.versiculo_autor && <div style={{ ...etiqueta, color: p.txt3, marginTop: 16 }}>{d.versiculo_autor}</div>}
-        </Sec>
-      )}
+      {d.versiculo && (() => {
+        // Frases de hasta 60 letras van en un solo renglón: el tamaño se ajusta al largo y a la pantalla.
+        // Las más largas se acomodan en varios renglones parejos.
+        const largo = String(d.versiculo).length
+        const unaLinea = largo <= 60
+        const estiloFrase = { fontFamily: p.serif, fontStyle: 'italic', fontSize: unaLinea ? `clamp(14px, ${(214 / Math.max(largo, 28)).toFixed(2)}vw, 27px)` : 26, lineHeight: 1.4, color: p.txt, margin: 0, whiteSpace: unaLinea ? 'nowrap' : 'normal', textWrap: 'balance' } as React.CSSProperties
+        return (
+          <Sec p={p} ancho={unaLinea ? 660 : 480} arriba={32} abajo={d.mensaje_padres ? 26 : 42}>
+            <p style={estiloFrase}>“{d.versiculo}”</p>
+            {d.versiculo_autor && <div style={{ ...etiqueta, color: p.txt3, marginTop: 16 }}>{d.versiculo_autor}</div>}
+          </Sec>
+        )
+      })()}
       {d.mensaje_padres && (
         <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32}>
-          <div style={etiqueta}>{t('Con la bendición de nuestras familias', 'With the blessing of our families')}</div>
-          <div style={{ marginTop: 20 }}>
-            {String(d.mensaje_padres).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 12).map((linea, i) => {
-              // "Padres de la novia: José y Patricia" -> etiqueta chica arriba y los nombres abajo
+          <div style={{ ...etiqueta, whiteSpace: 'nowrap', fontSize: 'clamp(9px, 2.75vw, 11px)', letterSpacing: '.2em' }}>{t('Con la bendición de nuestras familias', 'With the blessing of our families')}</div>
+          {(() => {
+            // "Padres de la novia: José y Patricia" -> etiqueta chica arriba y los nombres abajo
+            const lineas = String(d.mensaje_padres).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 12).map(linea => {
               const k = linea.indexOf(':')
               const conEtiqueta = k > 0 && k < 40
-              const etq = conEtiqueta ? linea.slice(0, k).trim() : ''
-              const nombres = conEtiqueta ? linea.slice(k + 1).trim() : linea
-              return (
-                <div key={i} style={{ marginTop: i ? 22 : 0 }}>
-                  {etq && <div style={{ ...etiqueta, color: p.txt3, fontSize: 10, letterSpacing: '.24em' }}>{etq}</div>}
-                  <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt, lineHeight: 1.3, marginTop: etq ? 6 : 0 }}>{nombres}</div>
-                </div>
-              )
-            })}
-          </div>
+              return { etq: conEtiqueta ? linea.slice(0, k).trim() : '', nombres: conEtiqueta ? linea.slice(k + 1).trim() : linea }
+            })
+            // Dos familias, cada una en un solo renglón: van lado a lado, a la misma altura.
+            const enColumnas = lineas.length === 2 && lineas.every(x => x.nombres.length <= 22 && x.etq.length <= 22)
+            if (enColumnas) return (
+              <div style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'start' }}>
+                {lineas.map((x, i) => (
+                  <div key={i} style={{ padding: '2px 8px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+                    {x.etq && <div style={{ ...etiqueta, color: p.txt3, fontSize: 10, letterSpacing: '.14em', whiteSpace: 'nowrap' }}>{x.etq}</div>}
+                    <div style={{ fontFamily: p.serif, fontSize: 'clamp(16px, 4.9vw, 24px)', color: p.txt, lineHeight: 1.3, marginTop: x.etq ? 8 : 0, whiteSpace: 'nowrap' }}>{x.nombres}</div>
+                  </div>
+                ))}
+              </div>
+            )
+            return (
+              <div style={{ marginTop: 20 }}>
+                {lineas.map((x, i) => (
+                  <div key={i} style={{ marginTop: i ? 22 : 0 }}>
+                    {x.etq && <div style={{ ...etiqueta, color: p.txt3, fontSize: 10, letterSpacing: '.24em' }}>{x.etq}</div>}
+                    <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt, lineHeight: 1.3, marginTop: x.etq ? 6 : 0 }}>{x.nombres}</div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </Sec>
       )}
 
@@ -308,8 +335,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── DÓNDE ───────── */}
       {(lugar1 || d.lugar2_nombre) && (
         <Sec p={p}>
-          <div style={etiqueta}>{t('¿Dónde será?', 'Where?')}</div>
-          <h2 style={titulo}>{t('Ubicación', 'Location')}</h2>
+          <h2 style={{ ...titulo, marginTop: 0 }}>{t('¿Dónde será?', 'Where will it be?')}</h2>
           {[{ etq: d.lugar2_nombre ? t('Ceremonia', 'Ceremony') : '', lugar: lugar1 }, { etq: t('Recepción', 'Reception'), lugar: (d.lugar2_nombre || '').trim() }].filter(x => x.lugar).map((x, i) => {
             const [nom, ...resto] = x.lugar.split(',')
             return (
@@ -340,6 +366,16 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
               <p style={{ ...parrafo, fontSize: 17, marginTop: 8 }}>{t('Adoramos a los más pequeños, sin embargo este evento está destinado solo para adultos. ¡Gracias por entenderlo!', 'We love the little ones, but this event is adults-only. Thank you for understanding!')}</p>
             </div>
           )}
+        </Sec>
+      )}
+
+      {/* ───────── AYUDA: PEINADO Y MAQUILLAJE ───────── */}
+      {linkAyuda && (
+        <Sec p={p} ancho={460}>
+          <div style={etiqueta}>{t('Para que luzcas increíble', 'To look your best')}</div>
+          <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Looking for hair & makeup?')}</h2>
+          <p style={{ ...parrafo, marginTop: 14 }}>{t('Escríbenos y con gusto te compartimos el contacto de quien nos arregla, para tu cita de maquillaje y/o peinado.', 'Message us and we will gladly share the contact of who is doing our hair and makeup, to book your appointment.')}</p>
+          <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</Boton></div>
         </Sec>
       )}
 
