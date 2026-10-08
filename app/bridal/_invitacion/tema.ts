@@ -85,7 +85,10 @@ export function urlImagenSegura(url?: string | null): string | null {
     // Solo en desarrollo (nunca en el sitio real): imágenes de prueba locales.
     if (process.env.NODE_ENV === 'development' && u.hostname === 'localhost' && u.pathname.startsWith('/mock/')) return u.toString()
     if (u.protocol !== 'https:') return null
-    if (!u.hostname.endsWith('.supabase.co')) return null
+    // Solo el Storage de ESTE proyecto de Supabase (no el de cualquier otro proyecto).
+    let propio = ''
+    try { propio = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').hostname } catch { propio = '' }
+    if (propio ? u.hostname !== propio : !u.hostname.endsWith('.supabase.co')) return null
     if (!u.pathname.startsWith('/storage/v1/object/public/')) return null
     return u.toString()
   } catch { return null }

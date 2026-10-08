@@ -1,0 +1,110 @@
+import { ImageResponse } from 'next/og'
+import { createClient } from '@supabase/supabase-js'
+import { fechaPuntos, urlImagenSegura } from '../../_invitacion/tema'
+
+export const runtime = 'edge'
+export const alt = 'Invitación de boda — Cheers Bridal'
+// 720x378 (misma proporción que 1200x630): la tarjeta pesa menos de ~300 KB, que es lo que WhatsApp acepta
+// para mostrar la imagen; sigue siendo nítida para WhatsApp, iMessage y redes.
+const ESC = 0.6
+export const size = { width: 720, height: 378 }
+export const contentType = 'image/png'
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Tipografías de la invitación, incluidas en el proyecto (nada se pide a terceros).
+const allura = fetch(new URL('./allura.woff', import.meta.url)).then(r => r.arrayBuffer())
+const cormorant = fetch(new URL('./cormorant.woff', import.meta.url)).then(r => r.arrayBuffer())
+
+const POSICION: Record<string, string> = { top: '50% 6%', center: '50% 28%', bottom: '50% 100%' }
+
+function aBase64(buf: ArrayBuffer) {
+  const bytes = new Uint8Array(buf)
+  let s = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(s)
+}
+
+// La foto se descarga aquí (solo de nuestro propio Storage, JPG/PNG, máx. 4 MB):
+// si algo falla, la tarjeta sale con las iniciales en lugar de la foto.
+async function fotoSegura(url: string | null) {
+  const u = urlImagenSegura(url)
+  if (!u) return null
+  try {
+    const r = await fetch(u, { signal: AbortSignal.timeout(4000) })
+    if (!r.ok) return null
+    const tipo = (r.headers.get('content-type') || '').split(';')[0]
+    if (tipo !== 'image/jpeg' && tipo !== 'image/png') return null
+    const buf = await r.arrayBuffer()
+    if (buf.byteLength > 4_000_000) return null
+    return `data:${tipo};base64,${aBase64(buf)}`
+  } catch {
+    return null
+  }
+}
+
+export default async function Image({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
+  let inv: any = null
+  if (UUID.test(token)) {
+    try {
+      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+      const { data } = await supabase.rpc('get_invitado_boda_por_token', { p_token: token })
+      inv = Array.isArray(data) ? data[0] : data
+    } catch { inv = null }
+  }
+
+  const [fAllura, fCormorant] = await Promise.all([allura, cormorant])
+  const novia = String(inv?.nombre_novia || '').slice(0, 24)
+  const novio = String(inv?.nombre_novio || '').slice(0, 24)
+  const foto = await fotoSegura(inv?.portada_url || null)
+  const fecha = fechaPuntos(inv?.fecha_boda, 'es')
+  const invitado = String(inv?.nombre || '').trim().slice(0, 40)
+  const iniciales = [novia[0], novio[0]].filter(Boolean).join(' & ').toUpperCase()
+  const largo = Math.max(novia.length, novio.length)
+  const tamNombres = largo <= 7 ? 124 : largo <= 10 ? 104 : largo <= 14 ? 84 : 66
+  const ROSA = '#AD857C'
+
+  return new ImageResponse(
+    (
+      <div style={{ width: 720, height: 378, display: 'flex' }}>
+      <div style={{ width: 1200, height: 630, display: 'flex', transform: `translate(${-600 * (1 - ESC)}px, ${-315 * (1 - ESC)}px) scale(${ESC})`, background: 'linear-gradient(135deg, #FAF6F0 0%, #F5ECE5 60%, #F0E3DB 100%)', fontFamily: 'Cormorant' }}>
+        {/* Foto en arco */}
+        <div style={{ display: 'flex', position: 'relative', width: 400, height: 520, margin: 'auto 0 auto 96px' }}>
+          <div style={{ position: 'absolute', left: -16, top: -16, width: 432, height: 552, borderRadius: '216px 216px 24px 24px', border: '2px solid rgba(173,133,124,0.42)', display: 'flex' }} />
+          <div style={{ display: 'flex', width: 400, height: 520, borderRadius: '200px 200px 18px 18px', overflow: 'hidden', background: '#E9D8CE' }}>
+            {foto
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={foto} width={400} height={520} style={{ width: 400, height: 520, objectFit: 'cover', objectPosition: POSICION[inv?.portada_posicion || 'center'] || POSICION.center }} />
+              : <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', fontFamily: 'Allura', fontSize: 120, color: ROSA }}>{iniciales || '♡'}</div>}
+          </div>
+        </div>
+
+        {/* Nombres y fecha */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'center', justifyContent: 'center', padding: '0 70px 0 40px' }}>
+          <div style={{ display: 'flex', fontSize: 26, letterSpacing: 8, color: ROSA }}>NOS CASAMOS</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 18, fontFamily: 'Allura', color: ROSA, lineHeight: 1 }}>
+            <div style={{ display: 'flex', fontSize: tamNombres }}>{novia || 'Nuestra boda'}</div>
+            {novio && <div style={{ display: 'flex', fontFamily: 'Cormorant', fontSize: 44, color: '#C8A69B', margin: '-4px 0 -2px' }}>&amp;</div>}
+            {novio && <div style={{ display: 'flex', fontSize: tamNombres }}>{novio}</div>}
+          </div>
+          {fecha && <div style={{ display: 'flex', fontSize: 25, letterSpacing: 5, color: '#6E5A55', marginTop: 30 }}>{fecha}</div>}
+          {invitado && (
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: 26, fontSize: 38, fontFamily: 'Allura', color: ROSA }}>
+              <div style={{ display: 'flex', fontFamily: 'Cormorant', fontSize: 22, letterSpacing: 4, color: '#9C8780', marginRight: 14 }}>PARA</div>
+              {invitado}
+            </div>
+          )}
+        </div>
+      </div>
+      </div>
+    ),
+    {
+      ...size,
+      fonts: [
+        { name: 'Allura', data: fAllura, style: 'normal', weight: 400 },
+        { name: 'Cormorant', data: fCormorant, style: 'normal', weight: 500 },
+      ],
+    }
+  )
+}
