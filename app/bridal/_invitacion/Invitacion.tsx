@@ -120,18 +120,19 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const limite = d.fecha_limite_rsvp as string | undefined
   const limitePasado = !!limite && new Date(limite + 'T23:59:59') < new Date()
 
-  // Botón flotante "Confirmar asistencia": aparece al bajar y se esconde
-  // cuando la sección de confirmación ya está a la vista.
+  // Botón flotante "Confirmar asistencia": aparece al bajar y se esconde en cuanto la
+  // confirmación entra a la vista; ya que la pasaste, no vuelve a estorbar.
   useEffect(() => {
     if (!sobreAbierto) return
-    const el = rsvpRef.current
-    let visible = false
-    const calc = () => setFlota(window.scrollY > 520 && !visible)
-    const io = el ? new IntersectionObserver(([e]) => { visible = e.isIntersecting; calc() }, { threshold: 0.12 }) : null
-    if (el && io) io.observe(el)
+    const calc = () => {
+      const r = rsvpRef.current?.getBoundingClientRect()
+      const todaviaNoLlega = r ? r.top > window.innerHeight : false
+      setFlota(window.scrollY > 520 && todaviaNoLlega)
+    }
     window.addEventListener('scroll', calc, { passive: true })
+    window.addEventListener('resize', calc)
     calc()
-    return () => { io?.disconnect(); window.removeEventListener('scroll', calc) }
+    return () => { window.removeEventListener('scroll', calc); window.removeEventListener('resize', calc) }
   }, [sobreAbierto])
 
   // Las secciones aparecen suavemente al llegar a ellas.
@@ -581,16 +582,16 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       <footer style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
         <div className="cw-aparece" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', borderRadius: 26, overflow: 'hidden', border: `1px solid ${p.linea}`, background: 'linear-gradient(180deg, rgba(255,255,255,.78), rgba(250,236,231,.78))', boxShadow: '0 30px 50px -34px rgba(90,60,55,.45)', padding: '60px 24px 180px' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: 10, borderRadius: 18, border: `1px solid ${p.linea}`, pointerEvents: 'none' }} />
-          {p.botanicos && <div style={{ position: 'absolute', top: -20, left: -34, opacity: .92, pointerEvents: 'none' }}><RamaEucalipto ancho={86} rotar={125} hojas={6} /></div>}
-          {p.botanicos && <div style={{ position: 'absolute', top: -16, right: -30, opacity: .88, pointerEvents: 'none' }}><RamaEucalipto ancho={78} rotar={-125} espejo hojas={6} /></div>}
+          {p.botanicos && <div style={{ position: 'absolute', top: -20, left: -34, opacity: .92, pointerEvents: 'none' }}><RamaEucalipto ancho={66} rotar={125} hojas={5} /></div>}
+          {p.botanicos && <div style={{ position: 'absolute', top: -16, right: -30, opacity: .88, pointerEvents: 'none' }}><RamaEucalipto ancho={60} rotar={-125} espejo hojas={5} /></div>}
           <div style={{ position: 'relative' }}>
             <div style={etiqueta}>{t('Con todo nuestro amor', 'With all our love')}</div>
             <div style={{ fontFamily: p.script, fontSize: `calc(clamp(38px, 11.4vw, 58px) * ${factorNombres})`, color: p.acento, lineHeight: 1.1, marginTop: 14, whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
               {d.nombre_novia}<span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.4em', color: p.acento2, margin: '0 .32em', verticalAlign: '.34em' }}>&amp;</span>{d.nombre_novio}
             </div>
-            <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em' }}>{t('Gracias por acompañarnos', 'Thank you for celebrating with us')}</div>
-            <div style={{ ...etiqueta, color: p.txt3, marginTop: 8, letterSpacing: '.26em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
-            {d.frase_cierre && <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 21, marginTop: 28 }}>{d.frase_cierre}</p>}
+            {/* Un solo agradecimiento (el que la pareja escribe como frase de cierre) y la fecha */}
+            <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 22, lineHeight: 1.4, margin: '22px auto 0', maxWidth: 340, textWrap: 'balance' } as React.CSSProperties}>{d.frase_cierre || t('Gracias por acompañarnos', 'Thank you for celebrating with us')}</p>
+            <div style={{ ...etiqueta, color: p.txt3, marginTop: 20, letterSpacing: '.26em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
           </div>
           {p.botanicos && <div style={{ position: 'absolute', left: '50%', bottom: -24, marginLeft: -175, pointerEvents: 'none' }}><Ramillete ancho={350} /></div>}
         </div>
@@ -740,7 +741,7 @@ function Estilos({ p }: { p: Paleta }) {
       .cw-campo { display: block; width: 100%; border: 0; border-bottom: 1px solid ${p.linea}; background: transparent; padding: 10px 2px; font-size: 19px; outline: none; border-radius: 0; margin-top: 4px; }
       .cw-campo:focus { border-bottom-color: ${p.acento}; }
       .cw-enlace { all: unset; cursor: pointer; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; border-bottom: 1px solid currentColor; padding-bottom: 2px; }
-      .cw-flota { position: fixed; z-index: 30; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); border: 0; cursor: pointer; font-size: 11px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; padding: 15px 28px; border-radius: 999px; box-shadow: 0 14px 28px -10px rgba(90,60,55,.55); animation: cw-sube .5s ease both; }
+      .cw-flota { white-space: nowrap; position: fixed; z-index: 30; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); border: 0; cursor: pointer; font-size: 11px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; padding: 15px 28px; border-radius: 999px; box-shadow: 0 14px 28px -10px rgba(90,60,55,.55); animation: cw-sube .5s ease both; }
       @keyframes cw-sube { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
       .cw-visor { position: fixed; inset: 0; z-index: 90; background: rgba(40,28,26,.88); display: flex; align-items: center; justify-content: center; padding: 18px; cursor: zoom-out; }
       .cw-visor img { max-width: 100%; max-height: 100%; border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
