@@ -4,12 +4,12 @@ import { fechaLarga } from '../../_invitacion/tema'
 
 // Lo que ven WhatsApp, iMessage y compañía cuando alguien pega el link de una
 // invitación: título, descripción y (en opengraph-image.tsx) una tarjeta con la
-// foto y los nombres de la pareja. Es el mismo preview para todos los invitados:
-// habla del evento, no de la persona.
+// foto y los nombres de la pareja. Cada link es personal, así que además del
+// evento se saluda al invitado por su nombre.
 //
 // Seguridad: se lee con la MISMA función segura que usa la invitación
-// (get_invitado_boda_por_token) y solo se muestran datos del evento (pareja, fecha,
-// foto), nunca el nombre de un invitado. Las invitaciones nunca se indexan.
+// (get_invitado_boda_por_token) y solo se muestra lo que el invitado ya ve en
+// su invitación. Las invitaciones nunca se indexan en buscadores.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -32,8 +32,8 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
     const fechaCruda = fechaLarga(inv.fecha_boda, 'es')
     const fecha = fechaCruda ? fechaCruda.charAt(0).toUpperCase() + fechaCruda.slice(1) : ''
     const title = pareja ? `${pareja} · Nuestra boda` : GENERICO.title as string
-    // El preview es del EVENTO (igual para todos los invitados): no lleva nombres de invitados.
-    const description = [fecha, 'Abre la invitación para ver todos los detalles'].filter(Boolean).join(' · ')
+    const nombre = String(inv.nombre || '').trim().slice(0, 60)
+    const description = [fecha, nombre ? `Invitación personal para ${nombre}` : 'Invitación personal'].filter(Boolean).join(' · ')
 
     return {
       title,
