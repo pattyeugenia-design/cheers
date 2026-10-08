@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { createClient } from '@supabase/supabase-js'
 import { fechaPuntos, urlImagenSegura } from '../../_invitacion/tema'
+import { leerEncuadreTexto } from '../../_invitacion/encuadre'
 
 export const runtime = 'edge'
 export const alt = 'Invitación de boda — Cheers Bridal'
@@ -16,7 +17,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const allura = fetch(new URL('./allura.woff', import.meta.url)).then(r => r.arrayBuffer())
 const cormorant = fetch(new URL('./cormorant.woff', import.meta.url)).then(r => r.arrayBuffer())
 
-const POSICION: Record<string, string> = { top: '50% 6%', center: '50% 28%', bottom: '50% 100%' }
 
 function aBase64(buf: ArrayBuffer) {
   const bytes = new Uint8Array(buf)
@@ -58,6 +58,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
   const novia = String(inv?.nombre_novia || '').slice(0, 24)
   const novio = String(inv?.nombre_novio || '').slice(0, 24)
   const foto = await fotoSegura(inv?.portada_url || null)
+  const enc = leerEncuadreTexto(inv?.portada_posicion)
   const fecha = fechaPuntos(inv?.fecha_boda, 'es')
   const invitado = String(inv?.nombre || '').trim().slice(0, 40)
   const iniciales = [novia[0], novio[0]].filter(Boolean).join(' & ').toUpperCase()
@@ -74,8 +75,11 @@ export default async function Image({ params }: { params: Promise<{ token: strin
           <div style={{ position: 'absolute', left: -16, top: -16, width: 432, height: 552, borderRadius: '216px 216px 24px 24px', border: '2px solid rgba(173,133,124,0.42)', display: 'flex' }} />
           <div style={{ display: 'flex', width: 400, height: 520, borderRadius: '200px 200px 18px 18px', overflow: 'hidden', background: '#E9D8CE' }}>
             {foto
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={foto} width={400} height={520} style={{ width: 400, height: 520, objectFit: 'cover', objectPosition: POSICION[inv?.portada_posicion || 'center'] || POSICION.center }} />
+              ? (
+                // El mismo encuadre (posición y acercamiento) que la pareja acomodó para su portada
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={foto} style={{ position: 'absolute', width: 400 * enc.z, height: 520 * enc.z, left: (400 - 400 * enc.z) * enc.x, top: (520 - 520 * enc.z) * enc.y, objectFit: 'cover', objectPosition: `${enc.x * 100}% ${enc.y * 100}%` }} />
+              )
               : <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', fontFamily: 'Allura', fontSize: 120, color: ROSA }}>{iniciales || '♡'}</div>}
           </div>
         </div>

@@ -12,11 +12,12 @@ import '@fontsource/jost/latin-300.css'
 import '@fontsource/jost/latin-400.css'
 import '@fontsource/jost/latin-500.css'
 import { useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
 import { DefsBotanicos, Peonia, RamaEucalipto, Ramillete } from './Botanicos'
 import { IconoItinerario } from './iconos'
 import Sobre from './Sobre'
 import { enlacesCalendario } from './calendario'
+import { FotoEncuadrada } from './FotoEncuadrada'
+import { leerEncuadreTexto } from './encuadre'
 import { paletaDe, urlEnlaceSegura, urlImagenSegura, fechaCorta, fechaLarga, fechaPuntos, horaBonita, hora12, partirHora, type Paleta } from './tema'
 
 export const MENU_OPCIONES = ['res', 'pollo', 'vegetariano', 'vegano'] as const
@@ -37,13 +38,6 @@ export type Control = {
   }
   firmas: { lista: any[]; nombre: string; setNombre: (v: string) => void; mensaje: string; setMensaje: (v: string) => void; enviada: boolean; enviando: boolean; enviar: () => void }
   fotos: { lista: any[]; subiendo: boolean; recienSubida: boolean; subir: (f: File) => void }
-}
-
-// Sin zoom: la foto se ve completa (solo se recorta lo que sobra a los lados).
-// "Centro" apunta un poco arriba del medio, que es donde suelen estar las caras.
-const POSICION_FOTO: Record<string, string> = { top: '50% 0%', center: '50% 28%', bottom: '50% 100%' }
-function fotoPos(pos?: string | null) {
-  return { objectFit: 'cover' as const, objectPosition: POSICION_FOTO[pos || 'center'] || POSICION_FOTO.center }
 }
 
 function Sec({ p, id, children, innerRef, ancho, arriba, abajo }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number }) {
@@ -106,6 +100,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const ultimoItem = Array.isArray(d.itinerario) && d.itinerario.length ? d.itinerario[d.itinerario.length - 1] : null
   const cal = d.fecha_boda ? enlacesCalendario(nombreBoda || 'Boda', d.fecha_boda, d.hora_boda, lugar1 || null, String(d.slug || d.token || nombreBoda || 'boda'), ultimoItem ? partirHora(ultimoItem.hora).fin : null) : null
   const portada = urlImagenSegura(d.portada_url)
+  const encPortada = leerEncuadreTexto(d.portada_posicion)
   const historia: any[] = (Array.isArray(d.historia) ? d.historia : []).filter((h: any) => urlImagenSegura(h?.url))
   const itinerario: any[] = Array.isArray(d.itinerario) ? d.itinerario : []
   const colores: any[] = Array.isArray(d.vestimenta_colores) ? d.vestimenta_colores : []
@@ -197,10 +192,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           <div aria-hidden="true" style={{ position: 'absolute', inset: -11, border: `1px solid ${p.linea}`, borderRadius: '999px 999px 22px 22px' }} />
           <div style={{ position: 'relative', aspectRatio: '3/4', borderRadius: '999px 999px 18px 18px', overflow: 'hidden', background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,55,.45)' }}>
             {portada
-              ? (portada.includes('.supabase.co')
-                  ? <Image src={portada} alt="" fill sizes="(max-width:600px) 74vw, 320px" priority style={fotoPos(d.portada_posicion)} />
-                  // eslint-disable-next-line @next/next/no-img-element
-                  : <img src={portada} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', ...fotoPos(d.portada_posicion) }} />)
+              ? <FotoEncuadrada src={portada} enc={encPortada} optimizada={portada.includes('.supabase.co')} prioridad sizes={`(max-width:600px) ${Math.round(74 * encPortada.z)}vw, ${Math.round(320 * encPortada.z)}px`} />
               : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: p.script, fontSize: 58, color: p.acento }}>{iniciales(d)}</div>}
           </div>
           {p.botanicos && <div style={{ position: 'absolute', right: -44, bottom: -46, pointerEvents: 'none' }}><Ramillete ancho={210} /></div>}
@@ -290,8 +282,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             {historia.map((h, i) => (
               <figure key={i} className="cw-polaroid" style={{ margin: 0, transform: `rotate(${[-1.8, 1.4, 1.1, -1.5, -1, 1.7][i % 6]}deg)`, marginTop: i % 2 ? 26 : 0 }}>
                 <button type="button" onClick={() => setVisor(urlImagenSegura(h.url))} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%' }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={urlImagenSegura(h.url) || ''} alt={h.pie || ''} loading="lazy" decoding="async" style={{ display: 'block', width: '100%', aspectRatio: '4/5', objectFit: 'cover', background: p.acento2 }} />
+                  <FotoEncuadrada src={urlImagenSegura(h.url) || ''} alt={h.pie || ''} enc={h} aspecto="4/5" fondo={p.acento2} />
                 </button>
                 {h.pie && <figcaption style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15, color: p.txt2, padding: '9px 4px 2px', lineHeight: 1.25 }}>{h.pie}</figcaption>}
               </figure>
@@ -372,8 +363,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <Sec p={p} ancho={460}>
           <div style={etiqueta}>{t('Para que luzcas increíble', 'To look your best')}</div>
           <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Looking for hair & makeup?')}</h2>
-          <p style={{ ...parrafo, marginTop: 14 }}>{t('Escríbenos y con gusto te compartimos el contacto de quien nos arregla, para tu cita de maquillaje y/o peinado.', 'Message us and we will gladly share the contact of who is doing our hair and makeup, to book your appointment.')}</p>
-          <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</Boton></div>
+          <p style={{ ...parrafo, marginTop: 14 }}>{t('Te recomendamos a quien nos arregla a nosotros. Escríbele directo por WhatsApp para tu cita de maquillaje y/o peinado.', 'We recommend who is doing our hair and makeup. Message her directly on WhatsApp to book your appointment.')}</p>
+          <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{t('Escribir por WhatsApp', 'Message on WhatsApp')}</Boton></div>
         </Sec>
       )}
 
@@ -596,11 +587,11 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           {p.botanicos && <div style={{ position: 'absolute', left: '50%', bottom: -24, marginLeft: -175, pointerEvents: 'none' }}><Ramillete ancho={350} /></div>}
         </div>
         <div style={{ marginTop: 40 }}><Orn p={p} /></div>
-        <a href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 18, textDecoration: 'none' }}>
-          <span style={{ display: 'block', fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.24em', textTransform: 'uppercase', color: p.txt3 }}>
-            {t('Invitación creada por', 'Invitation created by')} <span style={{ color: p.acento }}>Cheers Bridal</span>
+        <a href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 20, textDecoration: 'none', opacity: 0.75 }}>
+          <span style={{ display: 'block', fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>
+            {t('Invitación creada por Cheers Bridal', 'Invitation created by Cheers Bridal')}
           </span>
-          <span style={{ display: 'block', fontFamily: p.script, fontSize: 30, color: p.acento, lineHeight: 1.1, marginTop: 6 }}>Patty Eugenia</span>
+          <span style={{ display: 'block', fontFamily: p.serif, fontStyle: 'italic', fontSize: 14, color: p.txt3, marginTop: 3 }}>{t('de Patty Eugenia', 'by Patty Eugenia')}</span>
         </a>
       </footer>
 

@@ -6,6 +6,9 @@ import Image from 'next/image'
 import { supabase } from '../../supabase'
 import { getLang } from '../../i18n'
 import * as XLSX from 'xlsx'
+import EditorEncuadre from '../_invitacion/EditorEncuadre'
+import { FotoEncuadrada } from '../_invitacion/FotoEncuadrada'
+import { leerEncuadreTexto, encuadreATexto, redondear, type Encuadre } from '../_invitacion/encuadre'
 
 declare global { interface Window { google: any } }
 
@@ -96,14 +99,13 @@ function fmtFechaBonita(fecha: string | null | undefined, lang: string) {
   return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-// Con solo object-fit:cover + object-position, muchas fotos (sobre todo horizontales
-// en marcos casi cuadrados) no tienen margen real que mover — el "arriba/centro/abajo"
-// se ve como que no hace nada. Se acerca la foto un 15% extra (zoom) y el origen del
-// zoom se ancla al lado elegido, así siempre hay de dónde recortar en cualquier marco.
+// Miniaturas de las fotos de la portada: leen el encuadre guardado (posición y acercamiento) y
+// también las posiciones de antes (arriba / centro / abajo).
 const ORIGEN_POR_POSICION: Record<string, string> = { top: '50% 0%', center: '50% 50%', bottom: '50% 100%' }
 function estiloFotoConPosicion(pos: string | null | undefined) {
-  const p = pos || 'center'
-  return { objectFit: 'cover' as const, objectPosition: p, transform: 'scale(1.15)', transformOrigin: ORIGEN_POR_POSICION[p] || '50% 50%' }
+  const e = leerEncuadreTexto(pos)
+  const origen = `${e.x * 100}% ${e.y * 100}%`
+  return { objectFit: 'cover' as const, objectPosition: origen, transform: `scale(${e.z})`, transformOrigin: origen }
 }
 
 // Íconos automáticos por palabra clave — el organizador nunca elige un ícono a
@@ -308,6 +310,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [fechaLimiteInput, setFechaLimiteInput] = useState('')
   const [historiaItems, setHistoriaItems] = useState<any[]>([])
   const [subiendoMedia, setSubiendoMedia] = useState<string | null>(null)
+  const [editorEnc, setEditorEnc] = useState<null | { tipo: 'historia'; i: number } | { tipo: 'portada' }>(null)
   const [personalGuardado, setPersonalGuardado] = useState(false)
   const [mesasRegalosInput, setMesasRegalosInput] = useState('')
   const [ayudaWhatsappInput, setAyudaWhatsappInput] = useState('')
@@ -842,6 +845,23 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
     setHistoriaItems(nuevos)
     setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
+  }
+
+  // Acomodar una foto dentro de su marco (arrastrar y acercar). Se guarda la posición y el acercamiento.
+  async function guardarEncuadreHistoria(i: number, enc: Encuadre) {
+    const e = redondear(enc)
+    const nuevos = historiaItems.map((h, j) => (j === i ? { ...h, x: e.x, y: e.y, z: e.z } : h))
+    const { error } = await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
+    if (error) { alert(lang === 'en' ? "Couldn't save the position." : 'No se pudo guardar el acomodo.'); return }
+    setHistoriaItems(nuevos)
+    setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
+  }
+
+  async function guardarEncuadrePortada(enc: Encuadre) {
+    const texto = encuadreATexto(enc)
+    const { error } = await supabase.from('proyectos_boda').update({ portada_posicion: texto }).eq('id', id)
+    if (error) { alert(lang === 'en' ? "Couldn't save the position." : 'No se pudo guardar el acomodo.'); return }
+    setProyecto((prev: any) => ({ ...prev, portada_posicion: texto }))
   }
 
   async function guardarPieHistoria(i: number, pie: string) {
@@ -1432,8 +1452,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 {historiaItems.map((h, i) => (
                   <div key={h.ruta || i}>
                     <div style={{ position: 'relative' as const }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={h.url} alt="" style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover' as const, borderRadius: 8, display: 'block' }} />
+                      <FotoEncuadrada src={h.url} enc={h} aspecto="4/5" radio={8} fondo="rgba(183,110,121,.08)" />
+                      <button onClick={() => setEditorEnc({ tipo: 'historia', i })} style={{ position: 'absolute' as const, left: 4, bottom: 4, border: 'none', background: 'rgba(255,255,255,.92)', color: '#3D2B2E', fontSize: 10, fontWeight: 800, padding: '4px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Position' : 'Acomodar'}</button>
                       <button onClick={() => quitarHistoria(i)} aria-label={lang === 'en' ? 'Remove photo' : 'Quitar foto'} style={{ position: 'absolute' as const, top: 4, right: 4, border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', lineHeight: 1 }}>✕</button>
                     </div>
                     <input defaultValue={h.pie || ''} maxLength={80} onBlur={e => guardarPieHistoria(i, e.target.value)} placeholder={lang === 'en' ? 'Caption' : 'Pie de foto'} style={{ ...inputStyle, width: '100%', fontSize: 11, padding: '6px 8px', marginTop: 4, marginBottom: 0 }} />
@@ -1447,6 +1467,20 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 )}
               </div>
 
+              {editorEnc?.tipo === 'historia' && historiaItems[editorEnc.i] && (
+                <EditorEncuadre
+                  url={historiaItems[editorEnc.i].url} aspecto="4/5" inicial={historiaItems[editorEnc.i]} lang={lang}
+                  titulo={lang === 'en' ? 'Position this photo' : 'Acomoda esta foto'}
+                  onGuardar={e => { guardarEncuadreHistoria(editorEnc.i, e); setEditorEnc(null) }} onCancelar={() => setEditorEnc(null)}
+                />
+              )}
+              {editorEnc?.tipo === 'portada' && proyecto?.portada_url && (
+                <EditorEncuadre
+                  url={proyecto.portada_url} aspecto="3/4" arco inicial={leerEncuadreTexto(proyecto.portada_posicion)} lang={lang}
+                  titulo={lang === 'en' ? 'Position your cover photo' : 'Acomoda tu foto de portada'}
+                  onGuardar={e => { guardarEncuadrePortada(e); setEditorEnc(null) }} onCancelar={() => setEditorEnc(null)}
+                />
+              )}
               <button onClick={guardarPersonalizacion} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: F, marginTop: 4 }}>{personalGuardado ? (lang === 'en' ? 'Saved ✓' : 'Guardado ✓') : (lang === 'en' ? 'Save' : 'Guardar')}</button>
             </div>
 
@@ -1577,7 +1611,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
               <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
                 <div onClick={() => portadaInputRef.current?.click()} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', background: 'rgba(183,110,121,.08)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {proyecto?.portada_url ? (
-                    <Image src={proyecto.portada_url} alt="portada" fill sizes="80px" style={estiloFotoConPosicion(proyecto.portada_posicion)} />
+                    <FotoEncuadrada src={proyecto.portada_url} alt="portada" enc={leerEncuadreTexto(proyecto.portada_posicion)} optimizada sizes="80px" />
                   ) : (
                     <span style={{ fontSize: 10, color: 'rgba(61,43,46,.4)', fontWeight: 700, textAlign: 'center' as const, padding: 4 }}>{subiendoPortada ? '...' : (lang === 'en' ? 'Add photo' : 'Agregar foto')}</span>
                   )}
@@ -1586,6 +1620,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
                     <button onClick={() => portadaInputRef.current?.click()} style={{ border: 'none', background: 'rgba(183,110,121,.1)', color: '#3D2B2E', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: F, textAlign: 'left' as const }}>
                       {lang === 'en' ? 'Change photo' : 'Cambiar foto'}
+                    </button>
+                    <button onClick={() => setEditorEnc({ tipo: 'portada' })} style={{ border: 'none', background: 'linear-gradient(135deg,#C9A876,#C98A93)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: F, textAlign: 'left' as const }}>
+                      {lang === 'en' ? 'Position photo' : 'Acomodar foto'}
                     </button>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {[{ v: 'top', l: lang === 'en' ? 'Top' : 'Arriba' }, { v: 'center', l: lang === 'en' ? 'Center' : 'Centro' }, { v: 'bottom', l: lang === 'en' ? 'Bottom' : 'Abajo' }].map(p => (
