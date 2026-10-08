@@ -220,6 +220,11 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
               ? t('Guardamos un lugar para ti y para tu acompañante.', 'We saved seats for you and your guest.')
               : t(`Guardamos un lugar para ti y hasta ${permitidos} personas más.`, `We saved a seat for you and up to ${permitidos} more guests.`)}
         </p>
+        {d.solo_adultos && (
+          <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
+            {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', 'It will be an evening just for adults. Thank you for being with us and for helping us take care of this detail.')}
+          </p>
+        )}
         <div style={{ marginTop: 24 }}><Boton p={p} relleno onClick={() => irA('confirmar')}>{r.enviado || d.ya_respondio ? t('Ver mi respuesta', 'See my reply') : t('Confirmar asistencia', 'RSVP')}</Boton></div>
         {limite && <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginTop: 16 }}>{t('Responde antes del', 'Reply by')} {fechaCorta(limite, lang)}</div>}
       </Sec>
@@ -309,25 +314,23 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         )}
 
         {itinerario.length > 0 && (
-          <div style={{ marginTop: 44, textAlign: 'left', position: 'relative' }}>
-            <div style={{ ...etiqueta, textAlign: 'center', marginBottom: 26 }}>{t('Así será nuestro día', 'How our day will unfold')}</div>
-            <div aria-hidden="true" style={{ position: 'absolute', left: 112, top: 56, bottom: 14, width: 1, background: p.linea }} />
-            {itinerario.map((it, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '98px 30px 1fr', alignItems: 'start', marginBottom: i === itinerario.length - 1 ? 0 : 28, position: 'relative' }}>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: p.serif, fontSize: 21, fontWeight: 500, color: p.acento, lineHeight: '26px', fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>{hora12(partirHora(it.hora).ini)}</div>
-                  {partirHora(it.hora).fin && <div style={{ fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: p.txt3, marginTop: 3 }}>{t('hasta', 'until')} {hora12(partirHora(it.hora).fin)}</div>}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 7.5 }}><span style={{ width: 11, height: 11, borderRadius: '50%', background: p.papel, border: `1.5px solid ${p.acento}`, boxSizing: 'border-box' }} /></div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <span style={{ color: p.acento, marginTop: 0, flexShrink: 0 }}><IconoItinerario emoji={it.icono} titulo={it.titulo} /></span>
-                  <div>
-                    <div style={{ fontFamily: p.serif, fontSize: 22, color: p.txt, lineHeight: '26px' }}>{it.titulo}</div>
-                    {it.lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.txt3, marginTop: 3 }}>{it.lugar}</div>}
+          <div style={{ marginTop: 46 }}>
+            <div style={{ ...etiqueta, marginBottom: 30 }}>{t('Así será nuestro día', 'How our day will unfold')}</div>
+            {itinerario.map((it, i) => {
+              const h = partirHora(it.hora)
+              return (
+                <div key={i}>
+                  <div style={{ width: 54, height: 54, borderRadius: '50%', border: `1px solid ${p.linea}`, background: p.card, color: p.acento, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                    <IconoItinerario emoji={it.icono} titulo={it.titulo} tam={27} />
                   </div>
+                  <div style={{ fontFamily: p.serif, fontSize: 28, fontWeight: 500, color: p.acento, marginTop: 14, lineHeight: 1.1, fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>{hora12(h.ini)}</div>
+                  {h.fin && <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginTop: 5 }}>{t('hasta', 'until')} {hora12(h.fin)}</div>}
+                  <div style={{ fontFamily: p.serif, fontSize: 25, color: p.txt, marginTop: 12, lineHeight: 1.2 }}>{it.titulo}</div>
+                  {it.lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 5, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>{it.lugar}</div>}
+                  {i < itinerario.length - 1 && <div aria-hidden="true" style={{ width: 1, height: 40, background: p.linea, margin: '26px auto' }} />}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </Sec>
@@ -360,12 +363,6 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           {d.vestimenta_tipo && <div style={{ fontFamily: p.script, fontSize: 'clamp(54px,15vw,68px)', color: p.acento, lineHeight: 1.05, marginTop: 6 }}>{d.vestimenta_tipo}</div>}
           {colores.length > 0 && <CirculosColor colores={colores} p={p} />}
           {d.vestimenta_nota && <p style={{ ...parrafo, fontStyle: 'italic', marginTop: 14, fontSize: 18 }}>{d.vestimenta_nota}</p>}
-          {d.solo_adultos && (
-            <div style={{ marginTop: 30, padding: '18px 20px', border: `1px solid ${p.linea}`, borderRadius: 14, background: p.card }}>
-              <div style={{ ...etiqueta, color: p.txt3 }}>{t('Una nota con cariño', 'A note with love')}</div>
-              <p style={{ ...parrafo, fontSize: 17, marginTop: 8 }}>{t('Adoramos a los más pequeños, sin embargo este evento está destinado solo para adultos. ¡Gracias por entenderlo!', 'We love the little ones, but this event is adults-only. Thank you for understanding!')}</p>
-            </div>
-          )}
         </Sec>
       )}
 
