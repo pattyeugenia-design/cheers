@@ -222,7 +222,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           <div className="cw-std-cuerpo">
             <div className="cw-std-foto">
               <div aria-hidden="true" className="cw-std-marco" style={{ border: `1px solid ${p.linea}` }} />
-              <div className="cw-std-arco" style={{ background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,50,.55)' }}>
+              <div className="cw-std-arco cw-foto-vida" style={{ background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,50,.55)' }}>
                 {portada
                   ? <FotoEncuadrada src={portada} enc={encPortada} optimizada={portada.includes('.supabase.co')} prioridad sizes={`${Math.round(380 * encPortada.z)}px`} />
                   : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: p.script, fontSize: 58, color: p.acento }}>{iniciales(d)}</div>}
@@ -315,7 +315,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
         <div style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: -11, border: `1px solid ${p.linea}`, borderRadius: '999px 999px 22px 22px' }} />
-          <div style={{ position: 'relative', aspectRatio: '3/4', borderRadius: '999px 999px 18px 18px', overflow: 'hidden', background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,55,.45)' }}>
+          <div className="cw-foto-vida" style={{ position: 'relative', aspectRatio: '3/4', borderRadius: '999px 999px 18px 18px', overflow: 'hidden', background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,55,.45)' }}>
             {portada
               ? <FotoEncuadrada src={portada} enc={encPortada} optimizada={portada.includes('.supabase.co')} prioridad sizes={`(max-width:600px) ${Math.round(74 * encPortada.z)}vw, ${Math.round(320 * encPortada.z)}px`} />
               : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: p.script, fontSize: 58, color: p.acento }}>{iniciales(d)}</div>}
@@ -432,7 +432,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             {historia.map((h, i) => {
               const ar = h.w && h.h ? aspectoFoto(h.w, h.h) : (medidas[urlImagenSegura(h.url) || ''] || 0.8)
               return (
-                <figure key={i} className="cw-polaroid" style={{ margin: 0, width: `calc(104px * ${ar} + 12px)`, transform: `rotate(${[-1.8, 1.4, 1.1, -1.5, -1, 1.7][i % 6]}deg)` }}>
+                <figure key={i} className="cw-polaroid" style={{ margin: 0, width: `calc(104px * ${ar} + 12px)`, ['--giro' as string]: `${[-1.8, 1.4, 1.1, -1.5, -1, 1.7][i % 6]}deg` } as React.CSSProperties}>
                   <button type="button" onClick={() => setVisor(urlImagenSegura(h.url))} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%' }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
                     <FotoEncuadrada src={urlImagenSegura(h.url) || ''} alt={h.pie || ''} enc={h} aspecto={String(ar)} fondo={p.acento2} />
                   </button>
@@ -687,7 +687,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             {ctl.fotos.lista.map((f, i) => {
               const u = urlImagenSegura(f.url)
               return u ? (
-                <button key={i} type="button" onClick={() => setVisor(u)} style={{ all: 'unset', cursor: 'zoom-in', display: 'block' }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
+                <button key={i} type="button" className="cw-foto-mini" onClick={() => setVisor(u)} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', borderRadius: 6, overflow: 'hidden' }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={u} alt="" loading="lazy" decoding="async" style={{ display: 'block', width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6 }} />
                 </button>
@@ -934,7 +934,17 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-btn { transition: background .25s ease, color .25s ease, transform .25s ease; }
       .cw-btn:hover:not(:disabled) { transform: translateY(-1px); }
       .cw-chip { display: inline-block; text-decoration: none; font-size: 10.5px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; padding: 9px 16px; border-radius: 999px; }
-      .cw-polaroid { background: #fff; padding: 6px 6px 8px; box-sizing: border-box; box-shadow: 0 14px 26px -14px rgba(90,60,55,.45), 0 1px 3px rgba(0,0,0,.08); }
+      .cw-polaroid { background: #fff; padding: 6px 6px 8px; box-sizing: border-box; box-shadow: 0 14px 26px -14px rgba(90,60,55,.45), 0 1px 3px rgba(0,0,0,.08); position: relative; transform: rotate(var(--giro, 0deg)); transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease; }
+      .cw-polaroid img { transition: transform .9s ease; }
+      /* Fotos vivas: al pasar el cursor se enderezan y crecen (solo con mouse; en celular se quedan quietas) */
+      @media (hover: hover) and (pointer: fine) {
+        .cw-polaroid:hover { transform: rotate(0deg) scale(1.16) translateY(-6px); z-index: 5; box-shadow: 0 26px 40px -16px rgba(90,60,55,.55), 0 2px 6px rgba(0,0,0,.1); }
+        .cw-polaroid:hover img { transform: scale(1.06); }
+        .cw-foto-vida img { transition: transform 1.2s ease; }
+        .cw-foto-vida:hover img { transform: scale(1.06); }
+        .cw-foto-mini img { transition: transform .6s ease; }
+        .cw-foto-mini:hover img { transform: scale(1.08); }
+      }
       .cw-opcion { cursor: pointer; padding: 13px 6px; border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; transition: all .2s ease; }
       .cw-num { cursor: pointer; width: 44px; height: 44px; border-radius: 50%; font-size: 21px; transition: all .2s ease; }
       .cw-campo { display: block; width: 100%; border: 0; border-bottom: 1px solid ${p.linea}; background: transparent; padding: 10px 2px; font-size: 19px; outline: none; border-radius: 0; margin-top: 4px; }
@@ -973,6 +983,9 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-sobre-capa.cw-abriendo { animation-delay: .3s; animation-duration: .3s; }
         .cw-hint, .cw-flota { animation: none; }
         .cw-capa-ligera { display: none; }
+        .cw-polaroid, .cw-polaroid img, .cw-foto-vida img, .cw-foto-mini img { transition: none !important; }
+        .cw-polaroid:hover { transform: rotate(var(--giro, 0deg)) !important; }
+        .cw-polaroid:hover img, .cw-foto-vida:hover img, .cw-foto-mini:hover img { transform: none !important; }
         .cw-brisa, .cw-mece { animation: none; }
       }
     `}</style>

@@ -81,7 +81,7 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
     <Invitacion
       d={verStd
         ? { ...proyecto, nombre: '', modo_invitacion: 'save_the_date' }
-        : { ...proyecto, nombre: lang === 'en' ? 'Your guest' : 'Tu invitado', modo_invitacion: 'completa', acompanantes_permitidos: Math.max(1, proyecto.acompanantes_permitidos || 2), ya_respondio: false }}
+        : { ...proyecto, nombre: lang === 'en' ? 'Your guest' : 'Tu invitado', modo_invitacion: 'completa', acompanantes_permitidos: 1 /* la mayoría va en pareja */, ya_respondio: false }}
       lang={lang} modo="preview" ctl={ctl} volverHref={`/bridal/${id}`}
     />
   )
