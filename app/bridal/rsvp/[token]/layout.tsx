@@ -31,9 +31,12 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
     const pareja = [inv.nombre_novia, inv.nombre_novio].filter(Boolean).join(' & ')
     const fechaCruda = fechaLarga(inv.fecha_boda, 'es')
     const fecha = fechaCruda ? fechaCruda.charAt(0).toUpperCase() + fechaCruda.slice(1) : ''
-    const title = pareja ? `${pareja} · Nuestra boda` : GENERICO.title as string
+    const std = inv.modo_invitacion === 'save_the_date'
+    const title = pareja ? (std ? `Save the date · ${pareja}` : `${pareja} · Nuestra boda`) : GENERICO.title as string
     const nombre = String(inv.nombre || '').trim().slice(0, 60)
-    const description = [fecha, nombre ? `Invitación personal para ${nombre}` : 'Invitación personal'].filter(Boolean).join(' · ')
+    const description = std
+      ? [fecha, nombre ? `Aparta la fecha, ${nombre}` : 'Aparta la fecha'].filter(Boolean).join(' · ')
+      : [fecha, nombre ? `Invitación personal para ${nombre}` : 'Invitación personal'].filter(Boolean).join(' · ')
 
     return {
       title,

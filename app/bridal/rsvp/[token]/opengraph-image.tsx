@@ -86,7 +86,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
 
         {/* Nombres y fecha */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'center', justifyContent: 'center', padding: '0 70px 0 40px' }}>
-          <div style={{ display: 'flex', fontSize: 26, letterSpacing: 8, color: ROSA }}>NOS CASAMOS</div>
+          <div style={{ display: 'flex', fontSize: 26, letterSpacing: 8, color: ROSA }}>{inv?.modo_invitacion === 'save_the_date' ? 'SAVE THE DATE' : 'NOS CASAMOS'}</div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 18, fontFamily: 'Allura', color: ROSA, lineHeight: 1 }}>
             <div style={{ display: 'flex', fontSize: tamNombres }}>{novia || 'Nuestra boda'}</div>
             {novio && <div style={{ display: 'flex', fontFamily: 'Cormorant', fontSize: 44, color: '#C8A69B', margin: '-4px 0 -2px' }}>&amp;</div>}

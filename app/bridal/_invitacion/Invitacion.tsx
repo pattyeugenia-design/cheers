@@ -38,6 +38,7 @@ export type Control = {
   }
   firmas: { lista: any[]; nombre: string; setNombre: (v: string) => void; mensaje: string; setMensaje: (v: string) => void; enviada: boolean; enviando: boolean; enviar: () => void }
   fotos: { lista: any[]; subiendo: boolean; recienSubida: boolean; subir: (f: File) => void }
+  apartar?: { hecho: boolean; accion: () => void }   // "Ya aparté la fecha" (modo Save the date)
 }
 
 function Sec({ p, id, children, innerRef, ancho, arriba, abajo }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number }) {
@@ -85,6 +86,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const p = paletaDe(d.tema, d.fuente)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
   const preview = modo === 'preview'
+  const std = d.modo_invitacion === 'save_the_date'   // modo "Save the date": solo fecha, hospedaje y un botón
   const [sobreAbierto, setSobreAbierto] = useState(false)
   const [visor, setVisor] = useState<string | null>(null)
   const [flota, setFlota] = useState(false)
@@ -98,7 +100,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const [lugar1Nombre, ...lugar1Resto] = lugar1.split(',')
   const permitidos = Math.max(0, Number(d.acompanantes_permitidos) || 0)
   const ultimoItem = Array.isArray(d.itinerario) && d.itinerario.length ? d.itinerario[d.itinerario.length - 1] : null
-  const cal = d.fecha_boda ? enlacesCalendario(nombreBoda || 'Boda', d.fecha_boda, d.hora_boda, lugar1 || null, String(d.slug || d.token || nombreBoda || 'boda'), ultimoItem ? partirHora(ultimoItem.hora).fin : null) : null
+  const stdLugar = String(d.std_lugar || '').trim()
+  const cal = d.fecha_boda ? enlacesCalendario(nombreBoda || 'Boda', d.fecha_boda, std ? null : d.hora_boda, std ? (stdLugar || null) : (lugar1 || null), String(d.slug || d.token || nombreBoda || 'boda'), std ? null : (ultimoItem ? partirHora(ultimoItem.hora).fin : null), std) : null
   const portada = urlImagenSegura(d.portada_url)
   const encPortada = leerEncuadreTexto(d.portada_posicion)
   const historia: any[] = (Array.isArray(d.historia) ? d.historia : []).filter((h: any) => urlImagenSegura(h?.url))
@@ -179,14 +182,14 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── PORTADA ───────── */}
       <header style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
-        <div style={etiqueta}>{t('Nos casamos', "We're getting married")}</div>
+        <div style={etiqueta}>{std ? 'Save the date' : t('Nos casamos', "We're getting married")}</div>
         <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: `calc(clamp(42px, 12.4vw, 80px) * ${factorNombres})`, lineHeight: 1.1, color: p.acento, margin: '16px auto 0', padding: '0 10px', whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
           {d.nombre_novia}
           <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.5em', color: p.acento2, margin: '0 .26em', verticalAlign: '.22em' }}>&amp;</span>
           {d.nombre_novio}
         </h1>
         <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em', padding: '0 14px' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
-        {lugar1Nombre && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{lugar1Nombre}</div>}
+        {(std ? stdLugar : lugar1Nombre) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{std ? stdLugar : lugar1Nombre}</div>}
 
         <div style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: -11, border: `1px solid ${p.linea}`, borderRadius: '999px 999px 22px 22px' }} />
@@ -199,10 +202,33 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           {p.botanicos && <div style={{ position: 'absolute', left: -30, bottom: 24, pointerEvents: 'none', opacity: .9 }}><Peonia ancho={70} tono="claro" rotar={-14} /></div>}
         </div>
 
-        {d.fecha_boda && <Cuenta fecha={d.fecha_boda} hora={d.hora_boda} p={p} lang={lang} />}
+        {d.fecha_boda && <Cuenta fecha={d.fecha_boda} hora={std ? null : d.hora_boda} p={p} lang={lang} />}
       </header>
 
       {/* ───────── PARA TI ───────── */}
+      {std ? (
+        <Sec p={p} arriba={34} abajo={20}>
+          <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
+          <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
+          <p style={{ ...parrafo, marginTop: 14 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Save the date in your calendar. The formal invitation, with all the details, is coming soon.')}</p>
+          {d.solo_adultos && (
+            <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
+              {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', 'It will be an evening just for adults. Thank you for being with us and for helping us take care of this detail.')}
+            </p>
+          )}
+          {cal && (
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
+              <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>
+              <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>
+            </div>
+          )}
+          <div style={{ marginTop: 26 }}>
+            {ctl.apartar?.hecho || d.fecha_apartada
+              ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 20, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', 'Thank you! The date is saved.')}</div>
+              : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>}
+          </div>
+        </Sec>
+      ) : (
       <Sec p={p} arriba={34} abajo={20}>
         <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
         <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
@@ -221,6 +247,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <div style={{ marginTop: 24 }}><Boton p={p} relleno onClick={() => irA('confirmar')}>{r.enviado || d.ya_respondio ? t('Ver mi respuesta', 'See my reply') : t('Confirmar asistencia', 'RSVP')}</Boton></div>
         {limite && <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginTop: 16 }}>{t('Responde antes del', 'Reply by')} {fechaCorta(limite, lang)}</div>}
       </Sec>
+      )}
 
       {/* ───────── FRASE Y FAMILIAS ───────── */}
       {(d.versiculo || d.mensaje_padres) && <div style={{ padding: '14px 0 0' }}><Orn p={p} /></div>}
@@ -273,6 +300,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         </Sec>
       )}
 
+      {!std && (<>
       {/* ───────── NUESTRA HISTORIA ───────── */}
       {historia.length > 0 && (
         <Sec p={p} ancho={600} abajo={26}>
@@ -368,6 +396,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         </Sec>
       )}
 
+      </>)}
+
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
         <Sec p={p}>
@@ -394,6 +424,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         </Sec>
       )}
 
+      {!std && (<>
       {/* ───────── REGALOS ───────── */}
       {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
         <Sec p={p} ancho={520}>
@@ -569,6 +600,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         )}
       </Sec>
 
+      </>)}
+
       {/* ───────── CIERRE ───────── */}
       <footer style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
         <div className="cw-aparece" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', borderRadius: 26, overflow: 'hidden', border: `1px solid ${p.linea}`, background: 'linear-gradient(180deg, rgba(255,255,255,.78), rgba(250,236,231,.78))', boxShadow: '0 30px 50px -34px rgba(90,60,55,.45)', padding: '60px 24px 180px' }}>
@@ -598,7 +631,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       </div>{/* /cw-pagina */}
 
       {/* Botón flotante */}
-      {flota && !preview && !r.enviado && (
+      {flota && !std && !preview && !r.enviado && (
         <button type="button" className="cw-flota" onClick={() => irA('confirmar')} style={{ fontFamily: p.etiqueta, background: p.acento, color: p.botonTxt }}>{t('Confirmar asistencia', 'RSVP')}</button>
       )}
 

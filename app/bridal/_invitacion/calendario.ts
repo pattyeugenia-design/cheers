@@ -20,6 +20,15 @@ export function a24h(h?: string | null): [number, number] | null {
   return [hh, mm]
 }
 
+// Fecha sin hora (evento de todo el día): "20270213". `dias` mueve la fecha (el fin de un evento de un día es el día siguiente).
+function soloFecha(fecha: string, dias = 0) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha)
+  if (!m) return null
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + dias))
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}`
+}
+
 function marca(fecha: string, hora: string | null, extraMin = 0) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha)
   if (!m) return null
@@ -33,20 +42,20 @@ function marca(fecha: string, hora: string | null, extraMin = 0) {
 // finHora (opcional): hora en que termina el evento, para que el calendario
 // del invitado dure lo mismo que la boda. Si es menor que la de inicio se
 // entiende que termina al día siguiente (ej. 9:00 pm a 2:00 am).
-export function enlacesCalendario(nombre: string, fecha: string, hora: string | null, lugar: string | null, uid: string, finHora?: string | null) {
+export function enlacesCalendario(nombre: string, fecha: string, hora: string | null, lugar: string | null, uid: string, finHora?: string | null, todoElDia = false) {
   const a = a24h(hora || '12:00') || [12, 0]
   const b = a24h(finHora)
   let dur = b ? ((b[0] * 60 + b[1]) - (a[0] * 60 + a[1]) + 1440) % 1440 : 300
   if (dur < 30 || dur > 14 * 60) dur = 300
-  const ini = marca(fecha, hora)
-  const fin = marca(fecha, hora, dur)
+  const ini = todoElDia ? soloFecha(fecha) : marca(fecha, hora)
+  const fin = todoElDia ? soloFecha(fecha, 1) : marca(fecha, hora, dur)
   if (!ini || !fin) return null
   const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(nombre.slice(0, 200))}&dates=${ini}/${fin}&location=${encodeURIComponent((lugar || '').slice(0, 250))}`
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Cheers Bridal//ES', 'BEGIN:VEVENT',
     `UID:${uid.replace(/[^a-zA-Z0-9-]/g, '')}@joincheers.app`,
     `DTSTAMP:${marca(new Date().toISOString().slice(0, 10), '00:00')}Z`,
-    `DTSTART:${ini}`, `DTEND:${fin}`,
+    todoElDia ? `DTSTART;VALUE=DATE:${ini}` : `DTSTART:${ini}`, todoElDia ? `DTEND;VALUE=DATE:${fin}` : `DTEND:${fin}`,
     `SUMMARY:${limpiar(nombre)}`, `LOCATION:${limpiar(lugar || '')}`,
     'END:VEVENT', 'END:VCALENDAR',
   ].join('\r\n')

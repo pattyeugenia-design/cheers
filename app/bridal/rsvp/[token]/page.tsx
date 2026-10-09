@@ -15,6 +15,7 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
   const [noEncontrado, setNoEncontrado] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [fechaApartada, setFechaApartada] = useState(false)
 
   const [asistencia, setAsistencia] = useState<Asistencia>('')
   const [numAcompanantes, setNumAcompanantes] = useState(0)
@@ -40,6 +41,7 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
       const info = Array.isArray(data) ? data[0] : data
       if (error || !info) { setNoEncontrado(true); setCargando(false); return }
       setInvitado(info)
+      setFechaApartada(!!info.fecha_apartada)
       setFirmaNombreInput(info.nombre || '')
 
       // Si ya respondió, recuperamos su respuesta para mostrarla (y poder cambiarla).
@@ -151,7 +153,13 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
     </main>
   )
 
+  async function apartarFecha() {
+    setFechaApartada(true)
+    await supabase.rpc('apartar_fecha_boda', { p_token: token })
+  }
+
   const ctl: Control = {
+    apartar: { hecho: fechaApartada, accion: apartarFecha },
     rsvp: {
       asistencia, setAsistencia, numAcompanantes, setNum: actualizarNumAcompanantes,
       menuPrincipal, setMenu: setMenuPrincipal, acompanantes,
