@@ -150,6 +150,25 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
     return () => { window.removeEventListener('scroll', calc); window.removeEventListener('resize', calc) }
   }, [sobreAbierto])
 
+  // Save the date en computadora: si el contenido no cabe en la pantalla, se
+  // escala todo el bloque (sin cambiar proporciones) para que nunca haya scroll.
+  useEffect(() => {
+    if (!std || !sobreAbierto) return
+    const ajustar = () => {
+      const el = document.querySelector('.cw-std-escritorio') as HTMLElement | null
+      if (!el) return
+      el.style.zoom = ''
+      if (getComputedStyle(el).display === 'none') return
+      const alto = el.scrollHeight
+      if (alto > window.innerHeight) el.style.zoom = String(Math.max(0.72, window.innerHeight / alto))
+    }
+    ajustar()
+    const t = setTimeout(ajustar, 400)
+    document.fonts?.ready.then(ajustar)
+    window.addEventListener('resize', ajustar)
+    return () => { clearTimeout(t); window.removeEventListener('resize', ajustar) }
+  }, [std, sobreAbierto])
+
   // Las secciones aparecen suavemente al llegar a ellas.
   // Si el navegador no puede observar el scroll, todo queda visible desde el
   // inicio (la clase cw-js solo se pone cuando el observador ya está activo).
@@ -212,7 +231,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             </div>
 
             <div className="cw-std-info">
-              <div style={etiqueta}>Save the date</div>
+              <div className="cw-std-etq" style={{ ...etiqueta, fontSize: undefined }}>Save the date</div>
               <h1 className="cw-std-nombres" style={{ fontFamily: p.script, fontWeight: 400, color: p.acento, margin: 0, whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
                 {d.nombre_novia}<span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.5em', color: p.acento2, margin: '0 .26em', verticalAlign: '.22em' }}>&amp;</span>{d.nombre_novio}
               </h1>
@@ -220,17 +239,17 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
               {stdLugar && <div className="cw-std-ciudad" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3 }}>{stdLugar}</div>}
               {d.fecha_boda && <div className="cw-std-cuenta"><Cuenta fecha={d.fecha_boda} hora={null} p={p} lang={lang} compacta /></div>}
               <div className="cw-std-invitacion">
-                <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.24em', textTransform: 'uppercase', color: p.txt3 }}>{t('Tu invitación', 'Your invitation')}</div>
-                <div className="cw-std-invitado" style={{ fontFamily: p.script, color: p.acento, lineHeight: 1.05 }}>{invitado || t('Invitado', 'Guest')}</div>
+                {invitado && <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.txt3 }}>{t('Tu invitación', 'Your invitation')}</div>}
+                {invitado && <div className="cw-std-invitado" style={{ fontFamily: p.script, color: p.acento, lineHeight: 1.05 }}>{invitado}</div>}
                 <p className="cw-std-texto" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Save the date in your calendar. The formal invitation, with all the details, is coming soon.')}</p>
                 {d.solo_adultos && <p className="cw-std-adultos" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, margin: 0 }}>{t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', 'It will be an evening just for adults. Thank you for being with us and for helping us take care of this detail.')}</p>}
               </div>
               <div className="cw-std-acciones">
                 {cal && <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>}
                 {cal && <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>}
-                {ctl.apartar?.hecho || d.fecha_apartada
+                {ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
                   ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', 'Thank you! The date is saved.')}</div>
-                  : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>}
+                  : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>)}
               </div>
             </div>
           </div>
@@ -243,7 +262,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
                   <div className="cw-std-padres">
                     {padresLineas.map((x, i) => (
                       <div key={i} style={{ padding: '0 14px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
-                        {x.etq && <div style={{ fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, whiteSpace: 'nowrap' }}>{x.etq}</div>}
+                        {x.etq && <div className="cw-std-etq-padre" style={{ fontFamily: p.etiqueta, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, whiteSpace: 'nowrap' }}>{x.etq}</div>}
                         <div className="cw-std-padre" style={{ fontFamily: p.serif, color: p.txt, whiteSpace: 'nowrap' }}>{x.nombres}</div>
                       </div>
                     ))}
@@ -253,7 +272,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             )}
             {hoteles.length > 0 && (
               <div className="cw-std-hoteles">
-                <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.24em', textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Hospedaje para quienes vienen de lejos', 'Where to stay for those traveling')}</div>
+                <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Hospedaje para quienes vienen de lejos', 'Where to stay for those traveling')}</div>
                 <div className="cw-std-hoteles-grid">
                   {hoteles.slice(0, 3).map((h, i) => {
                     const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
@@ -277,8 +296,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           </div>
 
           <a className="cw-std-credito" href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', opacity: 0.75, textAlign: 'center' }}>
-            <span style={{ fontFamily: p.etiqueta, fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>{t('Invitación creada por Cheers Bridal', 'Invitation created by Cheers Bridal')}</span>
-            <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 13, color: p.txt3, marginLeft: 8 }}>{t('de Patty Eugenia', 'by Patty Eugenia')}</span>
+            <span className="cw-std-cred1" style={{ fontFamily: p.etiqueta, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>{t('Invitación creada por Cheers Bridal', 'Invitation created by Cheers Bridal')}</span>
+            <span className="cw-std-cred2" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, marginLeft: 8 }}>{t('de Patty Eugenia', 'by Patty Eugenia')}</span>
           </a>
         </div>
       )}
@@ -311,8 +330,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── PARA TI ───────── */}
       {std ? (
         <Sec p={p} arriba={34} abajo={20}>
-          <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
-          <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
+          <div style={etiqueta}>{invitado ? t('Tu invitación', 'Your invitation') : t('Aparta la fecha', 'Save the date')}</div>
+          {invitado && <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado}</div>}
           <p style={{ ...parrafo, marginTop: 14 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Save the date in your calendar. The formal invitation, with all the details, is coming soon.')}</p>
           {d.solo_adultos && (
             <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
@@ -325,11 +344,11 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
               <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>
             </div>
           )}
-          <div style={{ marginTop: 26 }}>
-            {ctl.apartar?.hecho || d.fecha_apartada
+          {ctl.apartar && <div style={{ marginTop: 26 }}>
+            {ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
               ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 20, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', 'Thank you! The date is saved.')}</div>
-              : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>}
-          </div>
+              : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>)}
+          </div>}
         </Sec>
       ) : (
       <Sec p={p} arriba={34} abajo={20}>
@@ -765,7 +784,7 @@ const BRILLOS: [number, number, number, number][] = [
   [8, 18, 12, 0], [22, 64, 10, 1.4], [37, 28, 13, 2.8], [52, 78, 11, 0.7], [63, 14, 10, 2.1],
   [78, 52, 13, 3.5], [90, 30, 11, 1.1], [16, 86, 12, 3.1], [44, 92, 10, 0.3], [85, 84, 12, 2.4],
 ]
-function Ambiente({ p }: { p: Paleta }) {
+export function Ambiente({ p }: { p: Paleta }) {
   if (!p.botanicos) return null
   return (
     <div aria-hidden="true">
@@ -805,7 +824,7 @@ function CirculosColor({ colores, p }: { colores: any[]; p: Paleta }) {
   )
 }
 
-function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora: string | null; p: Paleta; lang: string; compacta?: boolean }) {
+export function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora: string | null; p: Paleta; lang: string; compacta?: boolean }) {
   const [r, setR] = useState<{ d: number; h: number; m: number; s: number } | null>(null)
   useEffect(() => {
     const objetivo = new Date(`${fecha}T${/^\d{1,2}:\d{2}/.test(hora || '') ? hora : '00:00'}:00`).getTime()
@@ -819,12 +838,12 @@ function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora: strin
   const u = [[r.d, lang === 'en' ? 'days' : 'días'], [r.h, lang === 'en' ? 'hours' : 'horas'], [r.m, 'min'], [r.s, lang === 'en' ? 'sec' : 'seg']] as [number, string][]
   return (
     <div style={{ marginTop: compacta ? 0 : 52 }}>
-      <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }}>{lang === 'en' ? 'Counting down' : 'Faltan'}</div>
+      <div style={{ fontFamily: p.etiqueta, fontSize: compacta ? 'clamp(11px, 1.6vh, 14px)' : 10.5, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }}>{lang === 'en' ? 'Counting down' : 'Faltan'}</div>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: compacta ? 8 : 16 }}>
         {u.map(([n, l], i) => (
-          <div key={i} style={{ width: compacta ? 'clamp(56px, 7vh, 74px)' : 74, textAlign: 'center', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
-            <div style={{ fontFamily: p.serif, fontSize: compacta ? 'clamp(26px, 4.8vh, 40px)' : 40, fontWeight: 400, color: p.txt, lineHeight: 1, fontVariantNumeric: 'lining-nums tabular-nums', fontFeatureSettings: '"lnum" 1, "tnum" 1' }}>{String(n).padStart(2, '0')}</div>
-            <div style={{ fontFamily: p.etiqueta, fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3, marginTop: compacta ? 4 : 8 }}>{l}</div>
+          <div key={i} style={{ width: compacta ? 'clamp(64px, 9vh, 100px)' : 74, textAlign: 'center', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+            <div style={{ fontFamily: p.serif, fontSize: compacta ? 'clamp(30px, 6vh, 56px)' : 40, fontWeight: 400, color: p.txt, lineHeight: 1, fontVariantNumeric: 'lining-nums tabular-nums', fontFeatureSettings: '"lnum" 1, "tnum" 1' }}>{String(n).padStart(2, '0')}</div>
+            <div style={{ fontFamily: p.etiqueta, fontSize: compacta ? 'clamp(10px, 1.4vh, 12.5px)' : 9, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3, marginTop: compacta ? 4 : 8 }}>{l}</div>
           </div>
         ))}
       </div>
@@ -832,7 +851,7 @@ function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora: strin
   )
 }
 
-function Estilos({ p }: { p: Paleta }) {
+export function Estilos({ p }: { p: Paleta }) {
   return (
     <style>{`
       .cw-raiz { -webkit-font-smoothing: antialiased; }
@@ -841,41 +860,46 @@ function Estilos({ p }: { p: Paleta }) {
       @media (min-width: 1000px) and (min-height: 600px) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
-        .cw-std-escritorio { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1240px; margin: 0 auto; padding: 2.2vh 4vw 1.2vh; gap: 1.8vh; }
-        .cw-std-cuerpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5.5vw; align-items: center; justify-content: center; }
-        .cw-std-foto { position: relative; height: clamp(300px, 49vh, 540px); aspect-ratio: 3 / 4; }
+        .cw-std-escritorio { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1560px; margin: 0 auto; padding: 2.6vh 6vw 1.4vh; gap: 2.2vh; }
+        .cw-std-cuerpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4.5vw; align-items: center; justify-content: center; }
+        .cw-std-foto { position: relative; height: clamp(300px, 52vh, 640px); aspect-ratio: 3 / 4; }
         .cw-std-arco { position: absolute; inset: 0; border-radius: 999px 999px 18px 18px; overflow: hidden; }
         .cw-std-marco { position: absolute; inset: -10px; border-radius: 999px 999px 22px 22px; pointer-events: none; }
-        .cw-std-info { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.2vh; }
-        .cw-std-nombres { font-size: clamp(44px, 8.4vh, 88px); line-height: 1.05; }
-        .cw-std-fecha { font-size: clamp(11px, 1.7vh, 15px); }
-        .cw-std-ciudad { font-size: clamp(15px, 2.4vh, 21px); margin-top: -0.6vh; }
-        .cw-std-cuenta { margin-top: 0.2vh; }
-        .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.5vh; margin-top: 0.4vh; max-width: 560px; }
-        .cw-std-invitado { font-size: clamp(30px, 5.2vh, 48px); }
-        .cw-std-texto { font-size: clamp(14px, 2.1vh, 18px); line-height: 1.3; }
-        .cw-std-adultos { font-size: clamp(12px, 1.7vh, 14.5px); line-height: 1.3; }
-        .cw-std-acciones { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; margin-top: 0.4vh; }
-        .cw-std-pie { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); gap: 3.5vw; align-items: center; padding-top: 1.2vh; border-top: 1px solid rgba(173,133,124,.28); }
-        .cw-std-izq { display: flex; flex-direction: column; align-items: center; gap: 1.6vh; text-align: center; }
-        .cw-std-frase { font-size: clamp(14px, 2.2vh, 19px); line-height: 1.35; text-wrap: balance; }
+        .cw-std-info { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.3vh; }
+        .cw-std-etq { font-size: clamp(11.5px, 1.65vh, 14.5px); letter-spacing: .26em; }
+        .cw-std-nombres { font-size: clamp(60px, 11.5vh, 128px); line-height: 1.05; }
+        .cw-std-fecha { font-size: clamp(14.5px, 2.35vh, 21px); }
+        .cw-std-ciudad { font-size: clamp(19px, 3.1vh, 29px); margin-top: -0.6vh; }
+        .cw-std-cuenta { margin-top: 0.4vh; }
+        .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.8vh; margin-top: 0.6vh; max-width: 660px; }
+        .cw-std-invitado { font-size: clamp(34px, 6vh, 58px); }
+        .cw-std-texto { font-size: clamp(18.5px, 2.9vh, 26px); line-height: 1.35; text-wrap: balance; }
+        .cw-std-adultos { font-size: clamp(15px, 2.2vh, 19.5px); line-height: 1.35; text-wrap: balance; }
+        .cw-std-acciones { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin-top: 0.8vh; }
+        .cw-std-acciones .cw-chip { font-size: clamp(11.5px, 1.6vh, 14px); padding: clamp(10px, 1.5vh, 14px) clamp(18px, 1.6vw, 26px); }
+        .cw-std-pie { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.6fr); gap: 3.2vw; align-items: center; padding-top: 2vh; border-top: 1px solid rgba(173,133,124,.28); }
+        .cw-std-izq { display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
+        .cw-std-frase { font-size: clamp(18px, 2.9vh, 27px); line-height: 1.35; text-wrap: balance; }
         .cw-std-padres { display: flex; justify-content: center; }
-        .cw-std-padre { font-size: clamp(15px, 2.3vh, 19px); }
-        .cw-std-hoteles { display: flex; flex-direction: column; gap: 1vh; }
+        .cw-std-etq-padre { font-size: clamp(10.5px, 1.45vh, 13px); }
+        .cw-std-padre { font-size: clamp(18px, 2.9vh, 26px); }
+        .cw-std-hoteles { display: flex; flex-direction: column; gap: 1.2vh; }
         .cw-std-hoteles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 1.4vw; }
-        .cw-std-hotel { border-radius: 14px; padding: 1vh 1vw; text-align: left; display: flex; flex-direction: column; gap: 0.5vh; }
-        .cw-std-hotel-nombre { font-size: clamp(16px, 2.5vh, 21px); line-height: 1.15; }
-        .cw-std-hotel-dir { font-size: clamp(11.5px, 1.65vh, 14px); line-height: 1.25; }
-        .cw-std-hotel-resena { font-size: clamp(11.5px, 1.65vh, 14px); line-height: 1.3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-        .cw-std-hotel-traslado { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
-        .cw-std-hotel-mapas { display: flex; gap: 8px; margin-top: 0.3vh; }
-        .cw-std-mini { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; text-decoration: none; white-space: nowrap; }
+        .cw-std-hotel { border-radius: 14px; padding: 1.4vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.7vh; }
+        .cw-std-hotel-nombre { font-size: clamp(19px, 3vh, 28px); line-height: 1.15; }
+        .cw-std-hotel-dir { font-size: clamp(14px, 2vh, 17.5px); line-height: 1.25; }
+        .cw-std-hotel-resena { font-size: clamp(14.5px, 2.15vh, 18.5px); line-height: 1.35; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+        .cw-std-hotel-traslado { font-size: clamp(11px, 1.5vh, 13.5px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
+        .cw-std-hotel-mapas { display: flex; gap: 10px; margin-top: 0.4vh; }
+        .cw-std-mini { font-size: clamp(10.5px, 1.4vh, 12.5px); letter-spacing: .14em; text-transform: uppercase; padding: clamp(7px, 1vh, 10px) clamp(13px, 1.1vw, 18px); border-radius: 999px; text-decoration: none; white-space: nowrap; }
         .cw-std-credito { align-self: center; }
+        .cw-std-cred1 { font-size: clamp(10px, 1.35vh, 12px); }
+        .cw-std-cred2 { font-size: clamp(14px, 1.9vh, 17px); }
       }
-      @media (min-width: 1000px) and (min-height: 900px) {
+      @media (min-width: 1000px) and (min-height: 1150px) {
         .cw-std-hotel-resena { -webkit-line-clamp: 3; }
       }
-      @media (min-width: 1000px) and (min-height: 600px) and (max-height: 780px) {
+      @media (min-width: 1000px) and (min-height: 600px) and (max-height: 1149px) {
         .cw-std-hotel-dir { display: none; }
       }
       @media (min-width: 1000px) and (min-height: 600px) and (max-height: 690px) {

@@ -4,14 +4,14 @@ import { fechaPuntos, urlImagenSegura } from '../../_invitacion/tema'
 import { leerEncuadreTexto } from '../../_invitacion/encuadre'
 
 export const runtime = 'edge'
-export const alt = 'Invitación de boda — Cheers Bridal'
+export const alt = 'Save the date — Cheers Bridal'
 // 720x378 (misma proporción que 1200x630): la tarjeta pesa menos de ~300 KB, que es lo que WhatsApp acepta
 // para mostrar la imagen; sigue siendo nítida para WhatsApp, iMessage y redes.
 const ESC = 0.6
 export const size = { width: 720, height: 378 }
 export const contentType = 'image/png'
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const CODIGO = /^[a-z0-9]{8,24}$/
 
 // Tipografías de la invitación, incluidas en el proyecto (nada se pide a terceros).
 const allura = fetch(new URL('./allura.woff', import.meta.url)).then(r => r.arrayBuffer())
@@ -43,13 +43,14 @@ async function fotoSegura(url: string | null) {
   }
 }
 
-export default async function Image({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params
+// Tarjeta del link GENERAL del Save the date: sin nombre de invitado.
+export default async function Image({ params }: { params: Promise<{ codigo: string }> }) {
+  const { codigo } = await params
   let inv: any = null
-  if (UUID.test(token)) {
+  if (CODIGO.test(codigo)) {
     try {
       const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-      const { data } = await supabase.rpc('get_invitado_boda_por_token', { p_token: token })
+      const { data } = await supabase.rpc('get_std_boda', { p_codigo: codigo })
       inv = Array.isArray(data) ? data[0] : data
     } catch { inv = null }
   }
@@ -60,7 +61,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
   const foto = await fotoSegura(inv?.portada_url || null)
   const enc = leerEncuadreTexto(inv?.portada_posicion)
   const fecha = fechaPuntos(inv?.fecha_boda, 'es')
-  const invitado = String(inv?.nombre || '').trim().slice(0, 40)
+  const lugar = String(inv?.std_lugar || '').trim().slice(0, 40)
   const iniciales = [novia[0], novio[0]].filter(Boolean).join(' & ').toUpperCase()
   const largo = Math.max(novia.length, novio.length)
   const tamNombres = largo <= 7 ? 124 : largo <= 10 ? 104 : largo <= 14 ? 84 : 66
@@ -86,19 +87,14 @@ export default async function Image({ params }: { params: Promise<{ token: strin
 
         {/* Nombres y fecha */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'center', justifyContent: 'center', padding: '0 70px 0 40px' }}>
-          <div style={{ display: 'flex', fontSize: 26, letterSpacing: 8, color: ROSA }}>NOS CASAMOS</div>
+          <div style={{ display: 'flex', fontSize: 26, letterSpacing: 8, color: ROSA }}>SAVE THE DATE</div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 18, fontFamily: 'Allura', color: ROSA, lineHeight: 1 }}>
             <div style={{ display: 'flex', fontSize: tamNombres }}>{novia || 'Nuestra boda'}</div>
             {novio && <div style={{ display: 'flex', fontFamily: 'Cormorant', fontSize: 44, color: '#C8A69B', margin: '-4px 0 -2px' }}>&amp;</div>}
             {novio && <div style={{ display: 'flex', fontSize: tamNombres }}>{novio}</div>}
           </div>
           {fecha && <div style={{ display: 'flex', fontSize: 25, letterSpacing: 5, color: '#6E5A55', marginTop: 30 }}>{fecha}</div>}
-          {invitado && (
-            <div style={{ display: 'flex', alignItems: 'center', marginTop: 26, fontSize: 38, fontFamily: 'Allura', color: ROSA }}>
-              <div style={{ display: 'flex', fontFamily: 'Cormorant', fontSize: 22, letterSpacing: 4, color: '#9C8780', marginRight: 14 }}>PARA</div>
-              {invitado}
-            </div>
-          )}
+          {lugar && <div style={{ display: 'flex', marginTop: 22, fontSize: 30, fontStyle: 'normal', color: '#9C8780' }}>{lugar}</div>}
         </div>
       </div>
       </div>

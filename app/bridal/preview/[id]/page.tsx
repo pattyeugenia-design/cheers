@@ -18,6 +18,7 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
   const [noEncontrado, setNoEncontrado] = useState(false)
   const [firmas, setFirmas] = useState<any[]>([])
   const [fotos, setFotos] = useState<any[]>([])
+  const [verStd, setVerStd] = useState(false)   // ?std=1: vista previa del Save the date (link general)
 
   // Solo para sentir cómo responde el formulario — nunca se guarda nada aquí.
   const [asistencia, setAsistencia] = useState<Asistencia>('')
@@ -30,6 +31,7 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
 
   useEffect(() => {
     setLang(getLang())
+    setVerStd(new URLSearchParams(window.location.search).get('std') === '1')
     params.then(async ({ id }) => {
       setId(id)
       const { data: { user } } = await supabase.auth.getUser()
@@ -77,7 +79,9 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
 
   return (
     <Invitacion
-      d={{ ...proyecto, nombre: lang === 'en' ? 'Your guest' : 'Tu invitado', acompanantes_permitidos: Math.max(1, proyecto.acompanantes_permitidos || 2), ya_respondio: false }}
+      d={verStd
+        ? { ...proyecto, nombre: '', modo_invitacion: 'save_the_date' }
+        : { ...proyecto, nombre: lang === 'en' ? 'Your guest' : 'Tu invitado', modo_invitacion: 'completa', acompanantes_permitidos: Math.max(1, proyecto.acompanantes_permitidos || 2), ya_respondio: false }}
       lang={lang} modo="preview" ctl={ctl} volverHref={`/bridal/${id}`}
     />
   )

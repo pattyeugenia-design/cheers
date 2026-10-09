@@ -170,5 +170,6 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
     fotos: { lista: fotos, subiendo: subiendoFoto, recienSubida: fotoRecienSubida, subir: subirFoto },
   }
 
-  return <Invitacion d={{ ...invitado, token }} lang={lang} modo="real" ctl={ctl} />
+  // El link personal siempre es la invitación completa; el Save the date tiene su propio link general (/bridal/std/...).
+  return <Invitacion d={{ ...invitado, token, modo_invitacion: 'completa' }} lang={lang} modo="real" ctl={ctl} />
 }

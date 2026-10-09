@@ -4,7 +4,7 @@ import { fechaPuntos, urlImagenSegura } from '../../_invitacion/tema'
 import { leerEncuadreTexto } from '../../_invitacion/encuadre'
 
 export const runtime = 'edge'
-export const alt = 'Invitación de boda — Cheers Bridal'
+export const alt = 'Despedida de soltera — Cheers Bridal'
 // 720x378 (misma proporción que 1200x630): la tarjeta pesa menos de ~300 KB, que es lo que WhatsApp acepta
 // para mostrar la imagen; sigue siendo nítida para WhatsApp, iMessage y redes.
 const ESC = 0.6
@@ -43,27 +43,29 @@ async function fotoSegura(url: string | null) {
   }
 }
 
+// Tarjeta de la despedida: foto en arco, nombre de la festejada, fecha y "Para [invitada]".
 export default async function Image({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   let inv: any = null
   if (UUID.test(token)) {
     try {
       const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-      const { data } = await supabase.rpc('get_invitado_boda_por_token', { p_token: token })
+      const { data } = await supabase.rpc('get_despedida_por_token', { p_token: token })
       inv = Array.isArray(data) ? data[0] : data
     } catch { inv = null }
   }
 
   const [fAllura, fCormorant] = await Promise.all([allura, cormorant])
-  const novia = String(inv?.nombre_novia || '').slice(0, 24)
-  const novio = String(inv?.nombre_novio || '').slice(0, 24)
+  const novia = String(inv?.festejada || inv?.nombre_novia || '').slice(0, 24)
+  const novio = ''
+  const titulo = String(inv?.titulo || 'Despedida de soltera').toUpperCase().slice(0, 40)
   const foto = await fotoSegura(inv?.portada_url || null)
   const enc = leerEncuadreTexto(inv?.portada_posicion)
-  const fecha = fechaPuntos(inv?.fecha_boda, 'es')
+  const fecha = fechaPuntos(inv?.fecha, 'es')
   const invitado = String(inv?.nombre || '').trim().slice(0, 40)
   const iniciales = [novia[0], novio[0]].filter(Boolean).join(' & ').toUpperCase()
   const largo = Math.max(novia.length, novio.length)
-  const tamNombres = largo <= 7 ? 124 : largo <= 10 ? 104 : largo <= 14 ? 84 : 66
+  const tamNombres = largo <= 7 ? 160 : largo <= 10 ? 124 : largo <= 14 ? 96 : 72
   const ROSA = '#AD857C'
 
   return new ImageResponse(
@@ -86,9 +88,9 @@ export default async function Image({ params }: { params: Promise<{ token: strin
 
         {/* Nombres y fecha */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'center', justifyContent: 'center', padding: '0 70px 0 40px' }}>
-          <div style={{ display: 'flex', fontSize: 26, letterSpacing: 8, color: ROSA }}>NOS CASAMOS</div>
+          <div style={{ display: 'flex', fontSize: 26, letterSpacing: 8, color: ROSA }}>{titulo}</div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 18, fontFamily: 'Allura', color: ROSA, lineHeight: 1 }}>
-            <div style={{ display: 'flex', fontSize: tamNombres }}>{novia || 'Nuestra boda'}</div>
+            <div style={{ display: 'flex', fontSize: tamNombres }}>{novia || 'Despedida'}</div>
             {novio && <div style={{ display: 'flex', fontFamily: 'Cormorant', fontSize: 44, color: '#C8A69B', margin: '-4px 0 -2px' }}>&amp;</div>}
             {novio && <div style={{ display: 'flex', fontSize: tamNombres }}>{novio}</div>}
           </div>

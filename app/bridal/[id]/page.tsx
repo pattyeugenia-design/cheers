@@ -309,6 +309,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   // Personalización de la invitación: fecha límite, historia (fotos de la pareja) y estilo
   const [fechaLimiteInput, setFechaLimiteInput] = useState('')
   const [modoInvitacion, setModoInvitacion] = useState('completa')
+  const [stdActivo, setStdActivo] = useState(false)
+  const [stdCopiado, setStdCopiado] = useState(false)
   const [stdLugarInput, setStdLugarInput] = useState('')
   const [apartadas, setApartadas] = useState<string[]>([])
   const [historiaItems, setHistoriaItems] = useState<any[]>([])
@@ -436,6 +438,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       setHotelesInput(hotelesATexto(proy.hoteles))
       setFechaLimiteInput(proy.fecha_limite_rsvp || '')
       setModoInvitacion(proy.modo_invitacion || 'completa')
+      setStdActivo(!!proy.std_activo)
       setStdLugarInput(proy.std_lugar || '')
       setAyudaWhatsappInput(proy.ayuda_whatsapp || '')
       setAyudaMensajeInput(proy.ayuda_mensaje || '')
@@ -876,7 +879,17 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setProyecto((prev: any) => ({ ...prev, portada_posicion: texto }))
   }
 
-  // Modo de la invitación: "completa" (todo) o "save_the_date" (solo fecha, hospedaje y un botón).
+  // Save the date con link general: se prende/apaga y se edita la ciudad. El link
+  // personal de cada invitado siempre es la invitación completa.
+  async function guardarStd(activo: boolean, lugar: string) {
+    const std_lugar = lugar.trim().slice(0, 80) || null
+    const { error } = await supabase.from('proyectos_boda').update({ std_activo: activo, std_lugar }).eq('id', id)
+    if (error) { alert(lang === 'en' ? "Couldn't save the save the date." : 'No se pudo guardar el Save the date.'); return }
+    setStdActivo(activo)
+    setProyecto((prev: any) => ({ ...prev, std_activo: activo, std_lugar }))
+  }
+
+  // (Antes) Modo de la invitación: "completa" (todo) o "save_the_date" (solo fecha, hospedaje y un botón).
   async function guardarModoInvitacion(modo: string, lugar: string) {
     const std_lugar = lugar.trim().slice(0, 80) || null
     const { error } = await supabase.from('proyectos_boda').update({ modo_invitacion: modo, std_lugar }).eq('id', id)
@@ -1589,27 +1602,56 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 <div style={{ fontSize: 11, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
                   {lang === 'en' ? 'Invitation design' : 'Diseño de la invitación'}
                 </div>
-                <a href={`/bridal/preview/${id}`} target="_blank" style={{ fontSize: 11, color: '#B76E79', fontWeight: 700 }}>
-                  {lang === 'en' ? 'Full-size preview →' : 'Vista previa a tamaño real →'}
-                </a>
+                <span style={{ display: 'flex', gap: 12 }}>
+                  <a href={`/bridal/preview/${id}?std=1`} target="_blank" style={{ fontSize: 11, color: '#B76E79', fontWeight: 700 }}>Save the date →</a>
+                  <a href={`/bridal/preview/${id}`} target="_blank" style={{ fontSize: 11, color: '#B76E79', fontWeight: 700 }}>
+                    {lang === 'en' ? 'Full-size preview →' : 'Vista previa a tamaño real →'}
+                  </a>
+                </span>
               </div>
 
-              <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 12, background: modoInvitacion === 'save_the_date' ? 'rgba(201,168,118,.18)' : 'rgba(183,110,121,.06)' }}>
-                <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                  {lang === 'en' ? 'Invitation mode' : 'Modo de la invitación'}
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {([['save_the_date', 'Save the date'], ['completa', lang === 'en' ? 'Full invitation' : 'Invitación completa']] as [string, string][]).map(([valor, nombreModo]) => (
-                    <button key={valor} onClick={() => guardarModoInvitacion(valor, stdLugarInput)} style={{ flex: 1, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 800, padding: '9px 6px', borderRadius: 9, background: modoInvitacion === valor ? 'linear-gradient(135deg,#C9A876,#C98A93)' : 'rgba(255,255,255,.7)', color: modoInvitacion === valor ? '#fff' : 'rgba(61,43,46,.6)' }}>{nombreModo}</button>
-                  ))}
-                </div>
-                <p style={{ fontSize: 11, color: 'rgba(61,43,46,.55)', margin: '8px 0 0', lineHeight: 1.45 }}>
-                  {lang === 'en' ? 'Save the date shows only the date, lodging and an "I saved the date" button. Switch to Full invitation when you are ready to share everything.' : 'Save the date muestra solo la fecha, el hospedaje y un botón "Ya aparté la fecha". Cámbialo a Invitación completa cuando quieras compartir todo y recibir confirmaciones.'}
-                </p>
-                {modoInvitacion === 'save_the_date' && (
-                  <input value={stdLugarInput} maxLength={80} onChange={e => setStdLugarInput(e.target.value)} onBlur={() => guardarModoInvitacion('save_the_date', stdLugarInput)} placeholder={lang === 'en' ? 'City shown on the invitation (e.g. Monterrey, Nuevo León)' : 'Ciudad que se muestra (ej. Monterrey, Nuevo León)'} style={{ ...inputStyle, width: '100%', marginTop: 8 }} />
-                )}
-              </div>
+              {(() => {
+                const codigo = /^[a-z0-9]{8,24}$/.test(String(proyecto?.std_codigo || '')) ? String(proyecto.std_codigo) : ''
+                const linkStd = codigo ? `${typeof window !== 'undefined' ? window.location.origin : 'https://joincheers.app'}/bridal/std/${codigo}` : ''
+                const textoWa = `${lang === 'en' ? 'Save the date' : 'Aparta la fecha'}: ${linkStd}`
+                return (
+                  <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 12, background: stdActivo ? 'rgba(201,168,118,.18)' : 'rgba(183,110,121,.06)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const }}>
+                        {lang === 'en' ? 'Save the date (one link for everyone)' : 'Save the date (un link para todos)'}
+                      </div>
+                      <button onClick={() => guardarStd(!stdActivo, stdLugarInput)} style={{ border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 11, fontWeight: 800, padding: '6px 12px', borderRadius: 99, background: stdActivo ? 'linear-gradient(135deg,#C9A876,#C98A93)' : 'rgba(255,255,255,.8)', color: stdActivo ? '#fff' : 'rgba(61,43,46,.6)' }}>
+                        {stdActivo ? (lang === 'en' ? 'Active' : 'Activo') : (lang === 'en' ? 'Off' : 'Apagado')}
+                      </button>
+                    </div>
+                    {stdActivo && linkStd ? (
+                      <>
+                        <div style={{ fontSize: 12, color: '#3D2B2E', background: 'rgba(255,255,255,.75)', borderRadius: 8, padding: '8px 10px', wordBreak: 'break-all' as const }}>{linkStd}</div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' as const }}>
+                          <button onClick={() => { navigator.clipboard?.writeText(linkStd).then(() => { setStdCopiado(true); setTimeout(() => setStdCopiado(false), 1800) }) }} style={{ border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 11, fontWeight: 800, padding: '8px 12px', borderRadius: 9, background: '#B76E79', color: '#fff' }}>
+                            {stdCopiado ? (lang === 'en' ? 'Copied' : 'Copiado') : (lang === 'en' ? 'Copy link' : 'Copiar link')}
+                          </button>
+                          <a href={`https://wa.me/?text=${encodeURIComponent(textoWa)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', fontFamily: F, fontSize: 11, fontWeight: 800, padding: '8px 12px', borderRadius: 9, background: 'rgba(255,255,255,.8)', color: '#3D2B2E' }}>WhatsApp</a>
+                          <a href={linkStd} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', fontFamily: F, fontSize: 11, fontWeight: 800, padding: '8px 12px', borderRadius: 9, background: 'rgba(255,255,255,.8)', color: '#3D2B2E' }}>{lang === 'en' ? 'Open' : 'Ver'}</a>
+                        </div>
+                      </>
+                    ) : (
+                      <p style={{ fontSize: 11, color: 'rgba(61,43,46,.55)', margin: 0, lineHeight: 1.45 }}>
+                        {lang === 'en' ? 'Turn it on to get one link with the date, city and lodging, to share with everyone.' : 'Préndelo para tener un solo link con la fecha, la ciudad y el hospedaje, para mandárselo a todos.'}
+                      </p>
+                    )}
+                    <input value={stdLugarInput} maxLength={80} onChange={e => setStdLugarInput(e.target.value)} onBlur={() => guardarStd(stdActivo, stdLugarInput)} placeholder={lang === 'en' ? 'City shown (e.g. Monterrey, Nuevo León)' : 'Ciudad que se muestra (ej. Monterrey, Nuevo León)'} style={{ ...inputStyle, width: '100%', marginTop: 8 }} />
+                    <p style={{ fontSize: 11, color: 'rgba(61,43,46,.55)', margin: '8px 0 0', lineHeight: 1.45 }}>
+                      {lang === 'en' ? "Each guest's personal link is always the full invitation." : 'El link personal de cada invitado siempre es la invitación completa.'}
+                    </p>
+                  </div>
+                )
+              })()}
+
+              <a href={`/bridal/${id}/despedida`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', marginBottom: 14, padding: '12px 14px', borderRadius: 12, background: 'rgba(183,110,121,.06)', color: '#3D2B2E' }}>
+                <span style={{ fontSize: 12, fontWeight: 800 }}>{lang === 'en' ? 'Bridal shower: invitations and RSVPs' : 'Despedida: invitaciones y respuestas'}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#B76E79' }}>→</span>
+              </a>
 
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 10, color: 'rgba(61,43,46,.45)', fontWeight: 800, textTransform: 'uppercase' as const, marginBottom: 4 }}>
@@ -1840,7 +1882,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
-              {modoInvitacion === 'save_the_date' && invitadosBoda.length > 0 && (
+              {apartadas.length > 0 && invitadosBoda.length > 0 && (
                 <div style={{ fontSize: 12, fontWeight: 800, color: '#3D2B2E', margin: '2px 0 10px' }}>
                   {apartadas.length} {lang === 'en' ? 'of' : 'de'} {invitadosBoda.length} {lang === 'en' ? 'have saved the date' : 'ya apartaron la fecha'}
                 </div>
