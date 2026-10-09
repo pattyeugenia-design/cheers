@@ -8,7 +8,7 @@ import { getLang } from '../../i18n'
 import * as XLSX from 'xlsx'
 import EditorEncuadre from '../_invitacion/EditorEncuadre'
 import { FotoEncuadrada } from '../_invitacion/FotoEncuadrada'
-import { leerEncuadreTexto, encuadreATexto, redondear, type Encuadre } from '../_invitacion/encuadre'
+import { leerEncuadreTexto, encuadreATexto, redondear, aspectoFoto, type Encuadre } from '../_invitacion/encuadre'
 
 declare global { interface Window { google: any } }
 
@@ -313,6 +313,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [apartadas, setApartadas] = useState<string[]>([])
   const [historiaItems, setHistoriaItems] = useState<any[]>([])
   const [subiendoMedia, setSubiendoMedia] = useState<string | null>(null)
+  const [progresoFotos, setProgresoFotos] = useState('')
   const [editorEnc, setEditorEnc] = useState<null | { tipo: 'historia'; i: number } | { tipo: 'portada' }>(null)
   const [personalGuardado, setPersonalGuardado] = useState(false)
   const [mesasRegalosInput, setMesasRegalosInput] = useState('')
@@ -810,38 +811,42 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     }
   }
 
-  async function subirMedia(file: File) {
-    if (!file || !file.type.startsWith('image/')) return
-    if (file.size > 25 * 1024 * 1024) {
-      alert(lang === 'en' ? 'That photo is too big (max 25MB).' : 'Esa foto pesa demasiado (máx. 25MB).')
-      return
-    }
-    if (historiaItems.length >= 6) return
+  // Mide una foto (ya reducida) para guardar su proporción: así el marco se adapta si es horizontal o vertical.
+  function medirBlob(blob: Blob): Promise<{ w: number; h: number } | null> {
+    return createImageBitmap(blob).then(b => { const r = { w: b.width, h: b.height }; b.close?.(); return r }).catch(() => null)
+  }
+
+  // Sube varias fotos de "Nuestra historia" una tras otra (hasta completar 6). Va acumulando la lista
+  // para que ninguna pise a la anterior, y guarda después de cada foto para no perder lo ya subido.
+  async function subirVarias(archivos: File[]) {
+    const lugares = 6 - historiaItems.length
+    if (lugares <= 0) return
+    const lista = archivos.filter(f => f && f.type.startsWith('image/')).slice(0, lugares)
+    if (archivos.length > lugares) alert(lang === 'en' ? `Only ${lugares} more photo(s) fit (max 6). The rest were skipped.` : `Solo caben ${lugares} foto(s) más (máximo 6). Las demás no se subieron.`)
+    let acumulado = [...historiaItems]
+    let fallidas = 0
     setSubiendoMedia('historia')
-    const blob = await reducirImagen(file)
-    if (!blob) {
-      setSubiendoMedia(null)
-      alert(lang === 'en' ? "We couldn't read that photo. Please use a JPG, PNG or WebP image." : 'No pudimos leer esa foto. Usa una imagen JPG, PNG o WebP.')
-      return
-    }
-    const ruta = `${id}/historia-${crypto.randomUUID()}.jpg`
-    const { error } = await supabase.storage.from('bodas-media').upload(ruta, blob, { contentType: 'image/jpeg', upsert: false })
-    if (error) {
-      setSubiendoMedia(null)
-      alert(lang === 'en' ? "Couldn't upload the photo. Please try again." : 'No se pudo subir la foto. Intenta de nuevo.')
-      return
-    }
-    const { data: { publicUrl } } = supabase.storage.from('bodas-media').getPublicUrl(ruta)
-    const nuevos = [...historiaItems, { url: publicUrl, ruta, pie: '' }]
-    const { error: e2 } = await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
-    if (e2) {
-      await supabase.storage.from('bodas-media').remove([ruta])
-      alert(lang === 'en' ? "Couldn't save the photo." : 'No se pudo guardar la foto.')
-    } else {
+    for (let k = 0; k < lista.length; k++) {
+      const file = lista[k]
+      setProgresoFotos(`${k + 1}/${lista.length}`)
+      if (file.size > 25 * 1024 * 1024) { fallidas++; continue }
+      const blob = await reducirImagen(file)
+      if (!blob) { fallidas++; continue }
+      const dims = await medirBlob(blob)
+      const ruta = `${id}/historia-${crypto.randomUUID()}.jpg`
+      const { error } = await supabase.storage.from('bodas-media').upload(ruta, blob, { contentType: 'image/jpeg', upsert: false })
+      if (error) { fallidas++; continue }
+      const { data: { publicUrl } } = supabase.storage.from('bodas-media').getPublicUrl(ruta)
+      const nuevos = [...acumulado, { url: publicUrl, ruta, pie: '', ...(dims ? { w: dims.w, h: dims.h } : {}) }]
+      const { error: e2 } = await supabase.from('proyectos_boda').update({ historia: nuevos }).eq('id', id)
+      if (e2) { await supabase.storage.from('bodas-media').remove([ruta]); fallidas++; continue }
+      acumulado = nuevos
       setHistoriaItems(nuevos)
       setProyecto((prev: any) => ({ ...prev, historia: nuevos }))
     }
     setSubiendoMedia(null)
+    setProgresoFotos('')
+    if (fallidas) alert(lang === 'en' ? `${fallidas} photo(s) could not be uploaded. Please try those again.` : `${fallidas} foto(s) no se pudieron subir. Intenta esas de nuevo.`)
   }
 
   async function quitarHistoria(i: number) {
@@ -1468,7 +1473,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 {historiaItems.map((h, i) => (
                   <div key={h.ruta || i}>
                     <div style={{ position: 'relative' as const }}>
-                      <FotoEncuadrada src={h.url} enc={h} aspecto="4/5" radio={8} fondo="rgba(183,110,121,.08)" />
+                      <FotoEncuadrada src={h.url} enc={h} aspecto={String(aspectoFoto(h.w, h.h))} radio={8} fondo="rgba(183,110,121,.08)" />
                       <button onClick={() => setEditorEnc({ tipo: 'historia', i })} style={{ position: 'absolute' as const, left: 4, bottom: 4, border: 'none', background: 'rgba(255,255,255,.92)', color: '#3D2B2E', fontSize: 10, fontWeight: 800, padding: '4px 8px', borderRadius: 99, cursor: 'pointer', fontFamily: F }}>{lang === 'en' ? 'Position' : 'Acomodar'}</button>
                       <button onClick={() => quitarHistoria(i)} aria-label={lang === 'en' ? 'Remove photo' : 'Quitar foto'} style={{ position: 'absolute' as const, top: 4, right: 4, border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', lineHeight: 1 }}>✕</button>
                     </div>
@@ -1477,15 +1482,15 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                 ))}
                 {historiaItems.length < 6 && (
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '4/5', border: '1.5px dashed rgba(183,110,121,.45)', borderRadius: 8, cursor: subiendoMedia ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, color: '#B76E79', textAlign: 'center' as const, padding: 6, opacity: subiendoMedia === 'historia' ? .5 : 1 }}>
-                    {subiendoMedia === 'historia' ? (lang === 'en' ? 'Uploading…' : 'Subiendo…') : (lang === 'en' ? '+ Add photo' : '+ Agregar foto')}
-                    <input type="file" accept="image/jpeg,image/png,image/webp,image/*" disabled={!!subiendoMedia} onChange={e => { const f = e.target.files?.[0]; if (f) subirMedia(f); e.target.value = '' }} style={{ display: 'none' }} />
+                    {subiendoMedia === 'historia' ? `${lang === 'en' ? 'Uploading…' : 'Subiendo…'} ${progresoFotos}` : (lang === 'en' ? '+ Add photos (you can pick several)' : '+ Agregar fotos (puedes elegir varias)')}
+                    <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/*" disabled={!!subiendoMedia} onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) subirVarias(fs); e.target.value = '' }} style={{ display: 'none' }} />
                   </label>
                 )}
               </div>
 
               {editorEnc?.tipo === 'historia' && historiaItems[editorEnc.i] && (
                 <EditorEncuadre
-                  url={historiaItems[editorEnc.i].url} aspecto="4/5" inicial={historiaItems[editorEnc.i]} lang={lang}
+                  url={historiaItems[editorEnc.i].url} aspecto="auto" inicial={historiaItems[editorEnc.i]} lang={lang}
                   titulo={lang === 'en' ? 'Position this photo' : 'Acomoda esta foto'}
                   onGuardar={e => { guardarEncuadreHistoria(editorEnc.i, e); setEditorEnc(null) }} onCancelar={() => setEditorEnc(null)}
                 />

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { FotoEncuadrada } from './FotoEncuadrada'
-import { normalizarEncuadre, redondear, type Encuadre } from './encuadre'
+import { normalizarEncuadre, redondear, aspectoFoto, type Encuadre } from './encuadre'
 
 // Ventana para acomodar una foto en su marco: se arrastra para moverla y se acerca con la barra.
 // El marco usa la MISMA proporción y el MISMO dibujo que la invitación, así que lo que se ve aquí
@@ -16,6 +16,7 @@ export default function EditorEncuadre({ url, aspecto, arco, inicial, titulo, la
   const marco = useRef<HTMLDivElement>(null)
   const arrastre = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
   const [moviendo, setMoviendo] = useState(false)
+  const aspectoUsado = aspecto === 'auto' ? String(aspectoFoto(nat?.w, nat?.h)) : aspecto
 
   // medimos la foto original para saber cuánto sobra por cada lado y poder arrastrarla bien
   useEffect(() => {
@@ -65,7 +66,7 @@ export default function EditorEncuadre({ url, aspecto, arco, inicial, titulo, la
             const m: Record<string, [number, number]> = { ArrowLeft: [paso, 0], ArrowRight: [-paso, 0], ArrowUp: [0, paso], ArrowDown: [0, -paso] }
             if (m[e.key]) { e.preventDefault(); setEnc(p => normalizarEncuadre({ x: p.x + m[e.key][0], y: p.y + m[e.key][1], z: p.z })) }
           }}
-          style={{ position: 'relative', width: 'min(300px, calc(100vw - 80px))', margin: '0 auto', aspectRatio: aspecto, touchAction: 'none', cursor: moviendo ? 'grabbing' : 'grab', outlineOffset: 3, userSelect: 'none', WebkitUserSelect: 'none', borderRadius: arco ? '999px 999px 14px 14px' : 6, boxShadow: '0 8px 24px -10px rgba(60,40,36,.5)' }}
+          style={{ position: 'relative', width: 'min(300px, calc(100vw - 80px))', margin: '0 auto', aspectRatio: aspectoUsado, touchAction: 'none', cursor: moviendo ? 'grabbing' : 'grab', outlineOffset: 3, userSelect: 'none', WebkitUserSelect: 'none', borderRadius: arco ? '999px 999px 14px 14px' : 6, boxShadow: '0 8px 24px -10px rgba(60,40,36,.5)' }}
         >
           <FotoEncuadrada src={url} enc={enc} radio={arco ? '999px 999px 14px 14px' : 6} fondo="#EEE6E0" />
         </div>

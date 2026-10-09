@@ -35,3 +35,12 @@ export function redondear(e: Encuadre): Encuadre {
   const r = (v: number) => Math.round(v * 1000) / 1000
   return { x: r(n.x), y: r(n.y), z: r(n.z) }
 }
+
+// Proporción del marco para una foto: se adapta a si es vertical u horizontal (ancho / alto),
+// sin pasar de 0.75 (muy vertical) ni de 1.5 (muy horizontal). Sin medidas conocidas: 0.8 (4:5).
+export function aspectoFoto(w?: unknown, h?: unknown): number {
+  const a = typeof w === 'number' ? w : parseFloat(String(w))
+  const b = typeof h === 'number' ? h : parseFloat(String(h))
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) return 0.8
+  return Math.round(Math.min(1.5, Math.max(0.75, a / b)) * 1000) / 1000
+}

@@ -17,7 +17,7 @@ import { IconoItinerario } from './iconos'
 import Sobre from './Sobre'
 import { enlacesCalendario } from './calendario'
 import { FotoEncuadrada } from './FotoEncuadrada'
-import { leerEncuadreTexto } from './encuadre'
+import { leerEncuadreTexto, aspectoFoto } from './encuadre'
 import { paletaDe, urlEnlaceSegura, urlImagenSegura, fechaCorta, fechaLarga, fechaPuntos, horaBonita, hora12, partirHora, type Paleta } from './tema'
 
 export const MENU_OPCIONES = ['res', 'pollo', 'vegetariano', 'vegano'] as const
@@ -89,6 +89,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const std = d.modo_invitacion === 'save_the_date'   // modo "Save the date": solo fecha, hospedaje y un botón
   const [sobreAbierto, setSobreAbierto] = useState(false)
   const [visor, setVisor] = useState<string | null>(null)
+  const [medidas, setMedidas] = useState<Record<string, number>>({})   // proporción de fotos viejas que no guardaron su tamaño
   const [flota, setFlota] = useState(false)
   const rsvpRef = useRef<HTMLElement>(null)
 
@@ -105,9 +106,25 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const portada = urlImagenSegura(d.portada_url)
   const encPortada = leerEncuadreTexto(d.portada_posicion)
   const historia: any[] = (Array.isArray(d.historia) ? d.historia : []).filter((h: any) => urlImagenSegura(h?.url))
+  useEffect(() => {
+    historia.forEach((h: any) => {
+      const u = urlImagenSegura(h.url)
+      if (!u || (h.w && h.h)) return
+      const im = new window.Image()
+      im.onload = () => setMedidas(prev => (prev[u] ? prev : { ...prev, [u]: aspectoFoto(im.naturalWidth, im.naturalHeight) }))
+      im.src = u
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d.historia])
   const itinerario: any[] = Array.isArray(d.itinerario) ? d.itinerario : []
   const colores: any[] = Array.isArray(d.vestimenta_colores) ? d.vestimenta_colores : []
   const hoteles: any[] = Array.isArray(d.hoteles) ? d.hoteles : []
+  // familias ("Padres de la novia: José y Patricia" -> etiqueta + nombres), para el Save the date de escritorio
+  const padresLineas = String(d.mensaje_padres || '').split('\n').map(l => l.trim()).filter(Boolean).slice(0, 4).map(linea => {
+    const k = linea.indexOf(':')
+    const conEtiqueta = k > 0 && k < 40
+    return { etq: conEtiqueta ? linea.slice(0, k).trim() : '', nombres: conEtiqueta ? linea.slice(k + 1).trim() : linea }
+  })
   const linkRegalos = urlEnlaceSegura(d.mesa_regalos_link)
   // WhatsApp de ayuda (peinado y maquillaje): solo dígitos y largo válido; en México se agrega 52.
   const waDigitos = String(d.ayuda_whatsapp || '').replace(/\D/g, '')
@@ -172,11 +189,97 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <Sobre p={p} lang={lang} para={invitado || t('ti', 'you')} iniciales={iniciales(d)} etiqueta={t('Nos casamos', "We're getting married")} fecha={fechaPuntos(d.fecha_boda, lang)} hint={t('Toca el sobre para abrirlo', 'Tap the envelope to open it')} onAbierto={() => setSobreAbierto(true)} />
       )}
 
-      <div className="cw-pagina">
+      <div className={`cw-pagina${std ? ' cw-std-on' : ''}`}>
       {preview && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(60,40,36,.92)', color: '#fff', padding: '9px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase' }}>
+        <div className="cw-barra" style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(60,40,36,.92)', color: '#fff', padding: '9px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase' }}>
           <span>{t('Vista previa — nada se manda', 'Preview — nothing is sent')}</span>
           {volverHref && <a href={volverHref} style={{ color: '#EBCFC7', textDecoration: 'none' }}>{t('← Dashboard', '← Dashboard')}</a>}
+        </div>
+      )}
+
+      {/* ───────── SAVE THE DATE EN COMPUTADORA: todo en una sola pantalla ───────── */}
+      {std && (
+        <div className="cw-std-escritorio">
+          <div className="cw-std-cuerpo">
+            <div className="cw-std-foto">
+              <div aria-hidden="true" className="cw-std-marco" style={{ border: `1px solid ${p.linea}` }} />
+              <div className="cw-std-arco" style={{ background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,50,.55)' }}>
+                {portada
+                  ? <FotoEncuadrada src={portada} enc={encPortada} optimizada={portada.includes('.supabase.co')} prioridad sizes={`${Math.round(380 * encPortada.z)}px`} />
+                  : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: p.script, fontSize: 58, color: p.acento }}>{iniciales(d)}</div>}
+              </div>
+              {p.botanicos && <div style={{ position: 'absolute', right: -40, bottom: -42, pointerEvents: 'none' }}><Ramillete ancho={190} /></div>}
+            </div>
+
+            <div className="cw-std-info">
+              <div style={etiqueta}>Save the date</div>
+              <h1 className="cw-std-nombres" style={{ fontFamily: p.script, fontWeight: 400, color: p.acento, margin: 0, whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
+                {d.nombre_novia}<span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.5em', color: p.acento2, margin: '0 .26em', verticalAlign: '.22em' }}>&amp;</span>{d.nombre_novio}
+              </h1>
+              <div className="cw-std-fecha" style={{ fontFamily: p.etiqueta, fontWeight: 500, letterSpacing: '.26em', textTransform: 'uppercase', color: p.txt2 }}>{fechaPuntos(d.fecha_boda, lang)}</div>
+              {stdLugar && <div className="cw-std-ciudad" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3 }}>{stdLugar}</div>}
+              {d.fecha_boda && <div className="cw-std-cuenta"><Cuenta fecha={d.fecha_boda} hora={null} p={p} lang={lang} compacta /></div>}
+              <div className="cw-std-invitacion">
+                <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.24em', textTransform: 'uppercase', color: p.txt3 }}>{t('Tu invitación', 'Your invitation')}</div>
+                <div className="cw-std-invitado" style={{ fontFamily: p.script, color: p.acento, lineHeight: 1.05 }}>{invitado || t('Invitado', 'Guest')}</div>
+                <p className="cw-std-texto" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Save the date in your calendar. The formal invitation, with all the details, is coming soon.')}</p>
+                {d.solo_adultos && <p className="cw-std-adultos" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, margin: 0 }}>{t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', 'It will be an evening just for adults. Thank you for being with us and for helping us take care of this detail.')}</p>}
+              </div>
+              <div className="cw-std-acciones">
+                {cal && <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>}
+                {cal && <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>}
+                {ctl.apartar?.hecho || d.fecha_apartada
+                  ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', 'Thank you! The date is saved.')}</div>
+                  : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>}
+              </div>
+            </div>
+          </div>
+
+          <div className="cw-std-pie">
+            {(d.versiculo || padresLineas.length > 0) && (
+              <div className="cw-std-izq">
+                {d.versiculo && <p className="cw-std-frase" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt, margin: 0 }}>“{d.versiculo}”</p>}
+                {padresLineas.length > 0 && (
+                  <div className="cw-std-padres">
+                    {padresLineas.map((x, i) => (
+                      <div key={i} style={{ padding: '0 14px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+                        {x.etq && <div style={{ fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, whiteSpace: 'nowrap' }}>{x.etq}</div>}
+                        <div className="cw-std-padre" style={{ fontFamily: p.serif, color: p.txt, whiteSpace: 'nowrap' }}>{x.nombres}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {hoteles.length > 0 && (
+              <div className="cw-std-hoteles">
+                <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.24em', textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Hospedaje para quienes vienen de lejos', 'Where to stay for those traveling')}</div>
+                <div className="cw-std-hoteles-grid">
+                  {hoteles.slice(0, 3).map((h, i) => {
+                    const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
+                    const lugarH = `${h.nombre} ${h.direccion || ''}`.trim()
+                    return (
+                      <div key={i} className="cw-std-hotel" style={{ border: `1px solid ${p.cardBorde}`, background: p.card }}>
+                        <div className="cw-std-hotel-nombre" style={{ fontFamily: p.serif, color: p.txt }}>{h.nombre}</div>
+                        {h.direccion && <div className="cw-std-hotel-dir" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3 }}>{h.direccion}</div>}
+                        {h.resena && <p className="cw-std-hotel-resena" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{String(h.resena).slice(0, 700)}</p>}
+                        {h.traslado && <div className="cw-std-hotel-traslado" style={{ fontFamily: p.etiqueta, color: p.acento }}>{String(h.traslado).slice(0, 160)}</div>}
+                        <div className="cw-std-hotel-mapas">
+                          <a className="cw-std-mini" href={enlace || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugarH)}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Google Maps</a>
+                          <a className="cw-std-mini" href={`https://waze.com/ul?q=${encodeURIComponent(lugarH)}&navigate=yes`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Waze</a>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <a className="cw-std-credito" href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', opacity: 0.75, textAlign: 'center' }}>
+            <span style={{ fontFamily: p.etiqueta, fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>{t('Invitación creada por Cheers Bridal', 'Invitation created by Cheers Bridal')}</span>
+            <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 13, color: p.txt3, marginLeft: 8 }}>{t('de Patty Eugenia', 'by Patty Eugenia')}</span>
+          </a>
         </div>
       )}
 
@@ -306,15 +409,18 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <Sec p={p} ancho={600} abajo={26}>
           <div style={etiqueta}>{t('Momentos que nos trajeron aquí', 'Moments that brought us here')}</div>
           <h2 style={titulo}>{t('Nuestra historia', 'Our story')}</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px 16px', marginTop: 32, textAlign: 'center' }}>
-            {historia.map((h, i) => (
-              <figure key={i} className="cw-polaroid" style={{ margin: 0, transform: `rotate(${[-1.8, 1.4, 1.1, -1.5, -1, 1.7][i % 6]}deg)`, marginTop: i % 2 ? 26 : 0 }}>
-                <button type="button" onClick={() => setVisor(urlImagenSegura(h.url))} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%' }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
-                  <FotoEncuadrada src={urlImagenSegura(h.url) || ''} alt={h.pie || ''} enc={h} aspecto="4/5" fondo={p.acento2} />
-                </button>
-                {h.pie && <figcaption style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15, color: p.txt2, padding: '9px 4px 2px', lineHeight: 1.25 }}>{h.pie}</figcaption>}
-              </figure>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: '16px 12px', marginTop: 28, textAlign: 'center' }}>
+            {historia.map((h, i) => {
+              const ar = h.w && h.h ? aspectoFoto(h.w, h.h) : (medidas[urlImagenSegura(h.url) || ''] || 0.8)
+              return (
+                <figure key={i} className="cw-polaroid" style={{ margin: 0, width: `calc(104px * ${ar} + 12px)`, transform: `rotate(${[-1.8, 1.4, 1.1, -1.5, -1, 1.7][i % 6]}deg)` }}>
+                  <button type="button" onClick={() => setVisor(urlImagenSegura(h.url))} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%' }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
+                    <FotoEncuadrada src={urlImagenSegura(h.url) || ''} alt={h.pie || ''} enc={h} aspecto={String(ar)} fondo={p.acento2} />
+                  </button>
+                  {h.pie && <figcaption style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 13, color: p.txt2, padding: '6px 2px 0', lineHeight: 1.2, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{h.pie}</figcaption>}
+                </figure>
+              )
+            })}
           </div>
         </Sec>
       )}
@@ -699,7 +805,7 @@ function CirculosColor({ colores, p }: { colores: any[]; p: Paleta }) {
   )
 }
 
-function Cuenta({ fecha, hora, p, lang }: { fecha: string; hora: string | null; p: Paleta; lang: string }) {
+function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora: string | null; p: Paleta; lang: string; compacta?: boolean }) {
   const [r, setR] = useState<{ d: number; h: number; m: number; s: number } | null>(null)
   useEffect(() => {
     const objetivo = new Date(`${fecha}T${/^\d{1,2}:\d{2}/.test(hora || '') ? hora : '00:00'}:00`).getTime()
@@ -712,13 +818,13 @@ function Cuenta({ fecha, hora, p, lang }: { fecha: string; hora: string | null; 
   if (!r) return null
   const u = [[r.d, lang === 'en' ? 'days' : 'días'], [r.h, lang === 'en' ? 'hours' : 'horas'], [r.m, 'min'], [r.s, lang === 'en' ? 'sec' : 'seg']] as [number, string][]
   return (
-    <div style={{ marginTop: 52 }}>
+    <div style={{ marginTop: compacta ? 0 : 52 }}>
       <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }}>{lang === 'en' ? 'Counting down' : 'Faltan'}</div>
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: compacta ? 8 : 16 }}>
         {u.map(([n, l], i) => (
-          <div key={i} style={{ width: 74, textAlign: 'center', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
-            <div style={{ fontFamily: p.serif, fontSize: 40, fontWeight: 400, color: p.txt, lineHeight: 1, fontVariantNumeric: 'lining-nums tabular-nums', fontFeatureSettings: '"lnum" 1, "tnum" 1' }}>{String(n).padStart(2, '0')}</div>
-            <div style={{ fontFamily: p.etiqueta, fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3, marginTop: 8 }}>{l}</div>
+          <div key={i} style={{ width: compacta ? 'clamp(56px, 7vh, 74px)' : 74, textAlign: 'center', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+            <div style={{ fontFamily: p.serif, fontSize: compacta ? 'clamp(26px, 4.8vh, 40px)' : 40, fontWeight: 400, color: p.txt, lineHeight: 1, fontVariantNumeric: 'lining-nums tabular-nums', fontFeatureSettings: '"lnum" 1, "tnum" 1' }}>{String(n).padStart(2, '0')}</div>
+            <div style={{ fontFamily: p.etiqueta, fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3, marginTop: compacta ? 4 : 8 }}>{l}</div>
           </div>
         ))}
       </div>
@@ -730,6 +836,51 @@ function Estilos({ p }: { p: Paleta }) {
   return (
     <style>{`
       .cw-raiz { -webkit-font-smoothing: antialiased; }
+      /* Save the date en computadora: todo en una sola pantalla (el celular conserva su formato vertical) */
+      .cw-std-escritorio { display: none; }
+      @media (min-width: 1000px) and (min-height: 600px) {
+        .cw-pagina.cw-std-on { zoom: 1; }
+        .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
+        .cw-std-escritorio { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1240px; margin: 0 auto; padding: 2.2vh 4vw 1.2vh; gap: 1.8vh; }
+        .cw-std-cuerpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5.5vw; align-items: center; justify-content: center; }
+        .cw-std-foto { position: relative; height: clamp(300px, 49vh, 540px); aspect-ratio: 3 / 4; }
+        .cw-std-arco { position: absolute; inset: 0; border-radius: 999px 999px 18px 18px; overflow: hidden; }
+        .cw-std-marco { position: absolute; inset: -10px; border-radius: 999px 999px 22px 22px; pointer-events: none; }
+        .cw-std-info { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.2vh; }
+        .cw-std-nombres { font-size: clamp(44px, 8.4vh, 88px); line-height: 1.05; }
+        .cw-std-fecha { font-size: clamp(11px, 1.7vh, 15px); }
+        .cw-std-ciudad { font-size: clamp(15px, 2.4vh, 21px); margin-top: -0.6vh; }
+        .cw-std-cuenta { margin-top: 0.2vh; }
+        .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.5vh; margin-top: 0.4vh; max-width: 560px; }
+        .cw-std-invitado { font-size: clamp(30px, 5.2vh, 48px); }
+        .cw-std-texto { font-size: clamp(14px, 2.1vh, 18px); line-height: 1.3; }
+        .cw-std-adultos { font-size: clamp(12px, 1.7vh, 14.5px); line-height: 1.3; }
+        .cw-std-acciones { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; margin-top: 0.4vh; }
+        .cw-std-pie { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); gap: 3.5vw; align-items: center; padding-top: 1.2vh; border-top: 1px solid rgba(173,133,124,.28); }
+        .cw-std-izq { display: flex; flex-direction: column; align-items: center; gap: 1.6vh; text-align: center; }
+        .cw-std-frase { font-size: clamp(14px, 2.2vh, 19px); line-height: 1.35; text-wrap: balance; }
+        .cw-std-padres { display: flex; justify-content: center; }
+        .cw-std-padre { font-size: clamp(15px, 2.3vh, 19px); }
+        .cw-std-hoteles { display: flex; flex-direction: column; gap: 1vh; }
+        .cw-std-hoteles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 1.4vw; }
+        .cw-std-hotel { border-radius: 14px; padding: 1vh 1vw; text-align: left; display: flex; flex-direction: column; gap: 0.5vh; }
+        .cw-std-hotel-nombre { font-size: clamp(16px, 2.5vh, 21px); line-height: 1.15; }
+        .cw-std-hotel-dir { font-size: clamp(11.5px, 1.65vh, 14px); line-height: 1.25; }
+        .cw-std-hotel-resena { font-size: clamp(11.5px, 1.65vh, 14px); line-height: 1.3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+        .cw-std-hotel-traslado { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
+        .cw-std-hotel-mapas { display: flex; gap: 8px; margin-top: 0.3vh; }
+        .cw-std-mini { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; text-decoration: none; white-space: nowrap; }
+        .cw-std-credito { align-self: center; }
+      }
+      @media (min-width: 1000px) and (min-height: 900px) {
+        .cw-std-hotel-resena { -webkit-line-clamp: 3; }
+      }
+      @media (min-width: 1000px) and (min-height: 600px) and (max-height: 780px) {
+        .cw-std-hotel-dir { display: none; }
+      }
+      @media (min-width: 1000px) and (min-height: 600px) and (max-height: 690px) {
+        .cw-std-hotel-resena { display: none; }
+      }
       .cw-pagina { position: relative; z-index: 2; }
       /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
       .cw-rama { position: fixed; z-index: 1; pointer-events: none; }
@@ -759,7 +910,7 @@ function Estilos({ p }: { p: Paleta }) {
       .cw-btn { transition: background .25s ease, color .25s ease, transform .25s ease; }
       .cw-btn:hover:not(:disabled) { transform: translateY(-1px); }
       .cw-chip { display: inline-block; text-decoration: none; font-size: 10.5px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; padding: 9px 16px; border-radius: 999px; }
-      .cw-polaroid { background: #fff; padding: 9px 9px 12px; box-shadow: 0 14px 26px -14px rgba(90,60,55,.45), 0 1px 3px rgba(0,0,0,.08); }
+      .cw-polaroid { background: #fff; padding: 6px 6px 8px; box-sizing: border-box; box-shadow: 0 14px 26px -14px rgba(90,60,55,.45), 0 1px 3px rgba(0,0,0,.08); }
       .cw-opcion { cursor: pointer; padding: 13px 6px; border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; transition: all .2s ease; }
       .cw-num { cursor: pointer; width: 44px; height: 44px; border-radius: 50%; font-size: 21px; transition: all .2s ease; }
       .cw-campo { display: block; width: 100%; border: 0; border-bottom: 1px solid ${p.linea}; background: transparent; padding: 10px 2px; font-size: 19px; outline: none; border-radius: 0; margin-top: 4px; }
