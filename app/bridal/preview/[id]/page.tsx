@@ -38,7 +38,8 @@ export default function PreviewInvitacionBoda({ params }: { params: Promise<{ id
       if (!user) { router.push('/login'); return }
       const { data, error } = await supabase.from('proyectos_boda').select('*').eq('id', id).single()
       if (error || !data) { setNoEncontrado(true); setCargando(false); return }
-      setProyecto(data)
+      const { data: al } = await supabase.from('boda_albumes_qr').select('codigo, abre').eq('boda_id', id).is('despedida_id', null).order('abre', { ascending: true }).limit(1)
+      setProyecto(al?.[0] ? { ...data, album_codigo: al[0].codigo, album_abre: al[0].abre } : data)
       const { data: fm } = await supabase.from('boda_firmas').select('*').eq('boda_id', id).eq('aprobado', true).order('created_at', { ascending: false })
       setFirmas(fm || [])
       const { data: fo } = await supabase.from('boda_fotos').select('*').eq('boda_id', id).eq('aprobado', true).order('created_at', { ascending: false })

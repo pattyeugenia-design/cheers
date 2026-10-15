@@ -133,6 +133,18 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const linkAyuda = waNumero ? `https://wa.me/${waNumero}?text=${encodeURIComponent(waMensaje)}` : null
   const mesas: any[] = (Array.isArray(d.mesas_regalos) ? d.mesas_regalos : []).filter((m: any) => m && String(m.nombre || '').trim()).slice(0, 4)
   const limite = d.fecha_limite_rsvp as string | undefined
+  // Álbum de fotos con QR de la boda (si existe, reemplaza el botón viejo de "Subir una foto")
+  const albumCodigo = /^[a-z0-9]{8,24}$/.test(String(d.album_codigo || '')) ? String(d.album_codigo) : ''
+  const albumUrl = albumCodigo ? `https://joincheers.app/bridal/fotos/${albumCodigo}` : ''
+  const [albumQr, setAlbumQr] = useState('')
+  useEffect(() => {
+    if (!albumUrl) return
+    import('qrcode').then(({ default: QR }) => QR.toString(albumUrl, { type: 'svg', margin: 0, color: { dark: '#5A4440', light: '#0000' } }))
+      .then(svg => setAlbumQr(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`))
+      .catch(() => setAlbumQr(''))
+  }, [albumUrl])
+  const albumAbre = d.album_abre ? new Date(d.album_abre) : null
+  const albumAunNo = !!albumAbre && albumAbre.getTime() > Date.now()
   const limitePasado = !!limite && new Date(limite + 'T23:59:59') < new Date()
 
   // Botón flotante "Confirmar asistencia": aparece al bajar y se esconde en cuanto la
@@ -674,7 +686,20 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <div style={etiqueta}>{t('El álbum de todos', "Everyone's album")}</div>
         <h2 style={titulo}>{t('Comparte tus fotos', 'Share your photos')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{t('Ayúdanos a guardar cada instante del día: sube las fotos que tomes, queremos verlo todo desde tus ojos.', 'Help us keep every moment: upload the photos you take — we want to see it all through your eyes.')}</p>
-        {ctl.fotos.recienSubida ? (
+        {albumUrl ? (
+          <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {albumQr && <img className="cw-album-qr" src={albumQr} alt={t('Código QR del álbum de fotos', 'Photo album QR code')} />}
+            <div>
+              <a className="cw-btn" href={albumUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', textDecoration: 'none', fontFamily: p.etiqueta, fontSize: 11, fontWeight: 500, letterSpacing: '.22em', textTransform: 'uppercase', padding: '14px 26px', borderRadius: 999, border: `1px solid ${p.acento}`, background: p.acento, color: p.botonTxt }}>{t('Subir fotos', 'Upload photos')}</a>
+              <p style={{ ...parrafo, fontSize: 16, fontStyle: 'italic', color: p.txt3, marginTop: 10, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
+                {albumAunNo
+                  ? t('El álbum se abre el día de la boda y queda abierto una semana. Sin app.', 'The album opens on the wedding day and stays open for a week. No app needed.')
+                  : t('Sin app y sin registrarte.', 'No app, no sign-up.')}
+              </p>
+            </div>
+          </div>
+        ) : ctl.fotos.recienSubida ? (
           <p style={{ ...parrafo, marginTop: 20, color: p.acento }}>{t('¡Gracias! Tu foto aparecerá aquí cuando la aprobemos.', 'Thank you! Your photo will appear here once we approve it.')}</p>
         ) : (
           <label className="cw-btn" style={{ display: 'inline-block', marginTop: 22, cursor: preview ? 'default' : 'pointer', fontFamily: p.etiqueta, fontSize: 11, fontWeight: 500, letterSpacing: '.22em', textTransform: 'uppercase', padding: '14px 26px', borderRadius: 999, border: `1px solid ${p.acento}`, color: p.acento, opacity: preview || ctl.fotos.subiendo ? .55 : 1 }}>
@@ -934,6 +959,8 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-btn { transition: background .25s ease, color .25s ease, transform .25s ease; }
       .cw-btn:hover:not(:disabled) { transform: translateY(-1px); }
       .cw-chip { display: inline-block; text-decoration: none; font-size: 10.5px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; padding: 9px 16px; border-radius: 999px; }
+      .cw-album-qr { display: none; width: 92px; height: 92px; background: rgba(255,255,255,.8); padding: 7px; border-radius: 10px; }
+      @media (hover: hover) and (pointer: fine) and (min-width: 700px) { .cw-album-qr { display: block; } }
       .cw-polaroid { background: #fff; padding: 6px 6px 8px; box-sizing: border-box; box-shadow: 0 14px 26px -14px rgba(90,60,55,.45), 0 1px 3px rgba(0,0,0,.08); position: relative; transform: rotate(var(--giro, 0deg)); transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease; }
       .cw-polaroid img { transition: transform .9s ease; }
       /* Fotos vivas: al pasar el cursor se enderezan y crecen (solo con mouse; en celular se quedan quietas) */
