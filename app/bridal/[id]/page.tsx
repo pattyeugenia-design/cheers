@@ -357,7 +357,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       supabase.from('boda_rsvps').select('*').eq('boda_id', bodaId),
       supabase.from('boda_mesas').select('*').eq('boda_id', bodaId).order('orden'),
       supabase.from('boda_firmas').select('*').eq('boda_id', bodaId).order('created_at', { ascending: false }),
-      supabase.from('boda_fotos').select('*').eq('boda_id', bodaId).order('created_at', { ascending: false }),
+      supabase.from('boda_fotos').select('*').eq('boda_id', bodaId).is('album_id', null).order('created_at', { ascending: false }),
     ])
     setPresupuesto(p || [])
     setTimeline(t || [])
@@ -1647,6 +1647,11 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   </div>
                 )
               })()}
+
+              <a href={`/bridal/${id}/fotos`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', marginBottom: 14, padding: '12px 14px', borderRadius: 12, background: 'rgba(183,110,121,.06)', color: '#3D2B2E' }}>
+                <span style={{ fontSize: 12, fontWeight: 800 }}>{lang === 'en' ? 'Photo albums with QR' : 'Álbumes de fotos con QR'}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#B76E79' }}>→</span>
+              </a>
 
               <a href={`/bridal/${id}/despedida`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', marginBottom: 14, padding: '12px 14px', borderRadius: 12, background: 'rgba(183,110,121,.06)', color: '#3D2B2E' }}>
                 <span style={{ fontSize: 12, fontWeight: 800 }}>{lang === 'en' ? 'Bridal shower: invitations and RSVPs' : 'Despedida: invitaciones y respuestas'}</span>
