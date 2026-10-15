@@ -12,7 +12,7 @@ const ROSA = '#B76E79'
 const TINTA = '#3D2B2E'
 
 type Album = { id: string; codigo: string; titulo: string; abre: string; cierra: string; invitados_ven_album: boolean; despedida_id: string | null }
-type Foto = { id: string; url: string; ruta_storage: string; subida_por: string | null; created_at: string; album_id: string }
+type Foto = { id: string; url: string; ruta_storage: string; subida_por: string | null; created_at: string; album_id: string; aprobado: boolean }
 
 export default function FotosQrDashboard({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -37,7 +37,7 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
       setAlbumes(lista)
       setAbierto(lista[0]?.id || '')
       if (lista.length) {
-        const { data: fo } = await supabase.from('boda_fotos').select('id, url, ruta_storage, subida_por, created_at, album_id').in('album_id', lista.map(a => a.id)).order('created_at', { ascending: false }).limit(5000)
+        const { data: fo } = await supabase.from('boda_fotos').select('id, url, ruta_storage, subida_por, created_at, album_id, aprobado').in('album_id', lista.map(a => a.id)).order('created_at', { ascending: false }).limit(5000)
         setFotos((fo || []) as Foto[])
       }
       setCargando(false)
@@ -59,6 +59,12 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
     await supabase.storage.from('fotos-boda').remove([f.ruta_storage])
     const { error } = await supabase.from('boda_fotos').delete().eq('id', f.id)
     if (!error) setFotos(prev => prev.filter(x => x.id !== f.id))
+  }
+
+  async function aprobar(ids: string[]) {
+    if (!ids.length) return
+    const { error } = await supabase.from('boda_fotos').update({ aprobado: true }).in('id', ids)
+    if (!error) setFotos(prev => prev.map(x => (ids.includes(x.id) ? { ...x, aprobado: true } : x)))
   }
 
   async function descargarTodas(a: Album) {
@@ -123,6 +129,7 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
                 <button onClick={() => descargarTodas(a)} disabled={!suyas.length || !!zip} style={{ ...boton, opacity: !suyas.length || zip ? 0.5 : 1 }}>
                   {zip?.album === a.id ? t(`Preparando ${zip.hechas}/${zip.total}…`, `Preparing ${zip.hechas}/${zip.total}…`) : t('Descargar todas (.zip)', 'Download all (.zip)')}
                 </button>
+                {suyas.some(f => !f.aprobado) && <button onClick={() => aprobar(suyas.filter(f => !f.aprobado).map(f => f.id))} style={{ ...boton, background: '#7A9E78', color: '#fff' }}>{t(`Publicar ${suyas.filter(f => !f.aprobado).length} pendientes`, `Publish ${suyas.filter(f => !f.aprobado).length} pending`)}</button>}
                 {suyas.length > 0 && <button onClick={() => setAbierto(abierto === a.id ? '' : a.id)} style={boton}>{abierto === a.id ? t('Ocultar fotos', 'Hide photos') : t('Ver fotos', 'Show photos')}</button>}
               </div>
               {abierto === a.id && suyas.length > 0 && (
@@ -136,6 +143,7 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
                           <img src={u} alt="" loading="lazy" style={{ display: 'block', width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
                         </a>
                         <div style={{ fontSize: 11, color: 'rgba(61,43,46,.6)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.subida_por || t('Sin nombre', 'No name')}</div>
+                        {!f.aprobado && <button onClick={() => aprobar([f.id])} style={{ position: 'absolute', top: 4, left: 4, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 10, fontWeight: 800, padding: '4px 8px', borderRadius: 99, background: 'rgba(255,255,255,.92)', color: TINTA }}>{t('Pendiente · publicar', 'Pending · publish')}</button>}
                         <button onClick={() => borrarFoto(f)} aria-label={t('Borrar foto', 'Delete photo')} style={{ position: 'absolute', top: 4, right: 4, border: 'none', cursor: 'pointer', width: 26, height: 26, borderRadius: 99, background: 'rgba(61,43,46,.7)', color: '#fff', fontSize: 15, lineHeight: '26px' }}>×</button>
                       </div>
                     ) : null

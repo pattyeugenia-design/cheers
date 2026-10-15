@@ -13,8 +13,9 @@ const EXTENSIONES: Record<string, string> = {
   'image/webp': 'webp',
 }
 const TAMANO_MAXIMO = 15 * 1024 * 1024
-const MAX_POR_HORA = 400
-const MAX_TOTAL_POR_ALBUM = 3000
+// Sin límite por hora (decisión de Patty: que nadie se quede sin subir en el momento).
+// Solo un tope total por álbum, para proteger el espacio de almacenamiento.
+const MAX_TOTAL_POR_ALBUM = 5000
 const CODIGO = /^[a-z0-9]{8,24}$/
 
 const NIVELES_BLOQUEO = ['LIKELY', 'VERY_LIKELY']
@@ -77,12 +78,7 @@ export async function POST(req: Request) {
   if (ahora < new Date(album.abre).getTime()) return NextResponse.json({ error: 'El álbum todavía no abre.' }, { status: 403 })
   if (ahora > new Date(album.cierra).getTime()) return NextResponse.json({ error: 'El álbum ya cerró. ¡Gracias!' }, { status: 403 })
 
-  const haceUnaHora = new Date(ahora - 60 * 60_000).toISOString()
-  const [{ count: enLaHora }, { count: total }] = await Promise.all([
-    admin.from('boda_fotos').select('id', { count: 'exact', head: true }).eq('album_id', album.id).gte('created_at', haceUnaHora),
-    admin.from('boda_fotos').select('id', { count: 'exact', head: true }).eq('album_id', album.id),
-  ])
-  if ((enLaHora ?? 0) >= MAX_POR_HORA) return NextResponse.json({ error: 'Se subieron muchas fotos en poco tiempo, intenta en un rato.' }, { status: 429 })
+  const { count: total } = await admin.from('boda_fotos').select('id', { count: 'exact', head: true }).eq('album_id', album.id)
   if ((total ?? 0) >= MAX_TOTAL_POR_ALBUM) return NextResponse.json({ error: 'El álbum ya llegó a su límite de fotos.' }, { status: 429 })
 
   const bytes = new Uint8Array(await archivo.arrayBuffer())
@@ -95,18 +91,21 @@ export async function POST(req: Request) {
   if (errSubida) return NextResponse.json({ error: 'No se pudo subir la foto' }, { status: 500 })
   const { data: urlPublica } = admin.storage.from('fotos-boda').getPublicUrl(ruta)
 
-  // Ya pasó el filtro: se publica directo en el álbum (la pareja puede borrarla).
+  // Con el filtro activo, la foto ya fue revisada y se publica directo (la pareja
+  // puede borrarla). Si el filtro NO está configurado, nadie la revisó: queda
+  // pendiente hasta que la pareja la apruebe desde el dashboard.
+  const filtroActivo = !!process.env.GOOGLE_VISION_API_KEY
   const { error: errInsert } = await admin.from('boda_fotos').insert({
     boda_id: album.boda_id,
     album_id: album.id,
     url: urlPublica.publicUrl,
     ruta_storage: ruta,
     subida_por: nombre,
-    aprobado: true,
+    aprobado: filtroActivo,
   })
   if (errInsert) {
     await admin.storage.from('fotos-boda').remove([ruta])
     return NextResponse.json({ error: 'No se pudo guardar la foto' }, { status: 500 })
   }
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, publicada: filtroActivo })
 }

@@ -81,9 +81,11 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
     setResultado(null)
     setProgreso({ hechas: 0, total: lista.length })
     let ok = 0, fallaron = 0, mensaje = ''
+    let pendientes = false
     for (let i = 0; i < lista.length; i++) {
       const foto = await reducirFoto(lista[i])
-      if (!foto) { fallaron++; mensaje = t('Una foto no se pudo leer.', 'A photo could not be read.') }
+      if (!foto) { fallaron++; mensaje = t('Una foto no se pudo leer. Intenta tomarle captura y subir la captura.', 'A photo could not be read. Try a screenshot of it.') }
+      else if (foto.size > 4_300_000) { fallaron++; mensaje = t('Una foto es muy pesada para subirla desde aquí.', 'A photo is too large to upload from here.') }
       else {
         const form = new FormData()
         form.append('codigo', codigo)
@@ -91,7 +93,7 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
         form.append('archivo', foto, 'foto.jpg')
         try {
           const res = await fetch('/api/subir-foto-qr', { method: 'POST', body: form })
-          if (res.ok) ok++
+          if (res.ok) { ok++; const d = await res.json().catch(() => null); if (d && d.publicada === false) pendientes = true }
           else {
             fallaron++
             const d = await res.json().catch(() => null)
@@ -106,6 +108,7 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
       setProgreso({ hechas: i + 1, total: lista.length })
     }
     setProgreso(null)
+    if (pendientes && !mensaje) mensaje = t('Aparecerán en el álbum en cuanto los festejados las revisen.', 'They will show up once the hosts review them.')
     setResultado({ ok, fallaron, mensaje })
     if (inputRef.current) inputRef.current.value = ''
     if (album?.invitados_ven_album) cargarFotos(codigo)
@@ -157,7 +160,7 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
             {resultado && (
               <p style={{ fontFamily: p.serif, fontSize: 18, color: resultado.fallaron && !resultado.ok ? '#A0524F' : p.acento, margin: '12px 0 0' }}>
                 {resultado.ok > 0 && t(`¡Listo! Subiste ${resultado.ok} ${resultado.ok === 1 ? 'foto' : 'fotos'}.`, `Done! You uploaded ${resultado.ok} ${resultado.ok === 1 ? 'photo' : 'photos'}.`)}
-                {resultado.fallaron > 0 && <><br /><span style={{ fontSize: 16, color: p.txt3 }}>{resultado.mensaje}</span></>}
+                {resultado.mensaje && <><br /><span style={{ fontSize: 16, color: p.txt3 }}>{resultado.mensaje}</span></>}
               </p>
             )}
           </div>

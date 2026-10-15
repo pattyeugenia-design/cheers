@@ -81,7 +81,7 @@ export default function ImprimirQr({ params }: { params: Promise<{ id: string }>
           <div style={{ fontFamily: p.serif, fontSize: '4.4mm', lineHeight: 1.35, color: p.txt2, marginTop: '5mm' }}>
             Abre la cámara de tu celular,<br />escanea el código y sube tus fotos.<br /><i style={{ color: p.txt3 }}>Sin app y sin registrarte.</i>
           </div>
-          <div style={{ fontFamily: p.etiqueta, fontSize: '2.3mm', letterSpacing: '.18em', textTransform: 'uppercase', color: p.txt3, marginTop: '5mm' }}>{pareja}</div>
+          <div style={{ fontFamily: p.etiqueta, fontSize: '2.3mm', letterSpacing: '.18em', textTransform: 'uppercase', color: p.txt3, marginTop: '5mm' }}>{album.despedida_id ? '' : pareja}</div>
           {/* Sello de Cheers */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.6mm', marginTop: '4mm' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
