@@ -133,14 +133,14 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
                 {suyas.length > 0 && <button onClick={() => setAbierto(abierto === a.id ? '' : a.id)} style={boton}>{abierto === a.id ? t('Ocultar fotos', 'Hide photos') : t('Ver fotos', 'Show photos')}</button>}
               </div>
               {abierto === a.id && suyas.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, marginTop: 14 }}>
+                <div style={{ columnWidth: 140, columnGap: 8, marginTop: 14 }}>
                   {suyas.map(f => {
                     const u = urlImagenSegura(f.url)
                     return u ? (
-                      <div key={f.id} style={{ position: 'relative' }}>
+                      <div key={f.id} style={{ position: 'relative', breakInside: 'avoid', marginBottom: 10 }}>
                         <a href={u} target="_blank" rel="noopener noreferrer">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={u} alt="" loading="lazy" style={{ display: 'block', width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
+                          <img src={u} alt="" loading="lazy" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 8 }} />
                         </a>
                         <div style={{ fontSize: 11, color: 'rgba(61,43,46,.6)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.subida_por || t('Sin nombre', 'No name')}</div>
                         {!f.aprobado && <button onClick={() => aprobar([f.id])} style={{ position: 'absolute', top: 4, left: 4, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 10, fontWeight: 800, padding: '4px 8px', borderRadius: 99, background: 'rgba(255,255,255,.92)', color: TINTA }}>{t('Pendiente · publicar', 'Pending · publish')}</button>}

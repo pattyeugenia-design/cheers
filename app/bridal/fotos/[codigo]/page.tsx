@@ -169,13 +169,14 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
         {album.invitados_ven_album && fotos.length > 0 && (
           <section style={{ marginTop: 34 }}>
             <div style={etq}>{t(`El álbum · ${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}`, `The album · ${fotos.length} photos`)}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 14 }}>
+            {/* Mosaico: cada foto completa, sin recortar (vertical u horizontal) */}
+            <div style={{ columnCount: 3, columnGap: 6, marginTop: 14 }}>
               {fotos.map((f, i) => {
                 const u = urlImagenSegura(f.url)
                 return u ? (
-                  <button key={i} type="button" className="cw-foto-mini" onClick={() => setVisor(u)} aria-label={t('Ampliar foto', 'Enlarge photo')} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', borderRadius: 8, overflow: 'hidden' }}>
+                  <button key={i} type="button" className="cw-foto-mini" onClick={() => setVisor(u)} aria-label={t('Ampliar foto', 'Enlarge photo')} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%', borderRadius: 8, overflow: 'hidden', breakInside: 'avoid', marginBottom: 6 }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={u} alt="" loading="lazy" decoding="async" style={{ display: 'block', width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+                    <img src={u} alt="" loading="lazy" decoding="async" style={{ display: 'block', width: '100%', height: 'auto' }} />
                   </button>
                 ) : null
               })}
