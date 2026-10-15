@@ -9,7 +9,7 @@ import '@fontsource/cormorant-garamond/latin-400-italic.css'
 import '@fontsource/cormorant-garamond/latin-500.css'
 import '@fontsource/jost/latin-400.css'
 import '@fontsource/jost/latin-500.css'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DefsBotanicos } from './Botanicos'
 import Sobre from './Sobre'
 import { enlacesCalendario } from './calendario'
@@ -35,6 +35,33 @@ export default function InvitacionDespedida({ d, lang, ctl }: { d: any; lang: st
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
   const [sobreAbierto, setSobreAbierto] = useState(false)
   const [ahora] = useState(() => Date.now())
+  const albumCodigo = /^[a-z0-9]{8,24}$/.test(String(d.album_codigo || '')) ? String(d.album_codigo) : ''
+  const albumUrl = albumCodigo ? `https://joincheers.app/bridal/fotos/${albumCodigo}` : ''
+  const [albumQr, setAlbumQr] = useState('')
+  useEffect(() => {
+    if (!albumUrl) return
+    import('qrcode').then(({ default: QR }) => QR.toString(albumUrl, { type: 'svg', margin: 0, color: { dark: '#5A4440', light: '#0000' } }))
+      .then(svg => setAlbumQr(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`))
+      .catch(() => setAlbumQr(''))
+  }, [albumUrl])
+
+  // En computadora todo debe caber en una pantalla: si no cabe, se escala el bloque completo.
+  useEffect(() => {
+    if (!sobreAbierto) return
+    const ajustar = () => {
+      const el = document.querySelector('.cd-grid') as HTMLElement | null
+      if (!el) return
+      el.style.zoom = ''
+      if (window.innerWidth < 1000 || window.innerHeight < 600) return
+      const alto = el.scrollHeight
+      if (alto > window.innerHeight) el.style.zoom = String(Math.max(0.7, (window.innerHeight - 2) / alto))
+    }
+    ajustar()
+    const tm = setTimeout(ajustar, 400)
+    document.fonts?.ready.then(ajustar)
+    window.addEventListener('resize', ajustar)
+    return () => { clearTimeout(tm); window.removeEventListener('resize', ajustar) }
+  }, [sobreAbierto, albumQr])
 
   const festejada = String(d.festejada || d.nombre_novia || '').trim().slice(0, 40)
   const titulo = String(d.titulo || t('Despedida de soltera', 'Bridal shower')).trim().slice(0, 80)
@@ -166,6 +193,19 @@ export default function InvitacionDespedida({ d, lang, ctl }: { d: any; lang: st
               )}
             </div>
 
+            {/* Álbum de fotos con QR: botón en celular, QR + botón en computadora */}
+            {albumUrl && (
+              <div className="cd-album" style={{ border: `1px solid ${p.cardBorde}`, background: p.card }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {albumQr && <img className="cd-album-qr" src={albumQr} alt={t('Código QR del álbum de fotos', 'Photo album QR code')} />}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={etq}>{t('Álbum de fotos', 'Photo album')}</div>
+                  <div className="cd-texto" style={{ fontFamily: p.serif, color: p.txt2, fontSize: 16 }}>{t('Ese día sube aquí tus fotos, sin app.', 'On the day, upload your photos here, no app needed.')}</div>
+                  <a href={albumUrl} target="_blank" rel="noopener noreferrer" style={{ ...mini, background: p.acento, color: p.botonTxt, border: `1px solid ${p.acento}` }}>{t('Subir fotos', 'Upload photos')}</a>
+                </div>
+              </div>
+            )}
+
             {/* Calendario y dudas en una sola línea */}
             {(cal || linkDudas) && (
               <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -191,6 +231,7 @@ export default function InvitacionDespedida({ d, lang, ctl }: { d: any; lang: st
 function EstilosDespedida() {
   return (
     <style>{`
+      html, body { overflow-x: hidden; }
       .cw-pagina.cd-pagina { zoom: 1 !important; }
       .cd-grid { max-width: 460px; margin: 0 auto; padding: 46px 20px 28px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
       .cd-foto { position: relative; width: min(46vw, 190px); aspect-ratio: 3 / 4; margin: 6px 0 4px; }
@@ -207,6 +248,8 @@ function EstilosDespedida() {
       .cd-rsvp { width: 100%; box-sizing: border-box; border-radius: 18px; padding: 16px 14px; }
       .cd-limite { font-size: 16px; margin-top: 4px; }
       .cd-gracias { font-size: 40px; }
+      .cd-album { width: 100%; box-sizing: border-box; border-radius: 18px; padding: 12px 14px; display: flex; align-items: center; justify-content: center; gap: 14px; }
+      .cd-album-qr { display: none; width: 78px; height: 78px; background: rgba(255,255,255,.8); padding: 6px; border-radius: 10px; }
       @media (min-width: 1000px) and (min-height: 600px) {
         .cd-grid { max-width: 1240px; min-height: 100vh; box-sizing: border-box; padding: 3vh 5vw; flex-direction: row; justify-content: center; gap: 5vw; }
         .cd-foto { width: auto; height: clamp(320px, 74vh, 700px); flex: none; margin: 0; }
@@ -221,6 +264,8 @@ function EstilosDespedida() {
         .cd-det-lugar { grid-column: auto; padding-bottom: 0; border-bottom: none; border-right: 1px solid rgba(173,133,124,.22); padding-right: 8px; }
         .cd-det-valor { font-size: clamp(18px, 2.6vh, 23px); }
         .cd-rsvp { padding: 1.8vh 1.4vw; }
+        .cd-album { padding: 1.2vh 1.4vw; }
+        .cd-album-qr { display: block; width: clamp(70px, 10vh, 96px); height: clamp(70px, 10vh, 96px); }
       }
     `}</style>
   )

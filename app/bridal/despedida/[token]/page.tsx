@@ -27,7 +27,10 @@ export default function InvitacionDespedidaPagina({ params }: { params: Promise<
       const { data } = await supabase.rpc('get_despedida_por_token', { p_token: token })
       const info = Array.isArray(data) ? data[0] : data
       if (info) {
-        setDatos(info)
+        // Álbum de fotos con QR de la despedida (solo su código y horario)
+        const { data: al } = await supabase.rpc('get_album_despedida_por_token', { p_token: token })
+        const a = Array.isArray(al) ? al[0] : al
+        setDatos(a && /^[a-z0-9]{8,24}$/.test(String(a.codigo || '')) ? { ...info, album_codigo: a.codigo, album_abre: a.abre, album_cierra: a.cierra } : info)
         if (info.respuesta === 'si' || info.respuesta === 'no') { setRespuesta(info.respuesta); setEnviado(true) }
         setMensaje(String(info.mensaje_invitada || ''))
       }
