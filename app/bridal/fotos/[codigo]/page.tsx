@@ -4,7 +4,7 @@ import '@fontsource/cormorant-garamond/latin-400.css'
 import '@fontsource/cormorant-garamond/latin-400-italic.css'
 import '@fontsource/jost/latin-400.css'
 import '@fontsource/jost/latin-500.css'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../../supabase'
 import { getLang } from '../../../i18n'
 import { paletaDe, urlImagenSegura } from '../../_invitacion/tema'
@@ -48,17 +48,17 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
   // Mosaico con tamaños variados: cada foto se ve completa (alto según su proporción)
   // y algunas ocupan dos columnas para que no se vea como cuadrícula.
   const [proporciones, setProporciones] = useState<Record<string, number>>({})
-  const mosaicoRef = useRef<HTMLDivElement>(null)
   const [anchoMosaico, setAnchoMosaico] = useState(0)
-  useEffect(() => {
-    const el = mosaicoRef.current
+  const observador = useRef<ResizeObserver | null>(null)
+  // Se mide el ancho real del mosaico en cuanto aparece en pantalla (y al cambiar de tamaño)
+  const mosaicoRef = useCallback((el: HTMLDivElement | null) => {
+    observador.current?.disconnect()
     if (!el) return
     const medir = () => setAnchoMosaico(el.clientWidth)
     medir()
-    const ro = new ResizeObserver(medir)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [fotos.length > 0, album?.invitados_ven_album])
+    observador.current = new ResizeObserver(medir)
+    observador.current.observe(el)
+  }, [])
   const inputRef = useRef<HTMLInputElement>(null)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
 
@@ -150,7 +150,7 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
       <Estilos p={p} />
       <Ambiente p={p} />
       <style>{`html, body { overflow-x: hidden; }
-        .cw-album-ancho { width: min(1280px, 100vw - 32px); position: relative; left: 50%; transform: translateX(-50%); }
+        .cw-album-ancho { width: min(1280px, calc(100vw - 32px)); margin-left: calc(50% - min(640px, calc(50vw - 16px))); }
         .cw-mosaico { display: grid; grid-auto-rows: 4px; grid-auto-flow: row dense; column-gap: 8px; }`}</style>
       <main style={{ position: 'relative', zIndex: 2, maxWidth: 560, margin: '0 auto', padding: '56px 20px 40px', textAlign: 'center' }}>
         <div style={etq}>{album.titulo}</div>
@@ -204,7 +204,7 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
                     const filas = Math.max(1, Math.ceil((alto + GAP) / FILA))
                     return (
                       <button key={i} type="button" className="cw-foto-mini" onClick={() => setVisor(u)} aria-label={t('Ampliar foto', 'Enlarge photo')}
-                        style={{ all: 'unset', cursor: 'zoom-in', display: 'block', gridColumn: `span ${span}`, gridRow: `span ${filas}`, paddingBottom: GAP, boxSizing: 'border-box' }}>
+                        style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%', height: '100%', gridColumn: `span ${span}`, gridRow: `span ${filas}`, paddingBottom: GAP, boxSizing: 'border-box' }}>
                         <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden', background: 'rgba(173,133,124,.12)' }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={u} alt="" loading="lazy" decoding="async"
