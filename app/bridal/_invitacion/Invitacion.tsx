@@ -691,7 +691,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {albumQr && <img className="cw-album-qr" src={albumQr} alt={t('Código QR del álbum de fotos', 'Photo album QR code')} />}
             <div>
-              <a className="cw-btn" href={albumUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', textDecoration: 'none', fontFamily: p.etiqueta, fontSize: 11, fontWeight: 500, letterSpacing: '.22em', textTransform: 'uppercase', padding: '14px 26px', borderRadius: 999, border: `1px solid ${p.acento}`, background: p.acento, color: p.botonTxt }}>{t('Subir fotos', 'Upload photos')}</a>
+              <a className="cw-btn" href={`${albumUrl}${invitado ? `?de=${encodeURIComponent(invitado)}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', textDecoration: 'none', fontFamily: p.etiqueta, fontSize: 11, fontWeight: 500, letterSpacing: '.22em', textTransform: 'uppercase', padding: '14px 26px', borderRadius: 999, border: `1px solid ${p.acento}`, background: p.acento, color: p.botonTxt }}>{t('Subir fotos', 'Upload photos')}</a>
               <p style={{ ...parrafo, fontSize: 16, fontStyle: 'italic', color: p.txt3, marginTop: 10, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
                 {albumAunNo
                   ? t('El álbum se abre el día de la boda y queda abierto una semana. Sin app.', 'The album opens on the wedding day and stays open for a week. No app needed.')

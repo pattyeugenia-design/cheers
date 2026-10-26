@@ -90,7 +90,7 @@ export default function PostDespedida({ d, lang }: { d: any; lang: string }) {
                     {t('Si tomaste fotos, nos encantaría verlas. Puedes subirlas aquí, sin descargar nada.', "If you took photos, we'd love to see them. Upload them here, nothing to download.")}
                   </p>
                 )}
-                <a href={albumUrl} target="_blank" rel="noopener noreferrer" className="cw-btn" style={{ ...botonFotos, marginTop: 12 }}>
+                <a href={`${albumUrl}${invitada ? `?de=${encodeURIComponent(invitada)}` : ''}`} target="_blank" rel="noopener noreferrer" className="cw-btn" style={{ ...botonFotos, marginTop: 12 }}>
                   {fue && albumAbierto ? t('Subir y ver fotos', 'Upload and see photos') : t('Ver las fotos', 'See the photos')}
                 </a>
                 {fue && cierraTexto && (

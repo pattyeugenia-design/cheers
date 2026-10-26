@@ -184,7 +184,7 @@ export default function InvitacionDespedida({ d, lang, ctl }: { d: any; lang: st
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <div style={etq}>{t('Álbum de fotos', 'Photo album')}</div>
                   <div className="cd-texto" style={{ fontFamily: p.serif, color: p.txt2, fontSize: 16 }}>{t('Ese día sube aquí tus fotos, sin app.', 'On the day, upload your photos here, no app needed.')}</div>
-                  <a href={albumUrl} target="_blank" rel="noopener noreferrer" style={{ ...mini, background: p.acento, color: p.botonTxt, border: `1px solid ${p.acento}` }}>{t('Subir fotos', 'Upload photos')}</a>
+                  <a href={`${albumUrl}${invitada ? `?de=${encodeURIComponent(invitada)}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ ...mini, background: p.acento, color: p.botonTxt, border: `1px solid ${p.acento}` }}>{t('Subir fotos', 'Upload photos')}</a>
                 </div>
               </div>
             )}

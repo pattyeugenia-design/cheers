@@ -70,6 +70,9 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
   useEffect(() => {
     setLang(getLang())
     try { setNombre(localStorage.getItem(CLAVE_NOMBRE) || '') } catch { /* sin almacenamiento */ }
+    // Si viene del link personal de la invitación (?de=Nombre), el nombre ya va puesto
+    const de = new URLSearchParams(window.location.search).get('de')
+    if (de && de.trim()) setNombre(de.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 60))
     params.then(async ({ codigo }) => {
       setCodigo(codigo)
       if (!CODIGO.test(codigo)) { setCargando(false); return }
@@ -205,11 +208,16 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
                     return (
                       <button key={i} type="button" className="cw-foto-mini" onClick={() => setVisor(u)} aria-label={t('Ampliar foto', 'Enlarge photo')}
                         style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%', height: '100%', gridColumn: `span ${span}`, gridRow: `span ${filas}`, paddingBottom: GAP, boxSizing: 'border-box' }}>
-                        <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden', background: 'rgba(173,133,124,.12)' }}>
+                        <span style={{ display: 'block', position: 'relative', width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden', background: 'rgba(173,133,124,.12)' }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={u} alt="" loading="lazy" decoding="async"
                             onLoad={e => { const im = e.currentTarget; if (im.naturalWidth && im.naturalHeight && !proporciones[u]) setProporciones(prev => ({ ...prev, [u]: im.naturalWidth / im.naturalHeight })) }}
                             style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {String(f.subida_por || '').trim() && (
+                            <span style={{ position: 'absolute', left: 6, bottom: 6, maxWidth: 'calc(100% - 12px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: p.serif, fontStyle: 'italic', fontSize: 13, lineHeight: 1.2, color: '#4B3B38', background: 'rgba(255,255,255,.55)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', padding: '3px 9px', borderRadius: 999, pointerEvents: 'none' }}>
+                              {String(f.subida_por).trim().slice(0, 40)}
+                            </span>
+                          )}
                         </span>
                       </button>
                     )
