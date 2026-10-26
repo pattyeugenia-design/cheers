@@ -228,7 +228,7 @@ export default function InvitacionDespedida({ d, lang, ctl }: { d: any; lang: st
 
 // Diseño compacto: en celular, una columna corta; en computadora, foto a la
 // izquierda y todo lo demás a la derecha en una sola pantalla.
-function EstilosDespedida() {
+export function EstilosDespedida() {
   return (
     <style>{`
       html, body { overflow-x: hidden; }

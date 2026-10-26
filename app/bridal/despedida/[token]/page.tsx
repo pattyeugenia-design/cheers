@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../supabase'
 import { getLang } from '../../../i18n'
 import InvitacionDespedida, { type ControlDespedida, type RespuestaDespedida } from '../../_invitacion/InvitacionDespedida'
+import PostDespedida from '../../_invitacion/PostDespedida'
 
 // Página que abre cada invitada de la despedida con su link personal (token).
 // Solo lee su propia invitación (get_despedida_por_token) y solo puede guardar
@@ -18,9 +19,12 @@ export default function InvitacionDespedidaPagina({ params }: { params: Promise<
   const [mensaje, setMensaje] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
+  // ?invitacion=1 deja ver la invitación original aunque el evento ya pasó
+  const [verInvitacion, setVerInvitacion] = useState(false)
 
   useEffect(() => {
     setLang(getLang())
+    setVerInvitacion(new URLSearchParams(window.location.search).get('invitacion') === '1')
     params.then(async ({ token }) => {
       setToken(token)
       if (!UUID.test(token)) { setCargando(false); return }
@@ -64,6 +68,10 @@ export default function InvitacionDespedidaPagina({ params }: { params: Promise<
       </p>
     </main>
   )
+
+  // Del día siguiente al evento en adelante (hora de Monterrey) se muestra la post-invitación
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Monterrey' })
+  if (!verInvitacion && datos.fecha && String(datos.fecha) < hoy) return <PostDespedida d={datos} lang={lang} />
 
   const ctl: ControlDespedida = { respuesta, setRespuesta, mensaje, setMensaje, enviar, enviando, enviado, editar: () => setEnviado(false) }
   return <InvitacionDespedida d={{ ...datos, token }} lang={lang} ctl={ctl} />
