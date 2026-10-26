@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../supabase'
 import { getLang } from '../../../i18n'
 import { fechaLarga, fechaCorta, hora12 } from '../../_invitacion/tema'
+import ModoEnvio from '../../_envio/ModoEnvio'
 
 // Lista de invitadas de la despedida, SOLO para la pareja (miembros del proyecto,
 // por RLS de boda_despedidas y boda_despedida_invitadas). Desde aquí se manda
@@ -46,6 +47,7 @@ export default function DespedidaDashboard({ params }: { params: Promise<{ id: s
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoTel, setNuevoTel] = useState('')
   const [errorNuevo, setErrorNuevo] = useState('')
+  const [modoEnvio, setModoEnvio] = useState(false)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
 
   useEffect(() => {
@@ -185,7 +187,19 @@ export default function DespedidaDashboard({ params }: { params: Promise<{ id: s
             <button key={v} onClick={() => setFiltro(v)} style={chip(filtro === v)}>{txt}</button>
           ))}
         </div>
-        <input value={busca} onChange={e => setBusca(e.target.value)} placeholder={t('Buscar por nombre o teléfono', 'Search by name or phone')} style={{ ...input, width: '100%', marginBottom: 12 }} />
+        <input value={busca} onChange={e => setBusca(e.target.value)} placeholder={t('Buscar por nombre o teléfono', 'Search by name or phone')} style={{ ...input, width: '100%', marginBottom: 10 }} />
+        <button onClick={() => setModoEnvio(true)} disabled={visibles.length === 0} style={{ ...boton, width: '100%', padding: '12px', fontSize: 14, background: ROSA, color: '#fff', marginBottom: 12, opacity: visibles.length === 0 ? 0.5 : 1 }}>
+          {t(`Modo envío: mandar uno por uno (${visibles.length})`, `Send mode: one by one (${visibles.length})`)}
+        </button>
+        {modoEnvio && (
+          <ModoEnvio
+            lang={lang}
+            items={visibles.map(i => ({ id: i.id, nombre: i.nombre, telefono: i.telefono, enviado: !!i.enviado_en }))}
+            textoDe={idInv => { const inv = invitadas.find(x => x.id === idInv); return inv ? textoDe(inv) : '' }}
+            onEnviado={idInv => { const inv = invitadas.find(x => x.id === idInv); if (inv) marcarEnviada(inv) }}
+            onCerrar={() => setModoEnvio(false)}
+          />
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {visibles.map(inv => {
