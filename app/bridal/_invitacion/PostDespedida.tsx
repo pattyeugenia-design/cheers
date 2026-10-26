@@ -10,16 +10,19 @@ import '@fontsource/cormorant-garamond/latin-400-italic.css'
 import '@fontsource/cormorant-garamond/latin-500.css'
 import '@fontsource/jost/latin-400.css'
 import '@fontsource/jost/latin-500.css'
+import { useState } from 'react'
 import { DefsBotanicos } from './Botanicos'
+import Sobre from './Sobre'
 import { FotoEncuadrada } from './FotoEncuadrada'
 import { leerEncuadreTexto } from './encuadre'
-import { paletaDe, urlImagenSegura } from './tema'
+import { paletaDe, urlImagenSegura, fechaPuntos } from './tema'
 import { Ambiente, Estilos } from './Invitacion'
 import { EstilosDespedida } from './InvitacionDespedida'
 
 export default function PostDespedida({ d, lang }: { d: any; lang: string }) {
   const p = paletaDe(d.tema, d.fuente)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
+  const [sobreAbierto, setSobreAbierto] = useState(false)
 
   const festejada = String(d.festejada || d.nombre_novia || '').trim().slice(0, 40)
   const titulo = String(d.titulo || t('Despedida de soltera', 'Bridal shower')).trim().slice(0, 80)
@@ -27,8 +30,10 @@ export default function PostDespedida({ d, lang }: { d: any; lang: string }) {
   const primerNombre = invitada.split(/\s+/)[0] || invitada
   const anfitrionas = String(d.anfitrionas || '').trim().slice(0, 160)
   const fue = d.respuesta !== 'no'
-  const portada = urlImagenSegura(d.portada_url)
-  const encPortada = leerEncuadreTexto(d.portada_posicion)
+  // Foto propia de la post-invitación (ej. con las anfitrionas); si no hay, la portada de la boda
+  const fotoPost = urlImagenSegura(d.post_portada_url)
+  const portada = fotoPost || urlImagenSegura(d.portada_url)
+  const encPortada = leerEncuadreTexto(fotoPost ? d.post_portada_posicion : d.portada_posicion)
 
   const albumCodigo = /^[a-z0-9]{8,24}$/.test(String(d.album_codigo || '')) ? String(d.album_codigo) : ''
   const albumUrl = albumCodigo ? `https://joincheers.app/bridal/fotos/${albumCodigo}` : ''
@@ -47,6 +52,10 @@ export default function PostDespedida({ d, lang }: { d: any; lang: string }) {
       <Estilos p={p} />
       <EstilosDespedida />
       <Ambiente p={p} />
+
+      {!sobreAbierto && (
+        <Sobre p={p} lang={lang} para={invitada || t('ti', 'you')} iniciales={(festejada[0] || '♡').toUpperCase()} carta={t('Gracias', 'Thank you')} etiqueta={titulo} fecha={fechaPuntos(d.fecha, lang)} hint={t('Toca el sobre para abrirlo', 'Tap the envelope to open it')} onAbierto={() => setSobreAbierto(true)} />
+      )}
 
       <div className="cw-pagina cd-pagina">
         <div className="cd-grid">

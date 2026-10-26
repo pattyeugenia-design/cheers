@@ -6,8 +6,9 @@ import type { Paleta } from './tema'
 // Portada de entrada: un sobre dirigido al invitado por su nombre. Al tocarlo
 // se abre la solapa, la carta sube y la portada se desvanece. Es solo
 // decoración: el contenido de la invitación ya está debajo y accesible.
-export default function Sobre({ p, para, iniciales, etiqueta, fecha, hint, onAbierto, lang }: {
+export default function Sobre({ p, para, iniciales, etiqueta, fecha, hint, onAbierto, lang, carta }: {
   p: Paleta; para: string; iniciales: string; etiqueta: string; fecha: string; hint: string; onAbierto: () => void; lang: string
+  carta?: string // texto de la carta que sale del sobre; si no viene, se usan las iniciales
 }) {
   const [fase, setFase] = useState<'cerrado' | 'abriendo' | 'fuera'>('cerrado')
 
@@ -39,7 +40,7 @@ export default function Sobre({ p, para, iniciales, etiqueta, fecha, hint, onAbi
         <button type="button" onClick={abrir} aria-label={lang === 'en' ? 'Open invitation' : 'Abrir invitación'} className="cw-sobre">
           <div className="cw-sobre-cuerpo" />
           <div className="cw-sobre-carta">
-            <div style={{ fontFamily: p.script, fontSize: 30, color: p.acento, lineHeight: 1 }}>{iniciales}</div>
+            <div style={{ fontFamily: p.script, fontSize: 30, color: p.acento, lineHeight: 1 }}>{carta || iniciales}</div>
             <div style={{ fontFamily: p.etiqueta, fontSize: 8.5, letterSpacing: '.3em', color: p.txt3, marginTop: 8 }}>{fecha}</div>
           </div>
           <div className="cw-sobre-frente">

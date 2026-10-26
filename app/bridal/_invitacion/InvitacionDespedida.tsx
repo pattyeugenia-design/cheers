@@ -45,23 +45,6 @@ export default function InvitacionDespedida({ d, lang, ctl }: { d: any; lang: st
       .catch(() => setAlbumQr(''))
   }, [albumUrl])
 
-  // En computadora todo debe caber en una pantalla: si no cabe, se escala el bloque completo.
-  useEffect(() => {
-    if (!sobreAbierto) return
-    const ajustar = () => {
-      const el = document.querySelector('.cd-grid') as HTMLElement | null
-      if (!el) return
-      el.style.zoom = ''
-      if (window.innerWidth < 1000 || window.innerHeight < 600) return
-      const alto = el.scrollHeight
-      if (alto > window.innerHeight) el.style.zoom = String(Math.max(0.7, (window.innerHeight - 2) / alto))
-    }
-    ajustar()
-    const tm = setTimeout(ajustar, 400)
-    document.fonts?.ready.then(ajustar)
-    window.addEventListener('resize', ajustar)
-    return () => { clearTimeout(tm); window.removeEventListener('resize', ajustar) }
-  }, [sobreAbierto, albumQr])
 
   const festejada = String(d.festejada || d.nombre_novia || '').trim().slice(0, 40)
   const titulo = String(d.titulo || t('Despedida de soltera', 'Bridal shower')).trim().slice(0, 80)

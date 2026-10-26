@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../supabase'
 import { getLang } from '../../../i18n'
@@ -48,6 +48,8 @@ export default function DespedidaDashboard({ params }: { params: Promise<{ id: s
   const [nuevoTel, setNuevoTel] = useState('')
   const [errorNuevo, setErrorNuevo] = useState('')
   const [modoEnvio, setModoEnvio] = useState(false)
+  const [subiendoFotoPost, setSubiendoFotoPost] = useState(false)
+  const fotoPostRef = useRef<HTMLInputElement>(null)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
 
   useEffect(() => {
@@ -135,6 +137,31 @@ export default function DespedidaDashboard({ params }: { params: Promise<{ id: s
     setNuevoNombre(''); setNuevoTel('')
   }
 
+  // Foto de la post-invitación (la que ven las invitadas después del evento).
+  // Usa el bucket de portadas con el nombre boda-<id>-portada.despedida.<ext>,
+  // que ya está protegido para que solo los miembros de la boda lo suban.
+  async function subirFotoPost(file: File) {
+    if (!file || !file.type.startsWith('image/') || !despedida) return
+    if (file.size > 8 * 1024 * 1024) { alert(t('La foto pesa demasiado (máx. 8MB).', 'Photo is too big (max 8MB).')); return }
+    setSubiendoFotoPost(true)
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg'
+    const path = `boda-${id}-portada.despedida.${ext}`
+    const { error } = await supabase.storage.from('portadas').upload(path, file, { upsert: true })
+    if (error) { setSubiendoFotoPost(false); alert(t('No se pudo subir la foto. Intenta con una más chica.', "Couldn't upload the photo.")); return }
+    const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
+    const url = `${publicUrl}?v=${Date.now()}`
+    const { error: e2 } = await supabase.from('boda_despedidas').update({ post_portada_url: url, post_portada_posicion: 'center' }).eq('id', despedida.id)
+    setSubiendoFotoPost(false)
+    if (e2) { alert(t('Se subió la foto pero no se pudo guardar.', 'Uploaded but could not save.')); return }
+    setDespedida((prev: any) => ({ ...prev, post_portada_url: url, post_portada_posicion: 'center' }))
+  }
+
+  async function quitarFotoPost() {
+    if (!despedida) return
+    const { error } = await supabase.from('boda_despedidas').update({ post_portada_url: null, post_portada_posicion: null }).eq('id', despedida.id)
+    if (!error) setDespedida((prev: any) => ({ ...prev, post_portada_url: null, post_portada_posicion: null }))
+  }
+
   async function quitar(inv: Invitada) {
     if (!window.confirm(t(`¿Quitar a ${inv.nombre} de la despedida? Su link deja de funcionar.`, `Remove ${inv.nombre}? Her link will stop working.`))) return
     const { error } = await supabase.from('boda_despedida_invitadas').delete().eq('id', inv.id)
@@ -174,6 +201,26 @@ export default function DespedidaDashboard({ params }: { params: Promise<{ id: s
               <div style={{ fontSize: 11, color: 'rgba(61,43,46,.6)', fontWeight: 700 }}>{k}</div>
             </div>
           ))}
+        </div>
+
+        <div style={{ background: '#fff', borderRadius: 12, padding: '12px 14px', border: '1px solid rgba(183,110,121,.15)', marginBottom: 14, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ width: 54, height: 72, borderRadius: '999px 999px 8px 8px', overflow: 'hidden', background: 'rgba(183,110,121,.12)', flex: 'none' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {despedida.post_portada_url && <img src={despedida.post_portada_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+          </div>
+          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>{t('Foto de agradecimiento', 'Thank-you photo')}</div>
+            <div style={{ fontSize: 12, color: 'rgba(61,43,46,.6)', lineHeight: 1.4 }}>
+              {t('Sale en la post-invitación, la que ven las invitadas con su link después del evento. Si no subes una, se usa la portada de la boda.', 'Shown on the post-event page guests see after the event. If empty, the wedding cover is used.')}
+            </div>
+          </div>
+          <input ref={fotoPostRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) subirFotoPost(f); e.target.value = '' }} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => fotoPostRef.current?.click()} disabled={subiendoFotoPost} style={{ ...boton, background: ROSA, color: '#fff', opacity: subiendoFotoPost ? 0.6 : 1 }}>
+              {subiendoFotoPost ? t('Subiendo…', 'Uploading…') : despedida.post_portada_url ? t('Cambiar foto', 'Change photo') : t('Subir foto', 'Upload photo')}
+            </button>
+            {despedida.post_portada_url && <button onClick={quitarFotoPost} style={{ ...boton, background: 'transparent', color: 'rgba(61,43,46,.5)' }}>{t('Quitar', 'Remove')}</button>}
+          </div>
         </div>
 
         <details style={{ background: '#fff', borderRadius: 12, padding: '10px 14px', border: '1px solid rgba(183,110,121,.15)', marginBottom: 14 }}>
