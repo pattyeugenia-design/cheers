@@ -45,6 +45,20 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
   const [progreso, setProgreso] = useState<{ hechas: number; total: number } | null>(null)
   const [resultado, setResultado] = useState<{ ok: number; fallaron: number; mensaje: string } | null>(null)
   const [visor, setVisor] = useState<string | null>(null)
+  // Mosaico con tamaños variados: cada foto se ve completa (alto según su proporción)
+  // y algunas ocupan dos columnas para que no se vea como cuadrícula.
+  const [proporciones, setProporciones] = useState<Record<string, number>>({})
+  const mosaicoRef = useRef<HTMLDivElement>(null)
+  const [anchoMosaico, setAnchoMosaico] = useState(0)
+  useEffect(() => {
+    const el = mosaicoRef.current
+    if (!el) return
+    const medir = () => setAnchoMosaico(el.clientWidth)
+    medir()
+    const ro = new ResizeObserver(medir)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fotos.length > 0, album?.invitados_ven_album])
   const inputRef = useRef<HTMLInputElement>(null)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
 
@@ -135,7 +149,9 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
       <DefsBotanicos />
       <Estilos p={p} />
       <Ambiente p={p} />
-      <style>{`html, body { overflow-x: hidden; }`}</style>
+      <style>{`html, body { overflow-x: hidden; }
+        .cw-album-ancho { width: min(1280px, 100vw - 32px); position: relative; left: 50%; transform: translateX(-50%); }
+        .cw-mosaico { display: grid; grid-auto-rows: 4px; grid-auto-flow: row dense; column-gap: 8px; }`}</style>
       <main style={{ position: 'relative', zIndex: 2, maxWidth: 560, margin: '0 auto', padding: '56px 20px 40px', textAlign: 'center' }}>
         <div style={etq}>{album.titulo}</div>
         <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: 'clamp(46px, 13vw, 72px)', lineHeight: 1.05, color: p.acento, margin: '10px 0 0' }}>{t('Comparte tus fotos', 'Share your photos')}</h1>
@@ -167,20 +183,40 @@ export default function AlbumQr({ params }: { params: Promise<{ codigo: string }
         )}
 
         {album.invitados_ven_album && fotos.length > 0 && (
-          <section style={{ marginTop: 34 }}>
+          <section className="cw-album-ancho" style={{ marginTop: 34 }}>
             <div style={etq}>{t(`El álbum · ${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}`, `The album · ${fotos.length} photos`)}</div>
-            {/* Mosaico: cada foto completa, sin recortar (vertical u horizontal) */}
-            <div style={{ columnCount: 3, columnGap: 6, marginTop: 14 }}>
-              {fotos.map((f, i) => {
-                const u = urlImagenSegura(f.url)
-                return u ? (
-                  <button key={i} type="button" className="cw-foto-mini" onClick={() => setVisor(u)} aria-label={t('Ampliar foto', 'Enlarge photo')} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%', borderRadius: 8, overflow: 'hidden', breakInside: 'avoid', marginBottom: 6 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={u} alt="" loading="lazy" decoding="async" style={{ display: 'block', width: '100%', height: 'auto' }} />
-                  </button>
-                ) : null
-              })}
-            </div>
+            {/* Mosaico: cada foto completa (sin recortar) y con tamaños distintos */}
+            {(() => {
+              const GAP = 8, FILA = 4
+              const cols = anchoMosaico < 520 ? 2 : anchoMosaico < 860 ? 3 : anchoMosaico < 1150 ? 4 : 5
+              const colW = anchoMosaico ? (anchoMosaico - (cols - 1) * GAP) / cols : 180
+              return (
+                <div ref={mosaicoRef} className="cw-mosaico" style={{ marginTop: 14, gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+                  {fotos.map((f, i) => {
+                    const u = urlImagenSegura(f.url)
+                    if (!u) return null
+                    const ar = proporciones[u] || 1
+                    // Destacadas: cada 5 fotos una grande, y las horizontales más seguido
+                    const grande = cols >= 3 && (i % 5 === 0 || (ar > 1.2 && i % 3 === 1))
+                    const span = grande ? 2 : 1
+                    const ancho = span * colW + (span - 1) * GAP
+                    const alto = ancho / ar
+                    const filas = Math.max(1, Math.ceil((alto + GAP) / FILA))
+                    return (
+                      <button key={i} type="button" className="cw-foto-mini" onClick={() => setVisor(u)} aria-label={t('Ampliar foto', 'Enlarge photo')}
+                        style={{ all: 'unset', cursor: 'zoom-in', display: 'block', gridColumn: `span ${span}`, gridRow: `span ${filas}`, paddingBottom: GAP, boxSizing: 'border-box' }}>
+                        <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden', background: 'rgba(173,133,124,.12)' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={u} alt="" loading="lazy" decoding="async"
+                            onLoad={e => { const im = e.currentTarget; if (im.naturalWidth && im.naturalHeight && !proporciones[u]) setProporciones(prev => ({ ...prev, [u]: im.naturalWidth / im.naturalHeight })) }}
+                            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </section>
         )}
 
