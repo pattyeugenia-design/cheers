@@ -24,6 +24,20 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
   const [abierto, setAbierto] = useState<string>('')
   const [copiado, setCopiado] = useState('')
   const [zip, setZip] = useState<{ album: string; hechas: number; total: number } | null>(null)
+  // Visor en grande dentro de la página (antes abría la foto suelta y no había cómo regresar)
+  const [visor, setVisor] = useState<{ lista: string[]; i: number } | null>(null)
+  useEffect(() => {
+    if (!visor) return
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setVisor(null)
+      else if (e.key === 'ArrowRight') setVisor(v => v && { ...v, i: (v.i + 1) % v.lista.length })
+      else if (e.key === 'ArrowLeft') setVisor(v => v && { ...v, i: (v.i - 1 + v.lista.length) % v.lista.length })
+    }
+    window.addEventListener('keydown', tecla)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', tecla); document.body.style.overflow = prev }
+  }, [!!visor])
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
 
   useEffect(() => {
@@ -138,10 +152,11 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
                     const u = urlImagenSegura(f.url)
                     return u ? (
                       <div key={f.id} style={{ position: 'relative', breakInside: 'avoid', marginBottom: 10 }}>
-                        <a href={u} target="_blank" rel="noopener noreferrer">
+                        <button type="button" onClick={() => { const lista = suyas.map(x => urlImagenSegura(x.url)).filter(Boolean) as string[]; setVisor({ lista, i: Math.max(0, lista.indexOf(u)) }) }}
+                          aria-label={t('Ver en grande', 'View large')} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%' }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={u} alt="" loading="lazy" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 8 }} />
-                        </a>
+                        </button>
                         <div style={{ fontSize: 11, color: 'rgba(61,43,46,.6)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.subida_por || t('Sin nombre', 'No name')}</div>
                         {!f.aprobado && <button onClick={() => aprobar([f.id])} style={{ position: 'absolute', top: 4, left: 4, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 10, fontWeight: 800, padding: '4px 8px', borderRadius: 99, background: 'rgba(255,255,255,.92)', color: TINTA }}>{t('Pendiente · publicar', 'Pending · publish')}</button>}
                         <button onClick={() => borrarFoto(f)} aria-label={t('Borrar foto', 'Delete photo')} style={{ position: 'absolute', top: 4, right: 4, border: 'none', cursor: 'pointer', width: 26, height: 26, borderRadius: 99, background: 'rgba(61,43,46,.7)', color: '#fff', fontSize: 15, lineHeight: '26px' }}>×</button>
@@ -154,6 +169,26 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
           )
         })}
       </div>
+      {visor && (() => {
+        const n = visor.lista.length
+        const btn: React.CSSProperties = { border: 'none', cursor: 'pointer', fontFamily: F, background: 'rgba(255,255,255,.14)', color: '#fff', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+        const mover = (d: number) => setVisor(v => v && { ...v, i: (v.i + d + v.lista.length) % v.lista.length })
+        return (
+          <div role="dialog" aria-modal="true" onClick={() => setVisor(null)} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(20,14,13,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 64px' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={visor.lista[visor.i]} alt="" onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 6, boxShadow: '0 20px 60px rgba(0,0,0,.5)' }} />
+            <div style={{ position: 'absolute', top: 14, left: 18, color: 'rgba(255,255,255,.8)', fontFamily: F, fontSize: 13, fontWeight: 700 }}>{visor.i + 1} / {n}</div>
+            <div style={{ position: 'absolute', top: 12, right: 14, display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
+              <a href={visor.lista[visor.i]} target="_blank" rel="noopener noreferrer" style={{ ...btn, textDecoration: 'none', fontSize: 12, fontWeight: 700, padding: '9px 14px' }}>{t('Abrir original', 'Open original')}</a>
+              <button type="button" onClick={() => setVisor(null)} aria-label={t('Cerrar', 'Close')} style={{ ...btn, width: 38, height: 38, fontSize: 22 }}>×</button>
+            </div>
+            {n > 1 && <>
+              <button type="button" onClick={e => { e.stopPropagation(); mover(-1) }} aria-label={t('Anterior', 'Previous')} style={{ ...btn, position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, fontSize: 24 }}>‹</button>
+              <button type="button" onClick={e => { e.stopPropagation(); mover(1) }} aria-label={t('Siguiente', 'Next')} style={{ ...btn, position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, fontSize: 24 }}>›</button>
+            </>}
+          </div>
+        )
+      })()}
     </main>
   )
 }
