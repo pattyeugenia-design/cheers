@@ -102,7 +102,7 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
 
   return (
     <main style={pagina}>
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '22px 16px 60px' }}>
+      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '22px 16px 60px' }}>
         <a href={`/bridal/${id}`} style={{ color: ROSA, fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>{t('← Dashboard', '← Dashboard')}</a>
         <h1 style={{ fontSize: 24, margin: '14px 0 4px' }}>{t('Álbumes de fotos con QR', 'Photo albums with QR')}</h1>
         <p style={{ fontSize: 14, color: 'rgba(61,43,46,.65)', margin: 0, lineHeight: 1.5 }}>{t('Tus invitados escanean el QR y suben sus fotos sin app ni registro. Solo se puede subir dentro del horario del álbum.', 'Guests scan the QR and upload photos with no app or sign-up, only during the album hours.')}</p>
@@ -133,7 +133,7 @@ export default function FotosQrDashboard({ params }: { params: Promise<{ id: str
                 {suyas.length > 0 && <button onClick={() => setAbierto(abierto === a.id ? '' : a.id)} style={boton}>{abierto === a.id ? t('Ocultar fotos', 'Hide photos') : t('Ver fotos', 'Show photos')}</button>}
               </div>
               {abierto === a.id && suyas.length > 0 && (
-                <div style={{ columnWidth: 140, columnGap: 8, marginTop: 14 }}>
+                <div style={{ columnWidth: 190, columnGap: 10, marginTop: 14 }}>
                   {suyas.map(f => {
                     const u = urlImagenSegura(f.url)
                     return u ? (
