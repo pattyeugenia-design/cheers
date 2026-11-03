@@ -66,6 +66,35 @@ function Boton({ p, children, onClick, href, relleno, deshabilitado, ancho, comp
     : <button className="cw-btn" type="button" onClick={deshabilitado ? undefined : onClick} disabled={deshabilitado} style={st}>{children}</button>
 }
 
+// Iconos de línea para el itinerario: iglesia (ceremonia) y copas (recepción)
+function IconoMomento({ titulo, i, color }: { titulo?: string; i: number; color: string }) {
+  const tt = String(titulo || '').toLowerCase()
+  const iglesia = /ceremon|misa|iglesia|religios|church|ceremony/.test(tt) || (!/recep|fiesta|banquete|cena|party|reception/.test(tt) && i === 0)
+  return (
+    <svg className="cw-std-momento-icono" viewBox="0 0 48 48" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {iglesia ? (
+        <>
+          <path d="M24 4v8M20.5 7.5h7" />
+          <path d="M14 22l10-8 10 8" />
+          <path d="M16 20v22h16V20" />
+          <path d="M8 42V30l8-6M40 42V30l-8-6" />
+          <path d="M6 42h36" />
+          <path d="M21 42v-7a3 3 0 0 1 6 0v7" />
+          <circle cx="24" cy="25" r="2.2" />
+        </>
+      ) : (
+        <>
+          <path d="M14 8h9l-.6 8.5a4 4 0 0 1-7.8 0L14 8z" />
+          <path d="M18.5 20.5V34M14 34h9" />
+          <path d="M26.5 11.5l8.6 2.4-2.9 8a4 4 0 0 1-7.5-2.1l1.8-8.3z" />
+          <path d="M28.6 23.4l-3.6 12.9M21.6 34.4l7.1 2" />
+          <path d="M33 5l1 2.2M38 7.5l-1.8 1.6M37 3.5l-1 2.1" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 // Save the date: "¿Nos acompañas?" con tres opciones. Es solo para darse una idea;
 // la confirmación oficial se pide con la invitación. Se puede cambiar cuantas veces quiera.
 function PreRespuesta({ p, t, valor, responder }: { p: Paleta; t: (es: string, en: string) => string; valor: string | null; responder: (v: 'si' | 'no' | 'tal_vez') => void }) {
@@ -417,6 +446,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 <div className="cw-std-dia-fila">
                 {momentosStd.map((m, i) => (
                   <div key={i} className="cw-std-momento" style={{ border: `1px solid ${p.cardBorde}`, background: p.card }}>
+                    <IconoMomento titulo={m.titulo} i={i} color={p.acento} />
                     <div className="cw-std-momento-hora" style={{ fontFamily: p.etiqueta, color: p.acento }}>{m.hora}{m.titulo ? ` · ${m.titulo}` : ''}</div>
                     {m.lugar && <div className="cw-std-momento-lugar" style={{ fontFamily: p.serif, color: p.txt }}>{m.lugar}</div>}
                     {m.lugar && (
@@ -1085,20 +1115,22 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-info .cw-pre { gap: 0.8vh; margin-top: 0.6vh; }
         .cw-std-info .cw-pre-titulo { font-size: clamp(19px, 2.9vh, 27px); }
         .cw-std-info .cw-pre-ops { gap: 10px !important; }
-        .cw-std-info .cw-pre-op { font-size: clamp(11px, 1.55vh, 13.5px); letter-spacing: .18em; padding: clamp(9px, 1.35vh, 13px) clamp(16px, 1.5vw, 24px); }
+        .cw-std-info .cw-pre-ops { flex-wrap: nowrap !important; }
+        .cw-std-info .cw-pre-op { font-size: clamp(11px, 1.55vh, 13.5px); letter-spacing: .14em; padding: clamp(9px, 1.35vh, 13px) clamp(12px, 1.1vw, 20px); }
         .cw-std-info .cw-pre-nota { font-size: clamp(13.5px, 1.9vh, 17px); }
         .cw-std-acciones { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin-top: 0.8vh; }
         .cw-std-acciones .cw-chip { font-size: clamp(11.5px, 1.6vh, 14px); padding: clamp(10px, 1.4vh, 14px) clamp(18px, 1.6vw, 26px); }
         .cw-std-dia { grid-area: dia; align-self: start; display: flex; flex-direction: column; gap: 1.4vh; }
         .cw-std-dia-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 1.4vw; }
         .cw-std-momento { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: .8vh; text-align: center; border-radius: 16px; padding: 2vh 1.4vw; }
+        .cw-std-momento-icono { width: clamp(40px, 6.2vh, 62px); height: clamp(40px, 6.2vh, 62px); margin-bottom: -0.2vh; }
         .cw-std-momento-hora { font-size: clamp(11.5px, 1.6vh, 14.5px); letter-spacing: .2em; text-transform: uppercase; }
         .cw-std-momento-lugar { font-size: clamp(18px, 2.7vh, 25px); line-height: 1.2; text-wrap: balance; }
         .cw-std-izq { flex: none; width: 100%; box-sizing: border-box; padding: 2.4vh 1.4vw; border-radius: 18px; border: 1px solid rgba(173,133,124,.22); background: rgba(255,255,255,.42); display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
-        .cw-std-frase { font-size: clamp(20px, 3.3vh, 31px); line-height: 1.3; text-wrap: balance; max-width: 22ch; }
+        .cw-std-frase { font-size: clamp(23px, 4vh, 38px); line-height: 1.3; text-wrap: balance; max-width: 22ch; }
         .cw-std-padres { display: flex; justify-content: center; }
-        .cw-std-etq-padre { font-size: clamp(10.5px, 1.5vh, 13px); }
-        .cw-std-padre { font-size: clamp(19px, 3vh, 28px); }
+        .cw-std-etq-padre { font-size: clamp(11px, 1.65vh, 14px); }
+        .cw-std-padre { font-size: clamp(22px, 3.7vh, 34px); }
         .cw-std-hoteles { grid-area: hoteles; align-self: stretch; display: flex; flex-direction: column; gap: 1.2vh; padding-left: 2vw; border-left: 1px solid rgba(173,133,124,.28); }
         .cw-std-hoteles-grid { display: flex; flex-direction: column; gap: 1.4vh; flex: 1; }
         .cw-std-hotel { flex: 1; border-radius: 14px; padding: 2vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.8vh; }
