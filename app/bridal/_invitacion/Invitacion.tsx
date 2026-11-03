@@ -399,7 +399,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             )}
             {hoteles.length > 0 && (
               <div className="cw-std-hoteles">
-                <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Hospedaje para quienes vienen de lejos', 'Accommodations for out-of-town guests')}</div>
+                <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Dónde hospedarse', 'Where to stay')}</div>
                 <div className="cw-std-hoteles-grid">
                   {hoteles.slice(0, 3).map((h, i) => {
                     const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
@@ -936,6 +936,9 @@ const PETALOS: [number, number, number, number, number, number, number][] = [
   [6, 15, 17, 0, 60, 280, 0], [14, 11, 21, 6, -40, 200, 1], [23, 17, 19, 12, 50, 320, 0], [31, 12, 23, 3, -60, 240, 1],
   [40, 14, 18, 9, 40, 300, 0], [49, 10, 24, 15, -30, 180, 1], [57, 16, 20, 2, 70, 340, 0], [65, 12, 22, 11, -50, 260, 1],
   [73, 15, 18, 7, 45, 290, 0], [81, 11, 25, 14, -45, 210, 1], [88, 17, 19, 4, 55, 330, 0], [94, 12, 21, 10, -35, 230, 1],
+  [3, 13, 22, 18, 40, 250, 1], [10, 16, 19, 22, -55, 310, 0], [19, 12, 24, 5, 35, 190, 1], [27, 14, 20, 20, -40, 270, 0],
+  [35, 11, 26, 8, 60, 220, 1], [44, 15, 21, 24, -50, 300, 0], [53, 13, 23, 17, 45, 260, 1], [61, 16, 19, 21, -35, 330, 0],
+  [69, 12, 25, 1, 55, 210, 1], [77, 14, 20, 19, -60, 280, 0], [85, 16, 22, 23, 40, 240, 1], [97, 13, 24, 13, -45, 320, 0],
 ]
 const BRILLOS: [number, number, number, number][] = [
   [8, 18, 12, 0], [22, 64, 10, 1.4], [37, 28, 13, 2.8], [52, 78, 11, 0.7], [63, 14, 10, 2.1],
@@ -1080,7 +1083,7 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-flor-d2 { top: 12px; right: 34px; }
       .cw-mece { animation: cw-mece 10s ease-in-out infinite; }
       @keyframes cw-mece { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(2.2deg); } }
-      .cw-capa-ligera { position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+      .cw-capa-ligera { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
       .cw-petalo { position: absolute; top: -30px; opacity: 0; will-change: transform, opacity; animation: cw-cae linear infinite; filter: drop-shadow(0 1px 1.5px rgba(150,105,98,.28)); }
       @keyframes cw-cae { 0% { transform: translate3d(0,-6vh,0) rotate(0deg); opacity: 0; } 8% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translate3d(var(--der),108vh,0) rotate(var(--giro)); opacity: 0; } }
       .cw-brillo { position: absolute; opacity: 0; animation: cw-brilla 5.5s ease-in-out infinite; filter: drop-shadow(0 0 4px rgba(231,206,155,.95)); }
