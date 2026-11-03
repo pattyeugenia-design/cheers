@@ -953,6 +953,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       {/* ───────── CIERRE ───────── */}
       <footer style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
+        {/* En el Save the date no va (en computadora tampoco aparece) */}
+        {!std && (
         <div className="cw-aparece" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', borderRadius: 26, overflow: 'hidden', border: `1px solid ${p.linea}`, background: 'linear-gradient(180deg, rgba(255,255,255,.78), rgba(250,236,231,.78))', boxShadow: '0 30px 50px -34px rgba(90,60,55,.45)', padding: '60px 24px 180px' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: 10, borderRadius: 18, border: `1px solid ${p.linea}`, pointerEvents: 'none' }} />
           {p.botanicos && <div style={{ position: 'absolute', top: -20, left: -34, opacity: .92, pointerEvents: 'none' }}><RamaEucalipto ancho={66} rotar={125} hojas={5} /></div>}
@@ -968,7 +970,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           </div>
           {p.botanicos && <div style={{ position: 'absolute', left: '50%', bottom: -24, marginLeft: -175, pointerEvents: 'none' }}><Ramillete ancho={350} /></div>}
         </div>
-        <div style={{ marginTop: 40 }}><Orn p={p} /></div>
+        )}
+        <div style={{ marginTop: std ? 0 : 40 }}><Orn p={p} /></div>
         <a href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 20, textDecoration: 'none', opacity: 0.75 }}>
           <span style={{ display: 'block', fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>
             {t('Invitación creada por Cheers Bridal', 'Made with Cheers Bridal')}
@@ -1177,6 +1180,10 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-pre-ops { gap: 8px !important; }
       .cw-pre-op { font-size: 10.5px; letter-spacing: .1em; padding: 13px 14px; transition: background .2s ease, color .2s ease; }
       .cw-pre-nota { font-size: 16px; line-height: 1.35; max-width: 340px; }
+      /* En las invitaciones: nada se sale a los lados (evita la franja blanca y que el celular cambie de tamaño)
+         y se ocultan los destellos y el cursor decorativo generales de Cheers */
+      html:has(.cw-raiz), html:has(.cw-raiz) body { overflow-x: clip; }
+      html:has(.cw-raiz) body > span[style*="destelloFijo"], html:has(.cw-raiz) body > div[style*="z-index: 999"] { display: none !important; }
       .cw-capa-ligera { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
       .cw-petalo { position: absolute; top: -30px; opacity: 0; will-change: transform, opacity; animation: cw-cae linear infinite; filter: drop-shadow(0 1px 1.5px rgba(150,105,98,.28)); }
       @keyframes cw-cae { 0% { transform: translate3d(0,-6vh,0) rotate(0deg); opacity: 0; } 8% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translate3d(var(--der),108vh,0) rotate(var(--giro)); opacity: 0; } }
