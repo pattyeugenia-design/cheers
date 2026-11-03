@@ -1087,14 +1087,14 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-padre { font-size: clamp(16px, 2.4vh, 22px); }
         .cw-std-hoteles { grid-area: hoteles; align-self: stretch; display: flex; flex-direction: column; gap: 1.2vh; padding-left: 2vw; border-left: 1px solid rgba(173,133,124,.28); }
         .cw-std-hoteles-grid { display: flex; flex-direction: column; gap: 1.4vh; flex: 1; }
-        .cw-std-hotel { flex: 1; border-radius: 14px; padding: 2vh 1.3vw; text-align: left; display: flex; flex-direction: column; justify-content: center; gap: 0.9vh; }
+        .cw-std-hotel { flex: 1; border-radius: 14px; padding: 2vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.8vh; }
         .cw-std-hotel-nombre { font-size: clamp(19px, min(2.9vh, 1.55vw), 27px); line-height: 1.15; }
-        .cw-std-hotel-dir { display: none; }
+        .cw-std-hotel-dir { font-size: clamp(14px, min(2vh, 1.05vw), 17px); line-height: 1.3; margin-top: -0.3vh; }
         .cw-std-hotel-resena { font-size: clamp(14px, min(2.2vh, 1.18vw), 19.5px); line-height: 1.35; }
         .cw-std-hotel-tarifa { font-size: clamp(13.5px, min(2.05vh, 1.1vw), 18px); line-height: 1.35; }
         .cw-std-hotel-tarifa > div:last-child:not(:first-child) { font-size: clamp(10.5px, 1.4vh, 12.5px); }
         .cw-std-hotel-traslado { font-size: clamp(10.5px, min(1.5vh, .8vw), 13px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
-        .cw-std-hotel-mapas { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 0.6vh; }
+        .cw-std-hotel-mapas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 0.6vh; }
         .cw-std-mini { font-size: clamp(10px, min(1.35vh, .75vw), 12px); letter-spacing: .12em; text-transform: uppercase; padding: clamp(7px, 1vh, 10px) clamp(10px, .85vw, 16px); border-radius: 999px; text-decoration: none; white-space: nowrap; }
         .cw-std-credito { grid-area: cred; justify-self: center; }
         .cw-std-cred1 { font-size: clamp(10px, 1.35vh, 12px); }
