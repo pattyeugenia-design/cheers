@@ -1051,11 +1051,11 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
         /* Una sola pantalla: foto (y familias) | datos e itinerario | hoteles a todo lo alto en la orilla derecha */
-        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(300px, .52fr); grid-template-areas: 'foto info hoteles' 'izq dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
+        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(300px, .52fr); grid-template-areas: 'foto info hoteles' 'foto dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
         .cw-std-escritorio:not(.cw-std-listo) { visibility: hidden; }
         .cw-std-cuerpo, .cw-std-pie { display: contents; }
         html:has(.cw-std-on) .cw-rama, html:has(.cw-std-on) .cw-flor { opacity: .25 !important; }
-        .cw-std-foto { grid-area: foto; justify-self: center; position: relative; height: clamp(300px, 58vh, 800px); aspect-ratio: 3 / 4; }
+        .cw-std-foto { grid-area: foto; justify-self: center; align-self: start; margin-top: 2vh; position: relative; height: clamp(320px, 72vh, 1000px); aspect-ratio: 3 / 4; }
         .cw-std-arco { position: absolute; inset: 0; border-radius: 999px 999px 18px 18px; overflow: hidden; }
         .cw-std-marco { position: absolute; inset: -10px; border-radius: 999px 999px 22px 22px; pointer-events: none; }
         .cw-std-info { grid-area: info; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1vh; }
@@ -1080,7 +1080,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-momento { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: .8vh; text-align: center; border-radius: 16px; padding: 2vh 1.4vw; }
         .cw-std-momento-hora { font-size: clamp(11.5px, 1.6vh, 14.5px); letter-spacing: .2em; text-transform: uppercase; }
         .cw-std-momento-lugar { font-size: clamp(18px, 2.7vh, 25px); line-height: 1.2; text-wrap: balance; }
-        .cw-std-izq { grid-area: izq; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
+        .cw-std-izq { grid-area: foto; align-self: end; margin-bottom: 1vh; display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
         .cw-std-frase { font-size: clamp(17px, 2.6vh, 24px); line-height: 1.35; text-wrap: balance; max-width: 22ch; }
         .cw-std-padres { display: flex; justify-content: center; }
         .cw-std-etq-padre { font-size: clamp(9.5px, 1.3vh, 12px); }
