@@ -44,7 +44,7 @@ async function fotoSegura(url: string | null) {
   }
 }
 
-// Tarjeta del Save the date (general o personal): la imagen no lleva nombre de invitado.
+// Tarjeta del Save the date. En el link personal lleva también el nombre del invitado ("Para ...").
 export default async function Image({ params }: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await params
   let inv: any = null
@@ -66,9 +66,11 @@ export default async function Image({ params }: { params: Promise<{ codigo: stri
   const enc = leerEncuadreTexto(inv?.portada_posicion)
   const fecha = fechaPuntos(inv?.fecha_boda, 'es')
   const lugar = String(inv?.std_lugar || '').trim().slice(0, 40)
+  const para = personal ? String(inv?.nombre || '').trim().slice(0, 40) : ''
   const iniciales = [novia[0], novio[0]].filter(Boolean).join(' & ').toUpperCase()
   const largo = Math.max(novia.length, novio.length)
-  const tamNombres = largo <= 7 ? 124 : largo <= 10 ? 104 : largo <= 14 ? 84 : 66
+  const tamNombres = Math.round((largo <= 7 ? 124 : largo <= 10 ? 104 : largo <= 14 ? 84 : 66) * (para ? 0.8 : 1))
+  const tamPara = para.length <= 18 ? 58 : para.length <= 28 ? 48 : 40
   const ROSA = '#AD857C'
 
   return new ImageResponse(
@@ -98,7 +100,13 @@ export default async function Image({ params }: { params: Promise<{ codigo: stri
             {novio && <div style={{ display: 'flex', fontSize: tamNombres }}>{novio}</div>}
           </div>
           {fecha && <div style={{ display: 'flex', fontSize: 25, letterSpacing: 5, color: '#6E5A55', marginTop: 30 }}>{fecha}</div>}
-          {lugar && <div style={{ display: 'flex', marginTop: 22, fontSize: 30, fontStyle: 'normal', color: '#9C8780' }}>{lugar}</div>}
+          {lugar && <div style={{ display: 'flex', marginTop: para ? 14 : 22, fontSize: 30, fontStyle: 'normal', color: '#9C8780' }}>{lugar}</div>}
+          {para && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 26, paddingTop: 20, borderTop: '1.5px solid rgba(173,133,124,0.35)' }}>
+              <div style={{ display: 'flex', fontSize: 20, letterSpacing: 6, color: '#9C8780' }}>CON CARIÑO PARA</div>
+              <div style={{ display: 'flex', fontFamily: 'Allura', fontSize: tamPara, color: ROSA, marginTop: 6, lineHeight: 1.05, textAlign: 'center' }}>{para}</div>
+            </div>
+          )}
         </div>
       </div>
       </div>
