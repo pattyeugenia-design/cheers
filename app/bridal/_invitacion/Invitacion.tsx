@@ -1040,7 +1040,7 @@ export function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora
       <div style={{ fontFamily: p.etiqueta, fontSize: compacta ? 'clamp(11px, 1.6vh, 14px)' : 10.5, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }}>{lang === 'en' ? 'Countdown' : 'Faltan'}</div>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: compacta ? 8 : 16 }}>
         {u.map(([n, l], i) => (
-          <div key={i} style={{ width: compacta ? 'clamp(64px, 9vh, 100px)' : 74, textAlign: 'center', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+          <div key={i} style={{ width: compacta ? 'clamp(88px, 13vh, 150px)' : 74, textAlign: 'center', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
             <div style={{ fontFamily: p.serif, fontSize: compacta ? 'clamp(30px, 6vh, 56px)' : 40, fontWeight: 400, color: p.txt, lineHeight: 1, fontVariantNumeric: 'lining-nums tabular-nums', fontFeatureSettings: '"lnum" 1, "tnum" 1' }}>{String(n).padStart(2, '0')}</div>
             <div style={{ fontFamily: p.etiqueta, fontSize: compacta ? 'clamp(10px, 1.4vh, 12.5px)' : 9, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3, marginTop: compacta ? 4 : 8 }}>{l}</div>
           </div>
@@ -1073,13 +1073,13 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-nombres { font-size: clamp(60px, 12vh, 150px); line-height: 1.02; }
         .cw-std-fecha { font-size: clamp(15px, 2.5vh, 23px); }
         .cw-std-ciudad { font-size: clamp(18px, 2.8vh, 27px); margin-top: -0.6vh; }
-        .cw-std-cuenta { margin: 0.4vh 0; }
+        .cw-std-cuenta { margin: 0.6vh 0; padding: 1.2vh 1.6vw; border-radius: 18px; border: 1px solid rgba(173,133,124,.22); background: rgba(255,255,255,.42); }
         .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.7vh; max-width: 720px; }
         .cw-std-invitado { font-size: clamp(36px, 6.4vh, 64px); }
         .cw-std-texto { font-size: clamp(18px, 2.7vh, 26px); line-height: 1.3; text-wrap: balance; }
         .cw-std-adultos { font-size: clamp(14.5px, 2.1vh, 19px); line-height: 1.35; text-wrap: balance; }
         .cw-std-cta { display: flex; flex-direction: column; align-items: center; gap: 1.2vh; }
-        .cw-std-cta-2 { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: start; column-gap: 2.6vw; margin-top: 0.8vh; }
+        .cw-std-cta-2 { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: start; column-gap: 2.6vw; margin-top: 0.8vh; padding: 1.8vh 2.2vw; border-radius: 18px; border: 1px solid rgba(173,133,124,.22); background: rgba(255,255,255,.42); }
         .cw-std-cta-2 .cw-std-acciones { flex-direction: column; align-items: stretch; gap: 0.9vh; margin-top: 0; }
         .cw-std-cta-2 .cw-std-acciones .cw-pre-titulo { text-align: center; margin-bottom: 0.1vh; }
         .cw-std-cta-2 .cw-pre { padding-left: 2.6vw; border-left: 1px solid rgba(173,133,124,.28); margin-top: 0 !important; }
@@ -1096,11 +1096,11 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-momento { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: .8vh; text-align: center; border-radius: 16px; padding: 2vh 1.4vw; }
         .cw-std-momento-hora { font-size: clamp(11.5px, 1.6vh, 14.5px); letter-spacing: .2em; text-transform: uppercase; }
         .cw-std-momento-lugar { font-size: clamp(18px, 2.7vh, 25px); line-height: 1.2; text-wrap: balance; }
-        .cw-std-izq { flex: none; margin-bottom: 0.4vh; display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
-        .cw-std-frase { font-size: clamp(17px, 2.6vh, 24px); line-height: 1.35; text-wrap: balance; max-width: 22ch; }
+        .cw-std-izq { flex: none; width: 100%; box-sizing: border-box; padding: 2.4vh 1.4vw; border-radius: 18px; border: 1px solid rgba(173,133,124,.22); background: rgba(255,255,255,.42); display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
+        .cw-std-frase { font-size: clamp(20px, 3.3vh, 31px); line-height: 1.3; text-wrap: balance; max-width: 22ch; }
         .cw-std-padres { display: flex; justify-content: center; }
-        .cw-std-etq-padre { font-size: clamp(9.5px, 1.3vh, 12px); }
-        .cw-std-padre { font-size: clamp(16px, 2.4vh, 22px); }
+        .cw-std-etq-padre { font-size: clamp(10.5px, 1.5vh, 13px); }
+        .cw-std-padre { font-size: clamp(19px, 3vh, 28px); }
         .cw-std-hoteles { grid-area: hoteles; align-self: stretch; display: flex; flex-direction: column; gap: 1.2vh; padding-left: 2vw; border-left: 1px solid rgba(173,133,124,.28); }
         .cw-std-hoteles-grid { display: flex; flex-direction: column; gap: 1.4vh; flex: 1; }
         .cw-std-hotel { flex: 1; border-radius: 14px; padding: 2vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.8vh; }
