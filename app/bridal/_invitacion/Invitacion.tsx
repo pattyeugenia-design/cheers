@@ -281,6 +281,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       const H = window.innerHeight
       el.style.minHeight = '0px'
       el.style.zoom = '1'
+      // Alto disponible en las unidades del propio bloque: con él se dimensiona la foto
+      el.style.setProperty('--std-alto', `${H}px`)
       let z = 1
       if (el.getBoundingClientRect().height > H) {
         // Busca el zoom más grande con el que todo cabe (los tamaños en vh también cambian con el zoom)
@@ -288,10 +290,12 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         for (let i = 0; i < 8; i++) {
           const m = (lo + hi) / 2
           el.style.zoom = String(m)
+          el.style.setProperty('--std-alto', `${H / m}px`)
           if (el.getBoundingClientRect().height <= H) lo = m; else hi = m
         }
         z = lo
         el.style.zoom = String(z)
+        el.style.setProperty('--std-alto', `${H / z}px`)
       }
       el.style.minHeight = `${(H - 1) / z}px`
       el.classList.add('cw-std-listo')
@@ -356,6 +360,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       {std && (
         <div className="cw-std-escritorio">
           <div className="cw-std-cuerpo">
+            <div className="cw-std-lado">
             <div className="cw-std-foto">
               <div aria-hidden="true" className="cw-std-marco" style={{ border: `1px solid ${p.linea}` }} />
               <div className="cw-std-arco cw-foto-vida" style={{ background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,50,.55)' }}>
@@ -364,6 +369,22 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                   : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: p.script, fontSize: 58, color: p.acento }}>{iniciales(d)}</div>}
               </div>
               {p.botanicos && <div style={{ position: 'absolute', right: -40, bottom: -42, pointerEvents: 'none' }}><Ramillete ancho={190} /></div>}
+            </div>
+            {(d.versiculo || padresLineas.length > 0) && (
+              <div className="cw-std-izq">
+                {d.versiculo && <p className="cw-std-frase" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt, margin: 0 }}>“{d.versiculo}”</p>}
+                {padresLineas.length > 0 && (
+                  <div className="cw-std-padres">
+                    {padresLineas.map((x, i) => (
+                      <div key={i} style={{ padding: '0 14px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+                        {x.etq && <div className="cw-std-etq-padre" style={{ fontFamily: p.etiqueta, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, whiteSpace: 'nowrap' }}>{x.etq}</div>}
+                        <div className="cw-std-padre" style={{ fontFamily: p.serif, color: p.txt, whiteSpace: 'nowrap' }}>{x.nombres}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             </div>
 
             <div className="cw-std-info">
@@ -380,7 +401,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 <p className="cw-std-texto" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Please save the date. A formal invitation with all the details will follow.')}</p>
                 {d.solo_adultos && <p className="cw-std-adultos" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, margin: 0 }}>{t('Será una celebración solo para adultos. Gracias por tu comprensión.', "We've planned an adults-only celebration. Thank you for understanding.")}</p>}
               </div>
+              <div className={`cw-std-cta${ctl.preRespuesta ? ' cw-std-cta-2' : ''}`}>
               <div className="cw-std-acciones">
+                {ctl.preRespuesta && cal && <div className="cw-pre-titulo" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.acento }}>{t('Guárdala en tu calendario', 'Add it to your calendar')}</div>}
                 {cal && <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>}
                 {cal && <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>}
                 {!ctl.preRespuesta && ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
@@ -388,6 +411,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                   : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', "I've saved the date")}</Boton>)}
               </div>
               {ctl.preRespuesta && <PreRespuesta p={p} t={t} valor={ctl.preRespuesta.valor} responder={ctl.preRespuesta.responder} />}
+              </div>
             </div>
             {momentosStd.length > 0 && (
               <div className="cw-std-dia">
@@ -411,21 +435,6 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           </div>
 
           <div className="cw-std-pie">
-            {(d.versiculo || padresLineas.length > 0) && (
-              <div className="cw-std-izq">
-                {d.versiculo && <p className="cw-std-frase" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt, margin: 0 }}>“{d.versiculo}”</p>}
-                {padresLineas.length > 0 && (
-                  <div className="cw-std-padres">
-                    {padresLineas.map((x, i) => (
-                      <div key={i} style={{ padding: '0 14px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
-                        {x.etq && <div className="cw-std-etq-padre" style={{ fontFamily: p.etiqueta, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, whiteSpace: 'nowrap' }}>{x.etq}</div>}
-                        <div className="cw-std-padre" style={{ fontFamily: p.serif, color: p.txt, whiteSpace: 'nowrap' }}>{x.nombres}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
             {hoteles.length > 0 && (
               <div className="cw-std-hoteles">
                 <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Dónde hospedarse', 'Where to stay')}</div>
@@ -1051,11 +1060,12 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
         /* Una sola pantalla: foto (y familias) | datos e itinerario | hoteles a todo lo alto en la orilla derecha */
-        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(300px, .52fr); grid-template-areas: 'foto info hoteles' 'foto dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
+        .cw-std-escritorio { display: grid; grid-template-columns: calc(var(--std-alto, 100vh) * .54) minmax(0, 1fr) minmax(300px, .52fr); grid-template-areas: 'foto info hoteles' 'foto dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
         .cw-std-escritorio:not(.cw-std-listo) { visibility: hidden; }
         .cw-std-cuerpo, .cw-std-pie { display: contents; }
         html:has(.cw-std-on) .cw-rama, html:has(.cw-std-on) .cw-flor { opacity: .25 !important; }
-        .cw-std-foto { grid-area: foto; justify-self: center; align-self: start; margin-top: 2vh; position: relative; height: clamp(320px, 72vh, 1000px); aspect-ratio: 3 / 4; }
+        .cw-std-lado { grid-area: foto; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 2.4vh; min-height: 0; }
+        .cw-std-foto { position: relative; flex: none; width: 100%; aspect-ratio: 3 / 4; }
         .cw-std-arco { position: absolute; inset: 0; border-radius: 999px 999px 18px 18px; overflow: hidden; }
         .cw-std-marco { position: absolute; inset: -10px; border-radius: 999px 999px 22px 22px; pointer-events: none; }
         .cw-std-info { grid-area: info; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1vh; }
@@ -1068,6 +1078,12 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-invitado { font-size: clamp(36px, 6.4vh, 64px); }
         .cw-std-texto { font-size: clamp(18px, 2.7vh, 26px); line-height: 1.3; text-wrap: balance; }
         .cw-std-adultos { font-size: clamp(14.5px, 2.1vh, 19px); line-height: 1.35; text-wrap: balance; }
+        .cw-std-cta { display: flex; flex-direction: column; align-items: center; gap: 1.2vh; }
+        .cw-std-cta-2 { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: start; column-gap: 2.6vw; margin-top: 0.8vh; }
+        .cw-std-cta-2 .cw-std-acciones { flex-direction: column; align-items: stretch; gap: 0.9vh; margin-top: 0; }
+        .cw-std-cta-2 .cw-std-acciones .cw-pre-titulo { text-align: center; margin-bottom: 0.1vh; }
+        .cw-std-cta-2 .cw-pre { padding-left: 2.6vw; border-left: 1px solid rgba(173,133,124,.28); margin-top: 0 !important; }
+        .cw-std-cta-2 .cw-pre-nota { max-width: 300px; }
         .cw-std-info .cw-pre { gap: 0.8vh; margin-top: 0.6vh; }
         .cw-std-info .cw-pre-titulo { font-size: clamp(19px, 2.9vh, 27px); }
         .cw-std-info .cw-pre-ops { gap: 10px !important; }
@@ -1080,7 +1096,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-momento { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: .8vh; text-align: center; border-radius: 16px; padding: 2vh 1.4vw; }
         .cw-std-momento-hora { font-size: clamp(11.5px, 1.6vh, 14.5px); letter-spacing: .2em; text-transform: uppercase; }
         .cw-std-momento-lugar { font-size: clamp(18px, 2.7vh, 25px); line-height: 1.2; text-wrap: balance; }
-        .cw-std-izq { grid-area: foto; align-self: end; margin-bottom: 1vh; display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
+        .cw-std-izq { flex: none; margin-bottom: 0.4vh; display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
         .cw-std-frase { font-size: clamp(17px, 2.6vh, 24px); line-height: 1.35; text-wrap: balance; max-width: 22ch; }
         .cw-std-padres { display: flex; justify-content: center; }
         .cw-std-etq-padre { font-size: clamp(9.5px, 1.3vh, 12px); }
