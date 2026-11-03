@@ -241,22 +241,41 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
   // Save the date en computadora: si el contenido no cabe en la pantalla, se
   // escala todo el bloque (sin cambiar proporciones) para que nunca haya scroll.
+  // Se mide antes de mostrarlo (visibility) para que no "brinque" de tamaño al cargar,
+  // y el alto mínimo se compensa con el zoom para que llene toda la pantalla.
   useEffect(() => {
-    if (!std || !sobreAbierto) return
+    if (!std) return
+    let vivo = true
     const ajustar = () => {
       const el = document.querySelector('.cw-std-escritorio') as HTMLElement | null
-      if (!el) return
-      el.style.zoom = ''
-      if (getComputedStyle(el).display === 'none') return
-      const alto = el.scrollHeight
-      if (alto > window.innerHeight) el.style.zoom = String(Math.max(0.72, window.innerHeight / alto))
+      if (!el) return false
+      if (getComputedStyle(el).display === 'none') return true // celular: no aplica
+      const H = window.innerHeight
+      el.style.minHeight = '0px'
+      el.style.zoom = '1'
+      let z = 1
+      if (el.getBoundingClientRect().height > H) {
+        // Busca el zoom más grande con el que todo cabe (los tamaños en vh también cambian con el zoom)
+        let lo = 0.72, hi = 1
+        for (let i = 0; i < 8; i++) {
+          const m = (lo + hi) / 2
+          el.style.zoom = String(m)
+          if (el.getBoundingClientRect().height <= H) lo = m; else hi = m
+        }
+        z = lo
+        el.style.zoom = String(z)
+      }
+      el.style.minHeight = `${(H - 1) / z}px`
+      el.classList.add('cw-std-listo')
+      return true
     }
-    ajustar()
-    const t = setTimeout(ajustar, 400)
-    document.fonts?.ready.then(ajustar)
+    // Se ajusta desde que carga (detrás del sobre), así al abrirlo ya tiene su tamaño final
+    const esperar = () => { if (vivo && !ajustar()) requestAnimationFrame(esperar) }
+    esperar()
+    document.fonts?.ready.then(() => { if (vivo) ajustar() })
     window.addEventListener('resize', ajustar)
-    return () => { clearTimeout(t); window.removeEventListener('resize', ajustar) }
-  }, [std, sobreAbierto])
+    return () => { vivo = false; window.removeEventListener('resize', ajustar) }
+  }, [std])
 
   // Las secciones aparecen suavemente al llegar a ellas.
   // Si el navegador no puede observar el scroll, todo queda visible desde el
@@ -999,10 +1018,11 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
         /* Una sola pantalla: foto (y familias) | datos e itinerario | hoteles a todo lo alto en la orilla derecha */
-        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(300px, .62fr); grid-template-areas: 'foto info hoteles' 'izq dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1880px; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
+        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(290px, .5fr); grid-template-areas: 'foto info hoteles' 'izq dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1880px; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
+        .cw-std-escritorio:not(.cw-std-listo) { visibility: hidden; }
         .cw-std-cuerpo, .cw-std-pie { display: contents; }
         html:has(.cw-std-on) .cw-rama, html:has(.cw-std-on) .cw-flor { opacity: .25 !important; }
-        .cw-std-foto { grid-area: foto; justify-self: center; position: relative; height: clamp(300px, 54vh, 760px); aspect-ratio: 3 / 4; }
+        .cw-std-foto { grid-area: foto; justify-self: center; position: relative; height: clamp(300px, 58vh, 800px); aspect-ratio: 3 / 4; }
         .cw-std-arco { position: absolute; inset: 0; border-radius: 999px 999px 18px 18px; overflow: hidden; }
         .cw-std-marco { position: absolute; inset: -10px; border-radius: 999px 999px 22px 22px; pointer-events: none; }
         .cw-std-info { grid-area: info; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1vh; }
@@ -1022,18 +1042,18 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-momento { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: .8vh; text-align: center; border-radius: 16px; padding: 2vh 1.4vw; }
         .cw-std-momento-hora { font-size: clamp(11.5px, 1.6vh, 14.5px); letter-spacing: .2em; text-transform: uppercase; }
         .cw-std-momento-lugar { font-size: clamp(18px, 2.7vh, 25px); line-height: 1.2; text-wrap: balance; }
-        .cw-std-izq { grid-area: izq; align-self: start; display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
+        .cw-std-izq { grid-area: izq; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
         .cw-std-frase { font-size: clamp(17px, 2.6vh, 24px); line-height: 1.35; text-wrap: balance; max-width: 22ch; }
         .cw-std-padres { display: flex; justify-content: center; }
         .cw-std-etq-padre { font-size: clamp(9.5px, 1.3vh, 12px); }
         .cw-std-padre { font-size: clamp(16px, 2.4vh, 22px); }
         .cw-std-hoteles { grid-area: hoteles; align-self: stretch; display: flex; flex-direction: column; gap: 1.2vh; padding-left: 2vw; border-left: 1px solid rgba(173,133,124,.28); }
-        .cw-std-hoteles-grid { display: flex; flex-direction: column; gap: 1.2vh; flex: 1; }
-        .cw-std-hotel { flex: 1; border-radius: 14px; padding: 1.4vh 1.1vw; text-align: left; display: flex; flex-direction: column; gap: 0.6vh; }
-        .cw-std-hotel-nombre { font-size: clamp(18px, 2.6vh, 24px); line-height: 1.15; }
+        .cw-std-hoteles-grid { display: flex; flex-direction: column; justify-content: space-between; gap: 1.4vh; flex: 1; }
+        .cw-std-hotel { border-radius: 14px; padding: 1.8vh 1.2vw; text-align: left; display: flex; flex-direction: column; gap: 0.6vh; }
+        .cw-std-hotel-nombre { font-size: clamp(19px, 2.8vh, 26px); line-height: 1.15; }
         .cw-std-hotel-dir { display: none; }
-        .cw-std-hotel-resena { font-size: clamp(14px, 1.9vh, 17px); line-height: 1.35; }
-        .cw-std-hotel-tarifa { font-size: clamp(13.5px, 1.85vh, 16.5px); line-height: 1.35; }
+        .cw-std-hotel-resena { font-size: clamp(14.5px, 2.05vh, 18px); line-height: 1.35; }
+        .cw-std-hotel-tarifa { font-size: clamp(14px, 1.95vh, 17px); line-height: 1.35; }
         .cw-std-hotel-tarifa > div:last-child:not(:first-child) { font-size: clamp(10.5px, 1.4vh, 12.5px); }
         .cw-std-hotel-traslado { font-size: clamp(10.5px, 1.4vh, 12.5px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
         .cw-std-hotel-mapas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 0.4vh; }
