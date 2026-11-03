@@ -1106,6 +1106,15 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-invitado { font-size: clamp(36px, 6.4vh, 64px); }
         .cw-std-texto { font-size: clamp(18px, 2.7vh, 26px); line-height: 1.3; text-wrap: balance; }
         .cw-std-adultos { font-size: clamp(14.5px, 2.1vh, 19px); line-height: 1.35; text-wrap: balance; }
+        /* Paleta del evento (ivory · blush · dusty rose · mauve · sage) para distinguir cada zona */
+        .cw-std-escritorio .cw-std-cuenta { background: linear-gradient(180deg, rgba(242,228,223,.75), rgba(242,228,223,.45)); border-color: rgba(180,143,145,.38); }
+        .cw-std-escritorio .cw-std-cta-2 { background: rgba(251,248,243,.82); border-color: rgba(180,143,145,.28); }
+        .cw-std-escritorio .cw-std-cta-2 .cw-pre { border-left-color: rgba(180,143,145,.35); }
+        .cw-std-escritorio .cw-std-momento { background: rgba(170,186,152,.12) !important; border-color: rgba(150,166,134,.5) !important; }
+        .cw-std-escritorio .cw-std-momento-icono { stroke: #8E9A82; }
+        .cw-std-escritorio .cw-std-izq { background: linear-gradient(180deg, rgba(227,203,199,.42), rgba(242,228,223,.42)); border-color: rgba(180,143,145,.35); }
+        .cw-std-escritorio .cw-std-hotel { background: rgba(251,248,243,.88) !important; border-color: rgba(227,203,199,.9) !important; box-shadow: inset 3px 0 0 rgba(180,143,145,.55); }
+        .cw-std-escritorio .cw-std-hoteles { border-left-color: rgba(159,170,148,.45); }
         .cw-std-cta { display: flex; flex-direction: column; align-items: center; gap: 1.2vh; }
         .cw-std-cta-2 { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: start; column-gap: 2.6vw; margin-top: 0.8vh; padding: 1.8vh 2.2vw; border-radius: 18px; border: 1px solid rgba(173,133,124,.22); background: rgba(255,255,255,.42); }
         .cw-std-cta-2 .cw-std-acciones { flex-direction: column; align-items: stretch; gap: 0.9vh; margin-top: 0; }
