@@ -92,7 +92,7 @@ function conIngles(d: any, lang: string) {
   const r: any = { ...d }
   for (const k of CAMPOS_EN) {
     const v = en[k]
-    if (typeof v === 'string' && v.trim()) r[k] = v
+    if (typeof v === 'string' && v.trim() && d[k]) r[k] = v   // solo traduce lo que la pareja sí escribió en español
     else if (Array.isArray(v) && Array.isArray(d[k])) r[k] = d[k].map((x: any, i: number) => (x && typeof x === 'object' && v[i] && typeof v[i] === 'object' ? { ...x, ...v[i] } : x))
   }
   return r
@@ -131,7 +131,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const permitidos = Math.max(0, Number(d.acompanantes_permitidos) || 0)
   const ultimoItem = Array.isArray(d.itinerario) && d.itinerario.length ? d.itinerario[d.itinerario.length - 1] : null
   const stdLugar = String(d.std_lugar || '').trim()
-  const cal = d.fecha_boda ? enlacesCalendario(nombreBoda || 'Boda', d.fecha_boda, std ? null : d.hora_boda, std ? (stdLugar || null) : (lugar1 || null), String(d.slug || d.token || nombreBoda || 'boda'), std ? null : (ultimoItem ? partirHora(ultimoItem.hora).fin : null), std) : null
+  // Título del evento en el calendario del invitado: "Boda Patty y Valente (Monterrey)"
+  const ciudadCal = String(d.std_lugar || '').split(',')[0].trim()
+  const parejaCal = [d.nombre_novia, d.nombre_novio].filter(Boolean).join(lang === 'en' ? ' & ' : ' y ')
+  const tituloCal = (parejaCal ? (lang === 'en' ? `${parejaCal}'s Wedding` : `Boda ${parejaCal}`) : t('Boda', 'Wedding')) + (ciudadCal ? ` (${ciudadCal})` : '')
+  const cal = d.fecha_boda ? enlacesCalendario(tituloCal, d.fecha_boda, std ? null : d.hora_boda, std ? (stdLugar || null) : (lugar1 || null), String(d.slug || d.token || nombreBoda || 'boda'), std ? null : (ultimoItem ? partirHora(ultimoItem.hora).fin : null), std) : null
   const portada = urlImagenSegura(d.portada_url)
   const encPortada = leerEncuadreTexto(d.portada_posicion)
   const historia: any[] = (Array.isArray(d.historia) ? d.historia : []).filter((h: any) => urlImagenSegura(h?.url))
@@ -175,6 +179,16 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const albumAbre = d.album_abre ? new Date(d.album_abre) : null
   const albumAunNo = !!albumAbre && albumAbre.getTime() > Date.now()
   const limitePasado = !!limite && new Date(limite + 'T23:59:59') < new Date()
+
+  // Flores fijas de las esquinas: transparentes en cuanto el invitado baja (ver .cw-bajo).
+  useEffect(() => {
+    if (!sobreAbierto) return
+    const raiz = document.documentElement
+    const fn = () => raiz.classList.toggle('cw-bajo', window.scrollY > 120)
+    window.addEventListener('scroll', fn, { passive: true })
+    fn()
+    return () => { window.removeEventListener('scroll', fn); raiz.classList.remove('cw-bajo') }
+  }, [sobreAbierto])
 
   // Botón flotante "Confirmar asistencia": aparece al bajar y se esconde en cuanto la
   // confirmación entra a la vista; ya que la pasaste, no vuelve a estorbar.
@@ -283,7 +297,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 {invitado && <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.txt3 }}>{t('Con cariño para', 'Especially for')}</div>}
                 {invitado && <div className="cw-std-invitado" style={{ fontFamily: p.script, color: p.acento, lineHeight: 1.05 }}>{invitado}</div>}
                 <p className="cw-std-texto" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Please save the date. A formal invitation with all the details will follow.')}</p>
-                {d.solo_adultos && <p className="cw-std-adultos" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, margin: 0 }}>{t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', "We've planned an adults-only celebration. Thank you for understanding.")}</p>}
+                {d.solo_adultos && <p className="cw-std-adultos" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, margin: 0 }}>{t('Será una celebración solo para adultos. Gracias por tu comprensión.', "We've planned an adults-only celebration. Thank you for understanding.")}</p>}
               </div>
               <div className="cw-std-acciones">
                 {cal && <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>}
@@ -361,8 +375,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
               ? <FotoEncuadrada src={portada} enc={encPortada} optimizada={portada.includes('.supabase.co')} prioridad sizes={`(max-width:600px) ${Math.round(74 * encPortada.z)}vw, ${Math.round(320 * encPortada.z)}px`} />
               : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: p.script, fontSize: 58, color: p.acento }}>{iniciales(d)}</div>}
           </div>
-          {p.botanicos && <div style={{ position: 'absolute', right: -44, bottom: -46, pointerEvents: 'none' }}><Ramillete ancho={210} /></div>}
-          {p.botanicos && <div style={{ position: 'absolute', left: -30, bottom: 24, pointerEvents: 'none', opacity: .9 }}><Peonia ancho={70} tono="claro" rotar={-14} /></div>}
+          {p.botanicos && <div style={{ position: 'absolute', right: -62, bottom: -64, pointerEvents: 'none' }}><Ramillete ancho={170} /></div>}
+          {p.botanicos && <div style={{ position: 'absolute', left: -42, bottom: -14, pointerEvents: 'none', opacity: .9 }}><Peonia ancho={56} tono="claro" rotar={-14} /></div>}
         </div>
 
         {d.fecha_boda && <Cuenta fecha={d.fecha_boda} hora={std ? null : d.hora_boda} p={p} lang={lang} />}
@@ -376,7 +390,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           <p style={{ ...parrafo, marginTop: 14 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Please save the date. A formal invitation with all the details will follow.')}</p>
           {d.solo_adultos && (
             <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
-              {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', "We've planned an adults-only celebration. Thank you for understanding.")}
+              {t('Será una celebración solo para adultos. Gracias por tu comprensión.', "We've planned an adults-only celebration. Thank you for understanding.")}
             </p>
           )}
           {cal && (
@@ -404,7 +418,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </p>
         {d.solo_adultos && (
           <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
-            {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', "We've planned an adults-only celebration. Thank you for understanding.")}
+            {t('Será una celebración solo para adultos. Gracias por tu comprensión.', "We've planned an adults-only celebration. Thank you for understanding.")}
           </p>
         )}
         <div style={{ marginTop: 24 }}><Boton p={p} relleno onClick={() => irA('confirmar')}>{r.enviado || d.ya_respondio ? t('Ver mi respuesta', 'See my reply') : t('Confirmar asistencia', 'RSVP')}</Boton></div>
@@ -793,7 +807,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
               {d.nombre_novia}<span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: '0.4em', color: p.acento2, margin: '0 .32em', verticalAlign: '.34em' }}>&amp;</span>{d.nombre_novio}
             </div>
             {/* Un solo agradecimiento (el que la pareja escribe como frase de cierre) y la fecha */}
-            <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 22, lineHeight: 1.4, margin: '22px auto 0', maxWidth: 340, textWrap: 'balance' } as React.CSSProperties}>{d.frase_cierre || t('Gracias por acompañarnos', 'Thank you for celebrating with us')}</p>
+            <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 22, lineHeight: 1.4, margin: '22px auto 0', maxWidth: 340, textWrap: 'balance' } as React.CSSProperties}>{d.frase_cierre || (std ? t('Contamos los días para celebrar contigo.', "We're counting down the days to celebrate with you.") : t('Gracias por acompañarnos', 'Thank you for celebrating with us'))}</p>
             <div style={{ ...etiqueta, color: p.txt3, marginTop: 20, letterSpacing: '.26em' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
           </div>
           {p.botanicos && <div style={{ position: 'absolute', left: '50%', bottom: -24, marginLeft: -175, pointerEvents: 'none' }}><Ramillete ancho={350} /></div>}
@@ -962,6 +976,9 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-brisa-b { transform-origin: 100% 0; animation-duration: 11s; animation-delay: -3s; }
       @keyframes cw-brisa { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(2.8deg); } }
       .cw-flor { position: fixed; z-index: 1; pointer-events: none; }
+      /* Al bajar, las flores fijas de las esquinas se vuelven casi transparentes para no taparle el texto a nadie */
+      .cw-rama, .cw-flor { transition: opacity .6s ease; }
+      html.cw-bajo .cw-rama, html.cw-bajo .cw-flor { opacity: .28 !important; }
       .cw-flor-i1 { top: 34px; left: -30px; }
       .cw-flor-i2 { top: 4px; left: 38px; }
       .cw-flor-d1 { top: 46px; right: -28px; }
