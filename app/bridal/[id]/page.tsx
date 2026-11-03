@@ -136,18 +136,18 @@ function textoAItinerario(texto: string) {
   })
 }
 
-// Hoteles: una línea por hotel, "nombre | dirección | especial(si/no) | link | reseña | traslado".
+// Hoteles: una línea por hotel, "nombre | dirección | especial(si/no) | link | reseña | traslado | tarifa | clave | link para reservar | contacto".
 // Los campos vacíos se conservan en su lugar para que al volver a editar nada se recorra.
 function hotelesATexto(items: any[]) {
   return (items || []).map(h => {
-    const campos = [h.nombre, h.direccion, h.tarifa_especial ? 'si' : 'no', h.link, h.resena, h.traslado].map(v => (v ?? '').toString())
+    const campos = [h.nombre, h.direccion, h.tarifa_especial ? 'si' : 'no', h.link, h.resena, h.traslado, h.tarifa, h.codigo, h.reservar, h.contacto].map(v => (v ?? '').toString().replace(/\n/g, ' '))
     while (campos.length > 3 && campos[campos.length - 1] === '') campos.pop()
     return campos.join(' | ')
   }).join('\n')
 }
 function textoAHoteles(texto: string) {
   return texto.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 6).map(linea => {
-    const [nombre, direccion, especial, link, resena, traslado] = linea.split('|').map(p => p?.trim() || '')
+    const [nombre, direccion, especial, link, resena, traslado, tarifa, codigo, reservar, contacto] = linea.split('|').map(p => p?.trim() || '')
     return {
       nombre: (nombre || '').slice(0, 80),
       direccion: direccion ? direccion.slice(0, 160) : null,
@@ -155,6 +155,10 @@ function textoAHoteles(texto: string) {
       link: link ? link.slice(0, 500) : null,
       resena: resena ? resena.slice(0, 700) : null,
       traslado: traslado ? traslado.slice(0, 160) : null,
+      tarifa: tarifa ? tarifa.slice(0, 400) : null,
+      codigo: codigo ? codigo.slice(0, 30) : null,
+      reservar: reservar && /^https:\/\//i.test(reservar) ? reservar.slice(0, 500) : null,
+      contacto: contacto ? contacto.slice(0, 200) : null,
     }
   })
 }
@@ -1428,7 +1432,7 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                   <input ref={lugar2Ref} value={lugar2Input} onChange={e => setLugar2Input(e.target.value)} placeholder={lang === 'en' ? 'Search venue…' : 'Buscar lugar…'} style={{ ...inputStyle, width: '100%' }} />
 
                   <label style={{ fontSize: 11, color: 'rgba(61,43,46,.5)', fontWeight: 700, display: 'block', margin: '10px 0 4px' }}>
-                    {lang === 'en' ? 'Hotels — one per line: name | address | special wedding rate? yes/no | map link | short review | travel time (leave blanks between bars if you skip one)' : 'Hoteles — uno por línea: nombre | dirección | ¿tarifa especial de boda? si/no | link de mapa | reseña breve | traslado (si te saltas uno, deja las barras vacías)'}
+                    {lang === 'en' ? 'Hotels — one per line: name | address | special wedding rate? yes/no | map link | short review | travel time | rate | booking code | booking link | contact (leave blanks between bars if you skip one)' : 'Hoteles — uno por línea: nombre | dirección | ¿tarifa especial de boda? si/no | link de mapa | reseña breve | traslado | tarifa | clave de convenio | link para reservar | contacto (si te saltas uno, deja las barras vacías)'}
                   </label>
                   <textarea value={hotelesInput} onChange={e => setHotelesInput(e.target.value)} rows={5} placeholder={'Hotel Ejemplo | Av. Principal 100, Zona Centro | no | | Una frase sobre por qué lo elegimos | Aprox. 20 min en Uber'} style={{ ...inputStyle, width: '100%', resize: 'vertical' as const, fontFamily: 'monospace' }} />
                   {hotelesInput.trim() && (

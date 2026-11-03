@@ -77,6 +77,30 @@ function ComoLlegar({ p, lugar, google, t }: { p: Paleta; lugar: string; google?
   )
 }
 
+// Tarifa especial de un hotel: precio, clave de convenio y botón para reservar.
+function TarifaHotel({ p, h, t, compacta }: { p: Paleta; h: any; t: (es: string, en: string) => string; compacta?: boolean }) {
+  const tarifa = String(h.tarifa || '').trim().slice(0, 400)
+  const codigo = String(h.codigo || '').trim().slice(0, 30)
+  const contacto = String(h.contacto || '').trim().slice(0, 200)
+  const reservar = urlEnlaceSegura(h.reservar)
+  if (!tarifa && !codigo && !reservar) return null
+  if (compacta) return (
+    <div className="cw-std-hotel-tarifa" style={{ fontFamily: p.serif, color: p.txt, display: 'flex', flexDirection: 'column', gap: '0.5vh' }}>
+      {tarifa && <div style={{ whiteSpace: 'pre-wrap' }}>{tarifa}</div>}
+      {codigo && <div style={{ fontFamily: p.etiqueta, letterSpacing: '.1em', textTransform: 'uppercase', color: p.acento }}>{t('Clave de convenio', 'Booking code')}: <b>{codigo}</b></div>}
+    </div>
+  )
+  return (
+    <div style={{ marginTop: 14, padding: '14px 16px', border: `1px solid ${p.linea}`, borderRadius: 14, textAlign: 'left' }}>
+      <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento }}>{t('Tarifa especial de boda', 'Special wedding rate')}</div>
+      {tarifa && <p style={{ fontFamily: p.serif, fontSize: 17.5, lineHeight: 1.4, color: p.txt, margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>{tarifa}</p>}
+      {codigo && <div style={{ marginTop: 10, fontFamily: p.etiqueta, fontSize: 11.5, letterSpacing: '.14em', textTransform: 'uppercase', color: p.txt2 }}>{t('Clave de convenio', 'Booking code')}: <b style={{ color: p.acento, letterSpacing: '.2em' }}>{codigo}</b></div>}
+      {contacto && <p style={{ fontFamily: p.serif, fontSize: 15.5, lineHeight: 1.4, color: p.txt3, margin: '8px 0 0' }}>{contacto}</p>}
+      {reservar && <div style={{ marginTop: 14 }}><Boton p={p} relleno ancho compacto href={reservar}>{t('Reservar con tarifa especial', 'Book with the wedding rate')}</Boton></div>}
+    </div>
+  )
+}
+
 function iniciales(d: any) {
   const a = (d.nombre_novia || '').trim()[0]; const b = (d.nombre_novio || '').trim()[0]
   return [a, b].filter(Boolean).join(' & ').toUpperCase() || '♡'
@@ -337,8 +361,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                         <div className="cw-std-hotel-nombre" style={{ fontFamily: p.serif, color: p.txt }}>{h.nombre}</div>
                         {h.direccion && <div className="cw-std-hotel-dir" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3 }}>{h.direccion}</div>}
                         {h.resena && <p className="cw-std-hotel-resena" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{String(h.resena).slice(0, 700)}</p>}
+                        <TarifaHotel p={p} h={h} t={t} compacta />
                         {h.traslado && <div className="cw-std-hotel-traslado" style={{ fontFamily: p.etiqueta, color: p.acento }}>{String(h.traslado).slice(0, 160)}</div>}
                         <div className="cw-std-hotel-mapas">
+                          {urlEnlaceSegura(h.reservar) && <a className="cw-std-mini" href={urlEnlaceSegura(h.reservar)!} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: '#fff', background: p.acento, border: `1px solid ${p.acento}` }}>{t('Reservar', 'Book now')}</a>}
                           <a className="cw-std-mini" href={enlace || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugarH)}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Google Maps</a>
                           <a className="cw-std-mini" href={`https://waze.com/ul?q=${encodeURIComponent(lugarH)}&navigate=yes`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Waze</a>
                         </div>
@@ -589,9 +615,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             return (
               <div key={i} style={{ marginTop: 26, padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
                 <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt }}>{h.nombre}</div>
-                {h.tarifa_especial && <span style={{ display: 'inline-block', marginTop: 8, fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '4px 11px' }}>{t('Tarifa especial de boda', 'Special wedding rate')}</span>}
+                {h.tarifa_especial && !h.tarifa && <span style={{ display: 'inline-block', marginTop: 8, fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '4px 11px' }}>{t('Tarifa especial de boda', 'Special wedding rate')}</span>}
                 {h.direccion && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 10 }}>{h.direccion}</div>}
                 {h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700)}</p>}
+                <TarifaHotel p={p} h={h} t={t} />
                 {h.traslado && (
                   <div style={{ marginTop: 14, padding: '10px 14px', border: `1px solid ${p.linea}`, borderRadius: 12, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.acento, lineHeight: 1.6 }}>
                     {String(h.traslado).slice(0, 160)}
@@ -957,6 +984,8 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-hotel-nombre { font-size: clamp(19px, 3vh, 28px); line-height: 1.15; }
         .cw-std-hotel-dir { font-size: clamp(14px, 2vh, 17.5px); line-height: 1.25; }
         .cw-std-hotel-resena { font-size: clamp(14.5px, 2.15vh, 18.5px); line-height: 1.35; }
+        .cw-std-hotel-tarifa { font-size: clamp(14px, 2vh, 17.5px); line-height: 1.35; }
+        .cw-std-hotel-tarifa > div:last-child:not(:first-child) { font-size: clamp(10.5px, 1.45vh, 13px); }
         .cw-std-hotel-traslado { font-size: clamp(11px, 1.5vh, 13.5px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
         .cw-std-hotel-mapas { display: flex; gap: 10px; margin-top: 0.4vh; }
         .cw-std-mini { font-size: clamp(10.5px, 1.4vh, 12.5px); letter-spacing: .14em; text-transform: uppercase; padding: clamp(7px, 1vh, 10px) clamp(13px, 1.1vw, 18px); border-radius: 999px; text-decoration: none; white-space: nowrap; }
