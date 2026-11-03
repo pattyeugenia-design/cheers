@@ -340,22 +340,28 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                   : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', "I've saved the date")}</Boton>)}
               </div>
             </div>
+            {momentosStd.length > 0 && (
+              <div className="cw-std-dia">
+                {momentosStd.map((m, i) => (
+                  <div key={i} className="cw-std-momento">
+                    <div className="cw-std-momento-hora" style={{ fontFamily: p.etiqueta, color: p.acento }}>{m.hora}{m.titulo ? ` · ${m.titulo}` : ''}</div>
+                    {m.lugar && <div className="cw-std-momento-lugar" style={{ fontFamily: p.serif, color: p.txt }}>{m.lugar}</div>}
+                    {m.lugar && (
+                      <div className="cw-std-hotel-mapas" style={{ justifyContent: 'center' }}>
+                        <a className="cw-std-mini" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.completo)}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Google Maps</a>
+                        <a className="cw-std-mini" href={`https://waze.com/ul?q=${encodeURIComponent(m.completo)}&navigate=yes`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Waze</a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="cw-std-pie">
             {(d.fecha_boda || d.versiculo || padresLineas.length > 0) && (
               <div className="cw-std-izq">
                 {d.fecha_boda && <div className="cw-std-cuenta"><Cuenta fecha={d.fecha_boda} hora={null} p={p} lang={lang} compacta /></div>}
-                {momentosStd.length > 0 && (
-                  <div className="cw-std-momentos">
-                    {momentosStd.map((m, i) => (
-                      <div key={i} className="cw-std-momento">
-                        <div className="cw-std-momento-hora" style={{ fontFamily: p.etiqueta, color: p.acento }}>{m.hora}{m.titulo ? ` · ${m.titulo}` : ''}</div>
-                        {m.lugar && <a className="cw-std-momento-lugar" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.completo)}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.serif, color: p.txt, textDecoration: 'none', borderBottom: `1px solid ${p.linea}` }}>{m.lugar}</a>}
-                      </div>
-                    ))}
-                  </div>
-                )}
                 {d.versiculo && <p className="cw-std-frase" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt, margin: 0 }}>“{d.versiculo}”</p>}
                 {padresLineas.length > 0 && (
                   <div className="cw-std-padres">
@@ -990,31 +996,31 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
         /* Arriba: foto | datos | frase y papás. Abajo: hoteles a todo lo ancho. */
-        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, .46fr); grid-template-areas: 'foto info izq' 'hoteles hoteles hoteles' 'cred cred cred'; column-gap: 3vw; row-gap: 2.2vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1880px; margin: 0 auto; padding: 2.4vh 3.5vw 1.2vh; }
+        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, .46fr); grid-template-areas: 'foto info izq' 'dia dia dia' 'hoteles hoteles hoteles' 'cred cred cred'; column-gap: 3vw; row-gap: 1.8vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1880px; margin: 0 auto; padding: 2.4vh 3.5vw 1.2vh; }
         .cw-std-cuerpo, .cw-std-pie { display: contents; }
         /* En el Save the date de computadora las flores de las esquinas quedan tenues para no tapar la foto ni el conteo */
         html:has(.cw-std-on) .cw-rama, html:has(.cw-std-on) .cw-flor { opacity: .4 !important; }
         .cw-std-foto { grid-area: foto; }
         .cw-std-info { grid-area: info; }
         .cw-std-izq { grid-area: izq; }
-        .cw-std-hoteles { grid-area: hoteles; padding-top: 1.8vh; border-top: 1px solid rgba(173,133,124,.28); }
+        .cw-std-hoteles { grid-area: hoteles; padding-top: 1.6vh; border-top: 1px solid rgba(173,133,124,.28); }
         .cw-std-credito { grid-area: cred; justify-self: center; }
-        .cw-std-foto { position: relative; height: clamp(300px, 54vh, 760px); aspect-ratio: 3 / 4; }
+        .cw-std-foto { position: relative; height: clamp(280px, 50vh, 720px); aspect-ratio: 3 / 4; }
         .cw-std-arco { position: absolute; inset: 0; border-radius: 999px 999px 18px 18px; overflow: hidden; }
         .cw-std-marco { position: absolute; inset: -10px; border-radius: 999px 999px 22px 22px; pointer-events: none; }
-        .cw-std-info { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.2vh; }
+        .cw-std-info { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.9vh; }
         .cw-std-etq { font-size: clamp(11.5px, 1.65vh, 14.5px); letter-spacing: .26em; }
-        .cw-std-nombres { font-size: clamp(64px, 13vh, 160px); line-height: 1.02; }
+        .cw-std-nombres { font-size: clamp(60px, 12vh, 150px); line-height: 1.02; }
         .cw-std-fecha { font-size: clamp(15px, 2.6vh, 24px); }
         .cw-std-ciudad { font-size: clamp(19px, 3.1vh, 29px); margin-top: -0.6vh; }
         .cw-std-cuenta { margin-bottom: 0.6vh; }
-        .cw-std-momentos { display: flex; flex-direction: column; gap: 1.4vh; align-items: center; }
-        .cw-std-momento { display: flex; flex-direction: column; align-items: center; gap: .3vh; }
-        .cw-std-momento-hora { font-size: clamp(11px, 1.55vh, 14px); letter-spacing: .16em; text-transform: uppercase; }
-        .cw-std-momento-lugar { font-size: clamp(16px, 2.4vh, 22px); line-height: 1.25; text-wrap: balance; }
+        .cw-std-dia { grid-area: dia; display: flex; justify-content: center; align-items: flex-start; gap: 6vw; padding-top: 1.6vh; border-top: 1px solid rgba(173,133,124,.28); }
+        .cw-std-momento { display: flex; flex-direction: column; align-items: center; gap: .5vh; text-align: center; max-width: 460px; }
+        .cw-std-momento-hora { font-size: clamp(11.5px, 1.6vh, 14.5px); letter-spacing: .18em; text-transform: uppercase; }
+        .cw-std-momento-lugar { font-size: clamp(18px, 2.7vh, 25px); line-height: 1.2; text-wrap: balance; }
         .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.8vh; margin-top: 0.6vh; max-width: 860px; }
         .cw-std-invitado { font-size: clamp(36px, 6.6vh, 66px); }
-        .cw-std-texto { font-size: clamp(19px, 3.1vh, 28px); line-height: 1.35; text-wrap: balance; }
+        .cw-std-texto { font-size: clamp(18px, 2.8vh, 27px); line-height: 1.3; text-wrap: balance; }
         .cw-std-adultos { font-size: clamp(15px, 2.2vh, 19.5px); line-height: 1.35; text-wrap: balance; }
         .cw-std-acciones { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin-top: 0.8vh; }
         .cw-std-acciones .cw-chip { font-size: clamp(11.5px, 1.6vh, 14px); padding: clamp(10px, 1.5vh, 14px) clamp(18px, 1.6vw, 26px); }
@@ -1026,7 +1032,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-padre { font-size: clamp(19px, 3.1vh, 29px); }
         .cw-std-hoteles { display: flex; flex-direction: column; gap: 1.2vh; }
         .cw-std-hoteles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 1.4vw; }
-        .cw-std-hotel { border-radius: 14px; padding: 1.4vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.7vh; }
+        .cw-std-hotel { border-radius: 14px; padding: 1.2vh 1.2vw; text-align: left; display: flex; flex-direction: column; gap: 0.7vh; }
         .cw-std-hotel-nombre { font-size: clamp(19px, 3vh, 28px); line-height: 1.15; }
         .cw-std-hotel-dir { font-size: clamp(14px, 2vh, 17.5px); line-height: 1.25; }
         .cw-std-hotel-resena { font-size: clamp(14.5px, 2.15vh, 18.5px); line-height: 1.35; }
