@@ -12,6 +12,7 @@ export const size = { width: 720, height: 378 }
 export const contentType = 'image/png'
 
 const CODIGO = /^[a-z0-9]{8,24}$/
+const PERSONAL = /^[a-z0-9]+(-[a-z0-9]+)*-[a-z0-9]{12}$/
 
 // Tipografías de la invitación, incluidas en el proyecto (nada se pide a terceros).
 const allura = fetch(new URL('./allura.woff', import.meta.url)).then(r => r.arrayBuffer())
@@ -43,14 +44,17 @@ async function fotoSegura(url: string | null) {
   }
 }
 
-// Tarjeta del link GENERAL del Save the date: sin nombre de invitado.
+// Tarjeta del Save the date (general o personal): la imagen no lleva nombre de invitado.
 export default async function Image({ params }: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await params
   let inv: any = null
-  if (CODIGO.test(codigo)) {
+  const personal = codigo.length <= 100 && PERSONAL.test(codigo)
+  if (personal || CODIGO.test(codigo)) {
     try {
       const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-      const { data } = await supabase.rpc('get_std_boda', { p_codigo: codigo })
+      const { data } = personal
+        ? await supabase.rpc('get_std_invitado', { p_codigo: codigo })
+        : await supabase.rpc('get_std_boda', { p_codigo: codigo })
       inv = Array.isArray(data) ? data[0] : data
     } catch { inv = null }
   }

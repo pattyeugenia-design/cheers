@@ -37,8 +37,12 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
     setLang(getLang())
     params.then(async ({ token }) => {
       setToken(token)
-      const { data, error } = await supabase.rpc('get_invitado_boda_por_token', { p_token: token })
-      const info = Array.isArray(data) ? data[0] : data
+      const [{ data, error }, { data: en }] = await Promise.all([
+        supabase.rpc('get_invitado_boda_por_token', { p_token: token }),
+        supabase.rpc('get_contenido_en_boda', { p_ref: token }),
+      ])
+      const fila = Array.isArray(data) ? data[0] : data
+      const info = fila ? { ...fila, contenido_en: en || null } : fila
       if (error || !info) { setNoEncontrado(true); setCargando(false); return }
       // Álbum de fotos con QR de la boda (solo su código y horario)
       const { data: al } = await supabase.rpc('get_album_boda_por_token', { p_token: token })

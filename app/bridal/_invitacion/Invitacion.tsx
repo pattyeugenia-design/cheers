@@ -82,7 +82,36 @@ function iniciales(d: any) {
   return [a, b].filter(Boolean).join(' & ').toUpperCase() || '♡'
 }
 
-export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any; lang: string; modo: 'real' | 'preview'; ctl: Control; volverHref?: string }) {
+// Textos de la pareja en inglés (contenido_en): si el navegador está en inglés, se
+// sobreponen campo por campo a los de español. En listas (hoteles, itinerario) se
+// sobreponen por posición, así lo que no se tradujo (dirección, hora) se conserva.
+const CAMPOS_EN = ['versiculo', 'mensaje_padres', 'frase_cierre', 'info_viaje', 'faq', 'mesa_regalos_nota', 'vestimenta_nota', 'std_lugar', 'hoteles', 'itinerario', 'mesas_regalos']
+function conIngles(d: any, lang: string) {
+  const en = d?.contenido_en
+  if (lang !== 'en' || !en || typeof en !== 'object') return d
+  const r: any = { ...d }
+  for (const k of CAMPOS_EN) {
+    const v = en[k]
+    if (typeof v === 'string' && v.trim()) r[k] = v
+    else if (Array.isArray(v) && Array.isArray(d[k])) r[k] = d[k].map((x: any, i: number) => (x && typeof x === 'object' && v[i] && typeof v[i] === 'object' ? { ...x, ...v[i] } : x))
+  }
+  return r
+}
+
+// Nombre del sobre ("Alberto y Magdalena", "Carlos y su esposa") escrito en inglés si el navegador está en inglés.
+const SUFIJOS_EN: [RegExp, string][] = [
+  [/ y acompañante$/i, ' & guest'], [/ y acompañantes$/i, ' & guests'], [/ y familia$/i, ' & family'],
+  [/ y su esposa$/i, ' & his wife'], [/ y su esposo$/i, ' & her husband'], [/ y su novia$/i, ' & his girlfriend'],
+  [/ y su novio$/i, ' & her boyfriend'], [/ y su hija$/i, ' & daughter'], [/ y su hijo$/i, ' & son'],
+]
+function nombreParaIdioma(nombre: string, lang: string) {
+  if (lang !== 'en' || !nombre) return nombre
+  for (const [re, en] of SUFIJOS_EN) if (re.test(nombre)) return nombre.replace(re, en)
+  return nombre.replace(/ y /g, ' & ')
+}
+
+export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }: { d: any; lang: string; modo: 'real' | 'preview'; ctl: Control; volverHref?: string }) {
+  const d = conIngles(dOriginal, lang)
   const p = paletaDe(d.tema, d.fuente)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
   const preview = modo === 'preview'
@@ -96,7 +125,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const nombreBoda = [d.nombre_novia, d.nombre_novio].filter(Boolean).join(' & ')
   const largoNombres = String(d.nombre_novia || '').length + String(d.nombre_novio || '').length
   const factorNombres = Math.min(1, 15 / Math.max(1, largoNombres))   // nombres largos se achican para seguir en un renglón
-  const invitado = (d.nombre || '').trim()
+  const invitado = nombreParaIdioma((d.nombre || '').trim(), lang)
   const lugar1 = (d.lugar_nombre || '').trim()
   const [lugar1Nombre, ...lugar1Resto] = lugar1.split(',')
   const permitidos = Math.max(0, Number(d.acompanantes_permitidos) || 0)
@@ -129,7 +158,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   // WhatsApp de ayuda (peinado y maquillaje): solo dígitos y largo válido; en México se agrega 52.
   const waDigitos = String(d.ayuda_whatsapp || '').replace(/\D/g, '')
   const waNumero = /^\d{10}$/.test(waDigitos) ? '52' + waDigitos : (/^\d{11,15}$/.test(waDigitos) ? waDigitos : '')
-  const waMensaje = String(d.ayuda_mensaje || t('Hola, ¿me puedes ayudar a conseguir cita para maquillaje y/o peinado?', 'Hi! Could you help me book hair and/or makeup?')).replace(/\{nombre\}/g, invitado).slice(0, 300)
+  const waMensaje = String(d.ayuda_mensaje || t('Hola, ¿me puedes ayudar a conseguir cita para maquillaje y/o peinado?', "Hi! I'd like to book hair and/or makeup. Do you have availability?")).replace(/\{nombre\}/g, invitado).slice(0, 300)
   const linkAyuda = waNumero ? `https://wa.me/${waNumero}?text=${encodeURIComponent(waMensaje)}` : null
   const mesas: any[] = (Array.isArray(d.mesas_regalos) ? d.mesas_regalos : []).filter((m: any) => m && String(m.nombre || '').trim()).slice(0, 4)
   const limite = d.fecha_limite_rsvp as string | undefined
@@ -208,7 +237,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
   const irA = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   const r = ctl.rsvp
-  const respuestaTxt = r.asistencia === 'si' ? t('Sí, ahí estaré', 'Yes, I will be there') : r.asistencia === 'no' ? t('No podré asistir', "I can't make it") : t('Tal vez', 'Maybe')
+  const respuestaTxt = r.asistencia === 'si' ? t('Sí, ahí estaré', "Yes, I'll be there") : r.asistencia === 'no' ? t('No podré asistir', "I can't make it") : t('Tal vez', 'Maybe')
 
   return (
     <div className="cw-raiz" style={{ background: p.bg, backgroundColor: p.papel, color: p.txt, minHeight: '100vh', position: 'relative', overflowX: 'hidden', fontFamily: p.serif }}>
@@ -217,7 +246,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       <Ambiente p={p} />
 
       {!sobreAbierto && (
-        <Sobre p={p} lang={lang} para={invitado || t('ti', 'you')} iniciales={iniciales(d)} etiqueta={t('Nos casamos', "We're getting married")} fecha={fechaPuntos(d.fecha_boda, lang)} hint={t('Toca el sobre para abrirlo', 'Tap the envelope to open it')} onAbierto={() => setSobreAbierto(true)} />
+        <Sobre p={p} lang={lang} para={invitado || t('ti', 'you')} iniciales={iniciales(d)} etiqueta={t('Nos casamos', "We're getting married")} fecha={fechaPuntos(d.fecha_boda, lang)} hint={t('Toca el sobre para abrirlo', 'Tap the envelope to open')} onAbierto={() => setSobreAbierto(true)} />
       )}
 
       <div className={`cw-pagina${std ? ' cw-std-on' : ''}`}>
@@ -251,17 +280,17 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
               {stdLugar && <div className="cw-std-ciudad" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3 }}>{stdLugar}</div>}
               {d.fecha_boda && <div className="cw-std-cuenta"><Cuenta fecha={d.fecha_boda} hora={null} p={p} lang={lang} compacta /></div>}
               <div className="cw-std-invitacion">
-                {invitado && <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.txt3 }}>{t('Tu invitación', 'Your invitation')}</div>}
+                {invitado && <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.txt3 }}>{t('Con cariño para', 'Especially for')}</div>}
                 {invitado && <div className="cw-std-invitado" style={{ fontFamily: p.script, color: p.acento, lineHeight: 1.05 }}>{invitado}</div>}
-                <p className="cw-std-texto" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Save the date in your calendar. The formal invitation, with all the details, is coming soon.')}</p>
-                {d.solo_adultos && <p className="cw-std-adultos" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, margin: 0 }}>{t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', 'It will be an evening just for adults. Thank you for being with us and for helping us take care of this detail.')}</p>}
+                <p className="cw-std-texto" style={{ fontFamily: p.serif, color: p.txt2, margin: 0 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Please save the date. A formal invitation with all the details will follow.')}</p>
+                {d.solo_adultos && <p className="cw-std-adultos" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, margin: 0 }}>{t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', "We've planned an adults-only celebration. Thank you for understanding.")}</p>}
               </div>
               <div className="cw-std-acciones">
                 {cal && <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>}
                 {cal && <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>}
                 {ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
-                  ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', 'Thank you! The date is saved.')}</div>
-                  : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>)}
+                  ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', "Thank you! We're so glad you saved the date.")}</div>
+                  : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', "I've saved the date")}</Boton>)}
               </div>
             </div>
           </div>
@@ -284,7 +313,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             )}
             {hoteles.length > 0 && (
               <div className="cw-std-hoteles">
-                <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Hospedaje para quienes vienen de lejos', 'Where to stay for those traveling')}</div>
+                <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Hospedaje para quienes vienen de lejos', 'Accommodations for out-of-town guests')}</div>
                 <div className="cw-std-hoteles-grid">
                   {hoteles.slice(0, 3).map((h, i) => {
                     const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
@@ -308,7 +337,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           </div>
 
           <a className="cw-std-credito" href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', opacity: 0.75, textAlign: 'center' }}>
-            <span className="cw-std-cred1" style={{ fontFamily: p.etiqueta, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>{t('Invitación creada por Cheers Bridal', 'Invitation created by Cheers Bridal')}</span>
+            <span className="cw-std-cred1" style={{ fontFamily: p.etiqueta, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>{t('Invitación creada por Cheers Bridal', 'Made with Cheers Bridal')}</span>
             <span className="cw-std-cred2" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt3, marginLeft: 8 }}>{t('de Patty Eugenia', 'by Patty Eugenia')}</span>
           </a>
         </div>
@@ -342,12 +371,12 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── PARA TI ───────── */}
       {std ? (
         <Sec p={p} arriba={34} abajo={20}>
-          <div style={etiqueta}>{invitado ? t('Tu invitación', 'Your invitation') : t('Aparta la fecha', 'Save the date')}</div>
+          <div style={etiqueta}>{invitado ? t('Con cariño para', 'Especially for') : t('Aparta la fecha', 'Save the date')}</div>
           {invitado && <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado}</div>}
-          <p style={{ ...parrafo, marginTop: 14 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Save the date in your calendar. The formal invitation, with all the details, is coming soon.')}</p>
+          <p style={{ ...parrafo, marginTop: 14 }}>{t('Aparta la fecha en tu calendario. La invitación formal, con todos los detalles, llegará pronto.', 'Please save the date. A formal invitation with all the details will follow.')}</p>
           {d.solo_adultos && (
             <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
-              {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', 'It will be an evening just for adults. Thank you for being with us and for helping us take care of this detail.')}
+              {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', "We've planned an adults-only celebration. Thank you for understanding.")}
             </p>
           )}
           {cal && (
@@ -358,8 +387,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           )}
           {ctl.apartar && <div style={{ marginTop: 26 }}>
             {ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
-              ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 20, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', 'Thank you! The date is saved.')}</div>
-              : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', 'I saved the date')}</Boton>)}
+              ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 20, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', "Thank you! We're so glad you saved the date.")}</div>
+              : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', "I've saved the date")}</Boton>)}
           </div>}
         </Sec>
       ) : (
@@ -368,14 +397,14 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
         <p style={{ ...parrafo, marginTop: 14 }}>
           {permitidos === 0
-            ? t('Guardamos un lugar especial para ti.', 'We saved a special seat for you.')
+            ? t('Guardamos un lugar especial para ti.', "We've saved a seat for you.")
             : permitidos === 1
-              ? t('Guardamos un lugar para ti y para tu acompañante.', 'We saved seats for you and your guest.')
-              : t(`Guardamos un lugar para ti y hasta ${permitidos} personas más.`, `We saved a seat for you and up to ${permitidos} more guests.`)}
+              ? t('Guardamos un lugar para ti y para tu acompañante.', "We've saved seats for you and a guest.")
+              : t(`Guardamos un lugar para ti y hasta ${permitidos} personas más.`, `We've saved seats for you and up to ${permitidos} guests.`)}
         </p>
         {d.solo_adultos && (
           <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
-            {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', 'It will be an evening just for adults. Thank you for being with us and for helping us take care of this detail.')}
+            {t('Será una noche pensada solo para adultos. Gracias por acompañarnos y por ayudarnos a cuidar este detalle.', "We've planned an adults-only celebration. Thank you for understanding.")}
           </p>
         )}
         <div style={{ marginTop: 24 }}><Boton p={p} relleno onClick={() => irA('confirmar')}>{r.enviado || d.ya_respondio ? t('Ver mi respuesta', 'See my reply') : t('Confirmar asistencia', 'RSVP')}</Boton></div>
@@ -400,7 +429,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       })()}
       {d.mensaje_padres && (
         <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32}>
-          <div style={{ ...etiqueta, whiteSpace: 'nowrap', fontSize: 'clamp(9px, 2.75vw, 11px)', letterSpacing: '.2em' }}>{t('Con la bendición de nuestras familias', 'With the blessing of our families')}</div>
+          <div style={{ ...etiqueta, whiteSpace: 'nowrap', fontSize: 'clamp(9px, 2.75vw, 11px)', letterSpacing: '.2em' }}>{t('Con la bendición de nuestras familias', 'Together with our families')}</div>
           {(() => {
             // "Padres de la novia: José y Patricia" -> etiqueta chica arriba y los nombres abajo
             const lineas = String(d.mensaje_padres).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 12).map(linea => {
@@ -458,7 +487,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── EL GRAN DÍA ───────── */}
       <Sec p={p}>
-        <div style={etiqueta}>{t('Aparta la fecha', 'Save the date')}</div>
+        <div style={etiqueta}>{t('Nuestra boda', 'Our wedding')}</div>
         <h2 style={titulo}>{t('El gran día', 'The big day')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{(() => { const f = fechaLarga(d.fecha_boda, lang); return f.charAt(0).toUpperCase() + f.slice(1) })()}</p>
         {d.hora_boda && <p style={{ ...parrafo, fontSize: 19, color: p.acento, fontWeight: 500, marginTop: 2 }}>{horaBonita(d.hora_boda)}</p>}
@@ -472,7 +501,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
         {itinerario.length > 0 && (
           <div style={{ marginTop: 46 }}>
-            <div style={{ ...etiqueta, marginBottom: 30 }}>{t('Así será nuestro día', 'How our day will unfold')}</div>
+            <div style={{ ...etiqueta, marginBottom: 30 }}>{t('Así será nuestro día', 'Order of events')}</div>
             {itinerario.map((it, i) => {
               const h = partirHora(it.hora)
               return (
@@ -495,7 +524,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── DÓNDE ───────── */}
       {(lugar1 || d.lugar2_nombre) && (
         <Sec p={p}>
-          <h2 style={{ ...titulo, marginTop: 0 }}>{t('¿Dónde será?', 'Where will it be?')}</h2>
+          <h2 style={{ ...titulo, marginTop: 0 }}>{t('¿Dónde será?', 'Where to find us')}</h2>
           {[{ etq: d.lugar2_nombre ? t('Ceremonia', 'Ceremony') : '', lugar: lugar1 }, { etq: t('Recepción', 'Reception'), lugar: (d.lugar2_nombre || '').trim() }].filter(x => x.lugar).map((x, i) => {
             const [nom, ...resto] = x.lugar.split(',')
             return (
@@ -526,9 +555,9 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── AYUDA: PEINADO Y MAQUILLAJE ───────── */}
       {linkAyuda && (
         <Sec p={p} ancho={460}>
-          <div style={etiqueta}>{t('Para que luzcas increíble', 'To look your best')}</div>
-          <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Looking for hair & makeup?')}</h2>
-          <p style={{ ...parrafo, marginTop: 14 }}>{t('Te recomendamos a quien nos arregla a nosotros. Escríbele directo por WhatsApp para tu cita de maquillaje y/o peinado.', 'We recommend who is doing our hair and makeup. Message her directly on WhatsApp to book your appointment.')}</p>
+          <div style={etiqueta}>{t('Para que luzcas increíble', 'Getting ready')}</div>
+          <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Need hair and makeup?')}</h2>
+          <p style={{ ...parrafo, marginTop: 14 }}>{t('Te recomendamos a alguien de nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.', 'We recommend someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.')}</p>
           <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{t('Escribir por WhatsApp', 'Message on WhatsApp')}</Boton></div>
         </Sec>
       )}
@@ -538,7 +567,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
         <Sec p={p}>
-          <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For those traveling')}</div>
+          <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For out-of-town guests')}</div>
           <h2 style={titulo}>{t('Hospedaje', 'Where to stay')}</h2>
           {d.info_viaje && <p style={{ ...parrafo, marginTop: 16, whiteSpace: 'pre-wrap' }}>{d.info_viaje}</p>}
           {hoteles.map((h, i) => {
@@ -565,7 +594,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
       {/* ───────── REGALOS ───────── */}
       {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
         <Sec p={p} ancho={520}>
-          <div style={etiqueta}>{t('Si deseas obsequiarnos algo', 'If you wish to give us something')}</div>
+          <div style={etiqueta}>{t('Si deseas obsequiarnos algo', "If you'd like to give a gift")}</div>
           <h2 style={titulo}>{t('Mesa de regalos', 'Gift registry')}</h2>
           {d.mesa_regalos_nota && <p style={{ ...parrafo, marginTop: 14 }}>{d.mesa_regalos_nota}</p>}
           {mesas.map((m, i) => {
@@ -584,7 +613,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           {d.lluvia_sobres && (
             <div style={{ marginTop: 24, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', color: p.txt2 }}>
               <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><rect x="1" y="1" width="28" height="20" rx="2" fill="none" stroke={p.acento} strokeWidth="1.2" /><path d="m1.5 2 13.5 10L28.5 2" fill="none" stroke={p.acento} strokeWidth="1.2" /></svg>
-              <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 18 }}>{t('El día del evento habrá un buzón para recibir tu sobre.', 'On the day there will be a box to receive your envelope.')}</span>
+              <span style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 18 }}>{t('El día del evento habrá un buzón para recibir tu sobre.', 'There will be a card box at the reception for envelopes.')}</span>
             </div>
           )}
         </Sec>
@@ -592,7 +621,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── CONFIRMAR ───────── */}
       <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={520}>
-        <div style={etiqueta}>{t('Nos encantaría contar contigo', "We'd love to have you")}</div>
+        <div style={etiqueta}>{t('Nos encantaría contar contigo', 'We hope you can join us')}</div>
         <h2 style={titulo}>{t('Confirma tu asistencia', 'Please RSVP')}</h2>
 
         {r.enviado ? (
@@ -605,8 +634,8 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
           </div>
         ) : (
           <div style={{ marginTop: 28, textAlign: 'left', padding: '28px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
-            {(d.ya_respondio) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.acento, textAlign: 'center', marginBottom: 14 }}>{t('Ya habías respondido — aquí puedes cambiar tu respuesta.', 'You already replied — you can change it here.')}</div>}
-            {limite && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: limitePasado ? '#A8575F' : p.txt3, textAlign: 'center', marginBottom: 16 }}>{limitePasado ? t(`La fecha límite fue el ${fechaCorta(limite, lang)}. Si necesitas confirmar o cambiar algo, escríbenos.`, `The deadline was ${fechaCorta(limite, lang)}. If you need to confirm or change something, let us know.`) : t(`Por favor responde antes del ${fechaCorta(limite, lang)}.`, `Please reply by ${fechaCorta(limite, lang)}.`)}</div>}
+            {(d.ya_respondio) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.acento, textAlign: 'center', marginBottom: 14 }}>{t('Ya habías respondido — aquí puedes cambiar tu respuesta.', "You've already replied — you can update your response here.")}</div>}
+            {limite && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: limitePasado ? '#A8575F' : p.txt3, textAlign: 'center', marginBottom: 16 }}>{limitePasado ? t(`La fecha límite fue el ${fechaCorta(limite, lang)}. Si necesitas confirmar o cambiar algo, escríbenos.`, `The RSVP deadline was ${fechaCorta(limite, lang)}. If you need to confirm or make a change, please reach out to us.`) : t(`Por favor responde antes del ${fechaCorta(limite, lang)}.`, `Please reply by ${fechaCorta(limite, lang)}.`)}</div>}
             <div style={{ fontFamily: p.serif, fontSize: 22, color: p.txt, textAlign: 'center', marginBottom: 16 }}>{t(`${invitado ? invitado + ', ' : ''}¿nos acompañas?`, `${invitado ? invitado + ', ' : ''}will you join us?`)}</div>
             <div role="radiogroup" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {([['si', t('Sí', 'Yes')], ['tal_vez', t('Tal vez', 'Maybe')], ['no', t('No', 'No')]] as [Asistencia, string][]).map(([k, label]) => (
@@ -657,7 +686,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             )}
 
             <div style={{ marginTop: 22 }}>
-              <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Alergias o un mensaje para nosotros (opcional)', 'Allergies or a note for us (optional)')}</label>
+              <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Alergias o un mensaje para nosotros (opcional)', 'Dietary restrictions or a note for us (optional)')}</label>
               <textarea className="cw-campo" maxLength={1000} rows={2} value={r.notas} onChange={e => r.setNotas(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
             </div>
             <div style={{ marginTop: 24 }}>
@@ -683,9 +712,9 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── FOTOS ───────── */}
       <Sec p={p} ancho={520}>
-        <div style={etiqueta}>{t('El álbum de todos', "Everyone's album")}</div>
+        <div style={etiqueta}>{t('El álbum de todos', 'Shared photo album')}</div>
         <h2 style={titulo}>{t('Comparte tus fotos', 'Share your photos')}</h2>
-        <p style={{ ...parrafo, marginTop: 14 }}>{t('Ayúdanos a guardar cada instante del día: sube las fotos que tomes, queremos verlo todo desde tus ojos.', 'Help us keep every moment: upload the photos you take — we want to see it all through your eyes.')}</p>
+        <p style={{ ...parrafo, marginTop: 14 }}>{t('Ayúdanos a guardar cada instante del día: sube las fotos que tomes, queremos verlo todo desde tus ojos.', "Help us capture every moment by uploading the photos you take. We'd love to see the day through your eyes.")}</p>
         {albumUrl ? (
           <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -724,9 +753,9 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
 
       {/* ───────── FIRMAS ───────── */}
       <Sec p={p} ancho={520}>
-        <div style={etiqueta}>{t('Recuerdos que quedan', 'Memories that stay')}</div>
+        <div style={etiqueta}>{t('Recuerdos que quedan', 'Lasting memories')}</div>
         <h2 style={titulo}>{t('Libro de firmas', 'Guest book')}</h2>
-        <p style={{ ...parrafo, marginTop: 14 }}>{t('Déjanos unas palabras para volver a este día una y otra vez.', 'Leave us a few words so we can come back to this day again and again.')}</p>
+        <p style={{ ...parrafo, marginTop: 14 }}>{t('Déjanos unas palabras para volver a este día una y otra vez.', 'Leave us a few words we can come back to again and again.')}</p>
         {ctl.firmas.enviada ? (
           <p style={{ ...parrafo, marginTop: 22, color: p.acento }}>{t('Gracias — tu mensaje aparecerá aquí cuando lo aprobemos.', 'Thank you — your message will appear here once we approve it.')}</p>
         ) : (
@@ -734,7 +763,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
             <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Tu nombre', 'Your name')}</label>
             <input className="cw-campo" maxLength={100} value={ctl.firmas.nombre} onChange={e => ctl.firmas.setNombre(e.target.value)} style={{ fontFamily: p.serif, color: p.txt }} />
             <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginTop: 18 }}>{t('Tu mensaje', 'Your message')}</label>
-            <textarea className="cw-campo" maxLength={1000} rows={3} value={ctl.firmas.mensaje} onChange={e => ctl.firmas.setMensaje(e.target.value)} placeholder={t('Un deseo, un recuerdo, lo que el corazón te dicte…', 'A wish, a memory, whatever your heart says…')} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
+            <textarea className="cw-campo" maxLength={1000} rows={3} value={ctl.firmas.mensaje} onChange={e => ctl.firmas.setMensaje(e.target.value)} placeholder={t('Un deseo, un recuerdo, lo que el corazón te dicte…', "A wish, a memory, whatever's on your heart…")} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
             <div style={{ marginTop: 20 }}><Boton p={p} relleno ancho onClick={ctl.firmas.enviar} deshabilitado={preview || !ctl.firmas.nombre.trim() || !ctl.firmas.mensaje.trim() || ctl.firmas.enviando}>{ctl.firmas.enviando ? '…' : t('Firmar el libro', 'Sign the book')}</Boton></div>
           </div>
         )}
@@ -772,7 +801,7 @@ export default function Invitacion({ d, lang, modo, ctl, volverHref }: { d: any;
         <div style={{ marginTop: 40 }}><Orn p={p} /></div>
         <a href="https://joincheers.app" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 20, textDecoration: 'none', opacity: 0.75 }}>
           <span style={{ display: 'block', fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.22em', textTransform: 'uppercase', color: p.txt3 }}>
-            {t('Invitación creada por Cheers Bridal', 'Invitation created by Cheers Bridal')}
+            {t('Invitación creada por Cheers Bridal', 'Made with Cheers Bridal')}
           </span>
           <span style={{ display: 'block', fontFamily: p.serif, fontStyle: 'italic', fontSize: 14, color: p.txt3, marginTop: 3 }}>{t('de Patty Eugenia', 'by Patty Eugenia')}</span>
         </a>
@@ -863,7 +892,7 @@ export function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora
   const u = [[r.d, lang === 'en' ? 'days' : 'días'], [r.h, lang === 'en' ? 'hours' : 'horas'], [r.m, 'min'], [r.s, lang === 'en' ? 'sec' : 'seg']] as [number, string][]
   return (
     <div style={{ marginTop: compacta ? 0 : 52 }}>
-      <div style={{ fontFamily: p.etiqueta, fontSize: compacta ? 'clamp(11px, 1.6vh, 14px)' : 10.5, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }}>{lang === 'en' ? 'Counting down' : 'Faltan'}</div>
+      <div style={{ fontFamily: p.etiqueta, fontSize: compacta ? 'clamp(11px, 1.6vh, 14px)' : 10.5, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }}>{lang === 'en' ? 'Countdown' : 'Faltan'}</div>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: compacta ? 8 : 16 }}>
         {u.map(([n, l], i) => (
           <div key={i} style={{ width: compacta ? 'clamp(64px, 9vh, 100px)' : 74, textAlign: 'center', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>

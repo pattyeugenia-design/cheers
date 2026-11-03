@@ -123,6 +123,8 @@ export function fechaPuntos(fecha: string | null | undefined, lang: string) {
   const loc = lang === 'en' ? 'en-US' : 'es-MX'
   const dia = d.toLocaleDateString(loc, { weekday: 'long' }).toUpperCase()
   const mes = d.toLocaleDateString(loc, { month: 'long' }).toUpperCase()
+  // En inglés el mes va antes del día: "SATURDAY · FEBRUARY 13 · 2027"
+  if (lang === 'en') return `${dia} · ${mes} ${d.getDate()} · ${d.getFullYear()}`
   return `${dia} · ${d.getDate()} · ${mes} · ${d.getFullYear()}`
 }
 // "19:30" -> "7:30 pm"; "02:00" -> "2:00 am". Si ya viene con am/pm se respeta.
