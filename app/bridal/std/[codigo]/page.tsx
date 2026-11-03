@@ -31,6 +31,8 @@ export default function SaveTheDate({ params }: { params: Promise<{ codigo: stri
         setDatos(info ? { ...info, personal: true } : null)
         setApartada(!!info?.fecha_apartada)
         setRespuesta(info?.std_respuesta || null)
+        // Registra que abrió su link (para la columna "Entró al link" del Sheet)
+        if (info) supabase.rpc('registrar_visita_std', { p_codigo: codigo }).then(() => {}, () => {})
       } else if (CODIGO.test(codigo)) {
         const [{ data }, { data: en }] = await Promise.all([
           supabase.rpc('get_std_boda', { p_codigo: codigo }),
