@@ -1088,7 +1088,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
         /* Una sola pantalla: foto (y familias) | datos e itinerario | hoteles a todo lo alto en la orilla derecha */
-        .cw-std-escritorio { display: grid; grid-template-columns: calc(var(--std-alto, 100vh) * .54) minmax(0, 1fr) minmax(300px, .52fr); grid-template-areas: 'foto info hoteles' 'foto dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
+        .cw-std-escritorio { display: grid; grid-template-columns: calc(var(--std-alto, 100vh) * .54) minmax(0, 1fr) minmax(320px, .6fr); grid-template-areas: 'foto info hoteles' 'foto dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
         .cw-std-escritorio:not(.cw-std-listo) { visibility: hidden; }
         .cw-std-cuerpo, .cw-std-pie { display: contents; }
         html:has(.cw-std-on) .cw-rama, html:has(.cw-std-on) .cw-flor { opacity: .25 !important; }
@@ -1132,16 +1132,16 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-etq-padre { font-size: clamp(11px, 1.65vh, 14px); }
         .cw-std-padre { font-size: clamp(22px, 3.7vh, 34px); }
         .cw-std-hoteles { grid-area: hoteles; align-self: stretch; display: flex; flex-direction: column; gap: 1.2vh; padding-left: 2vw; border-left: 1px solid rgba(173,133,124,.28); }
-        .cw-std-hoteles-grid { display: flex; flex-direction: column; gap: 1.4vh; flex: 1; }
-        .cw-std-hotel { flex: 1; border-radius: 14px; padding: 2vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.8vh; }
-        .cw-std-hotel-nombre { font-size: clamp(19px, min(2.9vh, 1.55vw), 27px); line-height: 1.15; }
-        .cw-std-hotel-dir { font-size: clamp(14px, min(2vh, 1.05vw), 17px); line-height: 1.3; margin-top: -0.3vh; }
-        .cw-std-hotel-resena { font-size: clamp(14px, min(2.2vh, 1.18vw), 19.5px); line-height: 1.35; }
-        .cw-std-hotel-tarifa { font-size: clamp(13.5px, min(2.05vh, 1.1vw), 18px); line-height: 1.35; }
-        .cw-std-hotel-tarifa > div:last-child:not(:first-child) { font-size: clamp(10.5px, 1.4vh, 12.5px); }
-        .cw-std-hotel-traslado { font-size: clamp(10.5px, min(1.5vh, .8vw), 13px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
-        .cw-std-hotel-mapas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 0.6vh; }
-        .cw-std-mini { font-size: clamp(10px, min(1.35vh, .75vw), 12px); letter-spacing: .12em; text-transform: uppercase; padding: clamp(7px, 1vh, 10px) clamp(10px, .85vw, 16px); border-radius: 999px; text-decoration: none; white-space: nowrap; }
+        .cw-std-hoteles-grid { display: flex; flex-direction: column; justify-content: space-between; gap: 1.4vh; flex: 1; }
+        .cw-std-hotel { flex: none; border-radius: 14px; padding: 2vh 1.4vw; text-align: left; display: flex; flex-direction: column; gap: 0.8vh; }
+        .cw-std-hotel-nombre { font-size: clamp(20px, min(3.3vh, 1.8vw), 31px); line-height: 1.15; }
+        .cw-std-hotel-dir { font-size: clamp(14px, min(2.2vh, 1.2vw), 18.5px); line-height: 1.3; margin-top: -0.3vh; }
+        .cw-std-hotel-resena { font-size: clamp(15px, min(2.6vh, 1.4vw), 22px); line-height: 1.35; }
+        .cw-std-hotel-tarifa { font-size: clamp(14.5px, min(2.4vh, 1.3vw), 20.5px); line-height: 1.35; }
+        .cw-std-hotel-tarifa > div:last-child:not(:first-child) { font-size: clamp(11px, min(1.75vh, .95vw), 14.5px); }
+        .cw-std-hotel-traslado { font-size: clamp(11px, min(1.75vh, .95vw), 14.5px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
+        .cw-std-hotel-mapas { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 0.6vh; }
+        .cw-std-mini { font-size: clamp(10.5px, min(1.55vh, .85vw), 13px); letter-spacing: .12em; text-transform: uppercase; padding: clamp(7px, 1vh, 10px) clamp(10px, .85vw, 16px); border-radius: 999px; text-decoration: none; white-space: nowrap; }
         .cw-std-credito { grid-area: cred; justify-self: center; }
         .cw-std-cred1 { font-size: clamp(10px, 1.35vh, 12px); }
         .cw-std-cred2 { font-size: clamp(14px, 1.9vh, 17px); }
