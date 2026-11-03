@@ -914,9 +914,9 @@ export function Estilos({ p }: { p: Paleta }) {
       @media (min-width: 1000px) and (min-height: 600px) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
-        .cw-std-escritorio { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1560px; margin: 0 auto; padding: 2.6vh 6vw 1.4vh; gap: 2.2vh; }
-        .cw-std-cuerpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4.5vw; align-items: center; justify-content: center; }
-        .cw-std-foto { position: relative; height: clamp(300px, 52vh, 640px); aspect-ratio: 3 / 4; }
+        .cw-std-escritorio { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1880px; margin: 0 auto; padding: 2.6vh 3vw 1.4vh; gap: 2.2vh; }
+        .cw-std-cuerpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3.5vw; align-items: center; justify-content: center; }
+        .cw-std-foto { position: relative; height: clamp(300px, 56vh, 700px); aspect-ratio: 3 / 4; }
         .cw-std-arco { position: absolute; inset: 0; border-radius: 999px 999px 18px 18px; overflow: hidden; }
         .cw-std-marco { position: absolute; inset: -10px; border-radius: 999px 999px 22px 22px; pointer-events: none; }
         .cw-std-info { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.3vh; }
@@ -925,13 +925,13 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-fecha { font-size: clamp(14.5px, 2.35vh, 21px); }
         .cw-std-ciudad { font-size: clamp(19px, 3.1vh, 29px); margin-top: -0.6vh; }
         .cw-std-cuenta { margin-top: 0.4vh; }
-        .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.8vh; margin-top: 0.6vh; max-width: 660px; }
+        .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.8vh; margin-top: 0.6vh; max-width: 860px; }
         .cw-std-invitado { font-size: clamp(34px, 6vh, 58px); }
         .cw-std-texto { font-size: clamp(18.5px, 2.9vh, 26px); line-height: 1.35; text-wrap: balance; }
         .cw-std-adultos { font-size: clamp(15px, 2.2vh, 19.5px); line-height: 1.35; text-wrap: balance; }
         .cw-std-acciones { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin-top: 0.8vh; }
         .cw-std-acciones .cw-chip { font-size: clamp(11.5px, 1.6vh, 14px); padding: clamp(10px, 1.5vh, 14px) clamp(18px, 1.6vw, 26px); }
-        .cw-std-pie { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.6fr); gap: 3.2vw; align-items: center; padding-top: 2vh; border-top: 1px solid rgba(173,133,124,.28); }
+        .cw-std-pie { display: grid; grid-template-columns: minmax(0, 0.62fr) minmax(0, 2fr); gap: 2.4vw; align-items: center; padding-top: 2vh; border-top: 1px solid rgba(173,133,124,.28); }
         .cw-std-izq { display: flex; flex-direction: column; align-items: center; gap: 1.8vh; text-align: center; }
         .cw-std-frase { font-size: clamp(18px, 2.9vh, 27px); line-height: 1.35; text-wrap: balance; }
         .cw-std-padres { display: flex; justify-content: center; }
@@ -942,7 +942,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-hotel { border-radius: 14px; padding: 1.4vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.7vh; }
         .cw-std-hotel-nombre { font-size: clamp(19px, 3vh, 28px); line-height: 1.15; }
         .cw-std-hotel-dir { font-size: clamp(14px, 2vh, 17.5px); line-height: 1.25; }
-        .cw-std-hotel-resena { font-size: clamp(14.5px, 2.15vh, 18.5px); line-height: 1.35; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+        .cw-std-hotel-resena { font-size: clamp(14.5px, 2.15vh, 18.5px); line-height: 1.35; }
         .cw-std-hotel-traslado { font-size: clamp(11px, 1.5vh, 13.5px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
         .cw-std-hotel-mapas { display: flex; gap: 10px; margin-top: 0.4vh; }
         .cw-std-mini { font-size: clamp(10.5px, 1.4vh, 12.5px); letter-spacing: .14em; text-transform: uppercase; padding: clamp(7px, 1vh, 10px) clamp(13px, 1.1vw, 18px); border-radius: 999px; text-decoration: none; white-space: nowrap; }
@@ -950,14 +950,8 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-cred1 { font-size: clamp(10px, 1.35vh, 12px); }
         .cw-std-cred2 { font-size: clamp(14px, 1.9vh, 17px); }
       }
-      @media (min-width: 1000px) and (min-height: 1150px) {
-        .cw-std-hotel-resena { -webkit-line-clamp: 3; }
-      }
       @media (min-width: 1000px) and (min-height: 600px) and (max-height: 1149px) {
         .cw-std-hotel-dir { display: none; }
-      }
-      @media (min-width: 1000px) and (min-height: 600px) and (max-height: 690px) {
-        .cw-std-hotel-resena { display: none; }
       }
       .cw-pagina { position: relative; z-index: 2; }
       /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
