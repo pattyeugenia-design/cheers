@@ -133,6 +133,22 @@ function ComoLlegar({ p, lugar, google, t }: { p: Paleta; lugar: string; google?
 }
 
 // Tarifa especial de un hotel: precio, clave de convenio y botón para reservar.
+// Si el texto de contacto del hotel trae "WhatsApp <número>", se convierte en un link que abre
+// WhatsApp con un mensaje listo (incluye la clave de convenio) y el número no se muestra.
+const RE_WA = /(env[ií]a(?:r|nos)? un |send (?:a|us a) )?WhatsApp\s*:?\s*(\+?\d[\d\s-]{7,}\d)/i
+function linkWhatsHotel(h: any, t: (es: string, en: string) => string): { url: string; m: RegExpExecArray } | null {
+  const m = RE_WA.exec(String(h?.contacto || ''))
+  if (!m) return null
+  let num = m[2].replace(/\D/g, '')
+  if (num.length === 10) num = '52' + num
+  if (num.length < 11 || num.length > 15) return null
+  const clave = String(h?.codigo || '').replace(/\s*\(.*\)\s*/, '').trim().slice(0, 20)
+  const msg = clave
+    ? t(`Hola, quiero hacer una reservación con la clave de convenio ${clave}.`, `Hi, I'd like to make a reservation with the booking code ${clave}.`)
+    : t('Hola, quiero hacer una reservación.', "Hi, I'd like to make a reservation.")
+  return { url: `https://wa.me/${num}?text=${encodeURIComponent(msg)}`, m }
+}
+
 function TarifaHotel({ p, h, t, compacta }: { p: Paleta; h: any; t: (es: string, en: string) => string; compacta?: boolean }) {
   const tarifa = String(h.tarifa || '').trim().slice(0, 400)
   const codigo = String(h.codigo || '').trim().slice(0, 30)
@@ -150,7 +166,18 @@ function TarifaHotel({ p, h, t, compacta }: { p: Paleta; h: any; t: (es: string,
       <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento }}>{t('Tarifa especial de boda', 'Special wedding rate')}</div>
       {tarifa && <p style={{ fontFamily: p.serif, fontSize: 17.5, lineHeight: 1.4, color: p.txt, margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>{tarifa}</p>}
       {codigo && <div style={{ marginTop: 10, fontFamily: p.etiqueta, fontSize: 11.5, letterSpacing: '.14em', textTransform: 'uppercase', color: p.txt2 }}>{t('Clave de convenio', 'Booking code')}: <b style={{ color: p.acento, letterSpacing: '.2em' }}>{codigo}</b></div>}
-      {contacto && <p style={{ fontFamily: p.serif, fontSize: 15.5, lineHeight: 1.4, color: p.txt3, margin: '8px 0 0' }}>{contacto}</p>}
+      {contacto && (() => {
+        const wa = linkWhatsHotel(h, t)
+        if (!wa) return <p style={{ fontFamily: p.serif, fontSize: 15.5, lineHeight: 1.4, color: p.txt3, margin: '8px 0 0' }}>{contacto}</p>
+        const i = wa.m.index, fin = i + wa.m[0].length
+        return (
+          <p style={{ fontFamily: p.serif, fontSize: 15.5, lineHeight: 1.4, color: p.txt3, margin: '8px 0 0' }}>
+            {contacto.slice(0, i)}
+            <a href={wa.url} target="_blank" rel="noopener noreferrer" style={{ color: p.acento, textDecoration: 'underline', textUnderlineOffset: 3 }}>{(wa.m[1] || '') + 'WhatsApp'}</a>
+            {contacto.slice(fin)}
+          </p>
+        )
+      })()}
       {reservar && <div style={{ marginTop: 14 }}><Boton p={p} relleno ancho compacto href={reservar}>{t('Reservar con tarifa especial', 'Book with the wedding rate')}</Boton></div>}
     </div>
   )
@@ -479,6 +506,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                         {h.traslado && <div className="cw-std-hotel-traslado" style={{ fontFamily: p.etiqueta, color: p.acento }}>{String(h.traslado).slice(0, 160)}</div>}
                         <div className="cw-std-hotel-mapas">
                           {urlEnlaceSegura(h.reservar) && <a className="cw-std-mini" href={urlEnlaceSegura(h.reservar)!} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: '#fff', background: p.acento, border: `1px solid ${p.acento}` }}>{t('Reservar', 'Book now')}</a>}
+                          {(() => { const wa = linkWhatsHotel(h, t); return wa && <a className="cw-std-mini" href={wa.url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>WhatsApp</a> })()}
                           <a className="cw-std-mini" href={enlace || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugarH)}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Google Maps</a>
                           <a className="cw-std-mini" href={`https://waze.com/ul?q=${encodeURIComponent(lugarH)}&navigate=yes`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.acento}` }}>Waze</a>
                         </div>
