@@ -1212,6 +1212,10 @@ export function Estilos({ p }: { p: Paleta }) {
          y se ocultan los destellos y el cursor decorativo generales de Cheers */
       html:has(.cw-raiz), html:has(.cw-raiz) body { overflow-x: clip; }
       html:has(.cw-raiz) body > span[style*="destelloFijo"], html:has(.cw-raiz) body > div[style*="z-index: 999"] { display: none !important; }
+      /* Como el cursor decorativo se oculta aquí, se regresa el cursor normal del sistema */
+      html:has(.cw-raiz) body { cursor: auto !important; }
+      html:has(.cw-raiz) a, html:has(.cw-raiz) button, html:has(.cw-raiz) label, html:has(.cw-raiz) [role="button"] { cursor: pointer !important; }
+      html:has(.cw-raiz) input[type="text"], html:has(.cw-raiz) textarea { cursor: text !important; }
       .cw-capa-ligera { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
       .cw-petalo { position: absolute; top: -30px; opacity: 0; will-change: transform, opacity; animation: cw-cae linear infinite; filter: drop-shadow(0 1px 1.5px rgba(150,105,98,.28)); }
       @keyframes cw-cae { 0% { transform: translate3d(0,-6vh,0) rotate(0deg); opacity: 0; } 8% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translate3d(var(--der),108vh,0) rotate(var(--giro)); opacity: 0; } }
