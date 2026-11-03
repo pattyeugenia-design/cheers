@@ -317,6 +317,8 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
   const [stdCopiado, setStdCopiado] = useState(false)
   const [stdLugarInput, setStdLugarInput] = useState('')
   const [apartadas, setApartadas] = useState<string[]>([])
+  // Respuesta preliminar del Save the date por invitado: si / no / tal_vez
+  const [stdResp, setStdResp] = useState<Record<string, string>>({})
   const [historiaItems, setHistoriaItems] = useState<any[]>([])
   const [subiendoMedia, setSubiendoMedia] = useState<string | null>(null)
   const [progresoFotos, setProgresoFotos] = useState('')
@@ -371,8 +373,9 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
     setPagos(pg || [])
     setInvitadosBoda(inv || [])
     setRsvpsBoda(rs || [])
-    const { data: ap } = await supabase.from('boda_fecha_apartada').select('invitado_id').eq('boda_id', bodaId)
+    const { data: ap } = await supabase.from('boda_fecha_apartada').select('invitado_id, respuesta').eq('boda_id', bodaId)
     setApartadas((ap || []).map((x: any) => x.invitado_id))
+    setStdResp(Object.fromEntries((ap || []).filter((x: any) => x.respuesta).map((x: any) => [x.invitado_id, x.respuesta])))
     setMesasBoda(ms || [])
     setFirmasBoda(fm || [])
     setFotosBoda(fo || [])
@@ -1891,7 +1894,18 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
-              {apartadas.length > 0 && invitadosBoda.length > 0 && (
+              {Object.keys(stdResp).length > 0 && invitadosBoda.length > 0 && (() => {
+                const n = (v: string) => invitadosBoda.filter(i => stdResp[i.id] === v).length
+                const sin = invitadosBoda.filter(i => !stdResp[i.id]).length
+                return (
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#3D2B2E', margin: '2px 0 10px' }}>
+                    {lang === 'en'
+                      ? `Save the date: ${n('si')} coming · ${n('no')} can't · ${n('tal_vez')} not sure · ${sin} no answer yet`
+                      : `Save the date: ${n('si')} sí van · ${n('no')} no podrán · ${n('tal_vez')} aún no saben · ${sin} sin responder`}
+                  </div>
+                )
+              })()}
+              {Object.keys(stdResp).length === 0 && apartadas.length > 0 && invitadosBoda.length > 0 && (
                 <div style={{ fontSize: 12, fontWeight: 800, color: '#3D2B2E', margin: '2px 0 10px' }}>
                   {apartadas.length} {lang === 'en' ? 'of' : 'de'} {invitadosBoda.length} {lang === 'en' ? 'have saved the date' : 'ya apartaron la fecha'}
                 </div>
@@ -1907,7 +1921,12 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
                           {[inv.grupo, inv.acompanantes_permitidos > 0 ? `+${inv.acompanantes_permitidos}` : null].filter(Boolean).join(' · ')}
                         </div>
                       </div>
-                      {apartadas.includes(inv.id) && (
+                      {stdResp[inv.id] && (
+                        <span title={lang === 'en' ? 'Preliminary answer from the save the date' : 'Respuesta preliminar del save the date'} style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: stdResp[inv.id] === 'si' ? 'rgba(122,170,130,.28)' : stdResp[inv.id] === 'no' ? 'rgba(200,120,120,.22)' : 'rgba(201,168,118,.25)', color: '#3D2B2E', whiteSpace: 'nowrap' }}>
+                          {stdResp[inv.id] === 'si' ? (lang === 'en' ? 'STD: coming' : 'STD: sí va') : stdResp[inv.id] === 'no' ? (lang === 'en' ? "STD: can't" : 'STD: no podrá') : (lang === 'en' ? 'STD: not sure' : 'STD: aún no sabe')}
+                        </span>
+                      )}
+                      {!stdResp[inv.id] && apartadas.includes(inv.id) && (
                         <span style={{ fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 99, background: 'rgba(201,168,118,.25)', color: '#3D2B2E' }}>
                           {lang === 'en' ? 'Saved the date' : 'Apartó la fecha'}
                         </span>
