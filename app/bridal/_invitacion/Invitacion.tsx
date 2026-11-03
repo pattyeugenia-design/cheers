@@ -39,6 +39,8 @@ export type Control = {
   firmas: { lista: any[]; nombre: string; setNombre: (v: string) => void; mensaje: string; setMensaje: (v: string) => void; enviada: boolean; enviando: boolean; enviar: () => void }
   fotos: { lista: any[]; subiendo: boolean; recienSubida: boolean; subir: (f: File) => void }
   apartar?: { hecho: boolean; accion: () => void }   // "Ya aparté la fecha" (modo Save the date)
+  // Respuesta preliminar del Save the date: si / no / tal_vez. La confirmación oficial sigue en la invitación.
+  preRespuesta?: { valor: string | null; responder: (v: 'si' | 'no' | 'tal_vez') => void }
 }
 
 function Sec({ p, id, children, innerRef, ancho, arriba, abajo }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number }) {
@@ -62,6 +64,32 @@ function Boton({ p, children, onClick, href, relleno, deshabilitado, ancho, comp
   return href
     ? <a className="cw-btn" href={href} target="_blank" rel="noopener noreferrer" style={st}>{children}</a>
     : <button className="cw-btn" type="button" onClick={deshabilitado ? undefined : onClick} disabled={deshabilitado} style={st}>{children}</button>
+}
+
+// Save the date: "¿Nos acompañas?" con tres opciones. Es solo para darse una idea;
+// la confirmación oficial se pide con la invitación. Se puede cambiar cuantas veces quiera.
+function PreRespuesta({ p, t, valor, responder }: { p: Paleta; t: (es: string, en: string) => string; valor: string | null; responder: (v: 'si' | 'no' | 'tal_vez') => void }) {
+  const ops: ['si' | 'no' | 'tal_vez', string][] = [['si', t('¡Ahí estaré!', "I'll be there!")], ['no', t('No podré', "Can't make it")], ['tal_vez', t('Aún no sé', 'Not sure yet')]]
+  const gracias = valor === 'si' ? t('¡Qué emoción! Gracias por avisarnos.', "We're so excited! Thanks for letting us know.")
+    : valor === 'no' ? t('Gracias por avisarnos, te vamos a extrañar.', "Thanks for letting us know. We'll miss you.")
+    : valor === 'tal_vez' ? t('Gracias. Cuando lo sepas, aquí mismo puedes cambiar tu respuesta.', "Thanks! Once you know, you can update your answer right here.")
+    : null
+  return (
+    <div className="cw-pre" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <div className="cw-pre-titulo" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.acento }}>{t('¿Nos acompañas?', 'Will you join us?')}</div>
+      <div className="cw-pre-ops" style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {ops.map(([v, txt]) => (
+          <button key={v} type="button" className="cw-btn cw-pre-op" aria-pressed={valor === v} onClick={() => responder(v)}
+            style={{ cursor: 'pointer', fontFamily: p.etiqueta, fontWeight: 500, textTransform: 'uppercase', borderRadius: 999, whiteSpace: 'nowrap', border: `1px solid ${p.acento}`, background: valor === v ? p.acento : 'transparent', color: valor === v ? p.botonTxt : p.acento }}>
+            {txt}
+          </button>
+        ))}
+      </div>
+      <div className="cw-pre-nota" aria-live="polite" style={{ fontFamily: p.serif, fontStyle: 'italic', color: gracias ? p.acento : p.txt3, textAlign: 'center' }}>
+        {gracias || t('Es solo para irnos dando una idea; la confirmación será con la invitación.', "Just to help us plan. We'll ask again with the formal invitation.")}
+      </div>
+    </div>
+  )
 }
 
 // "Cómo llegar": una etiqueta (no botón) y dos botones iguales.
@@ -355,10 +383,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
               <div className="cw-std-acciones">
                 {cal && <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>}
                 {cal && <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>}
-                {ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
+                {!ctl.preRespuesta && ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
                   ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', "Thank you! We're so glad you saved the date.")}</div>
                   : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', "I've saved the date")}</Boton>)}
               </div>
+              {ctl.preRespuesta && <PreRespuesta p={p} t={t} valor={ctl.preRespuesta.valor} responder={ctl.preRespuesta.responder} />}
             </div>
             {momentosStd.length > 0 && (
               <div className="cw-std-dia">
@@ -473,7 +502,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
               <a className="cw-chip" href={cal.icsUrl} download="boda.ics" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Apple / Outlook</a>
             </div>
           )}
-          {ctl.apartar && <div style={{ marginTop: 26 }}>
+          {ctl.preRespuesta && <div className="cw-pre-movil" style={{ marginTop: 28 }}><PreRespuesta p={p} t={t} valor={ctl.preRespuesta.valor} responder={ctl.preRespuesta.responder} /></div>}
+          {!ctl.preRespuesta && ctl.apartar && <div style={{ marginTop: 26 }}>
             {ctl.apartar && (ctl.apartar.hecho || d.fecha_apartada
               ? <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 20, color: p.acento }}>{t('¡Gracias! Ya quedó apartada la fecha.', "Thank you! We're so glad you saved the date.")}</div>
               : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', "I've saved the date")}</Boton>)}
@@ -1021,7 +1051,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-pagina.cw-std-on { zoom: 1; }
         .cw-pagina.cw-std-on > *:not(.cw-std-escritorio):not(.cw-barra) { display: none !important; }
         /* Una sola pantalla: foto (y familias) | datos e itinerario | hoteles a todo lo alto en la orilla derecha */
-        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(290px, .5fr); grid-template-areas: 'foto info hoteles' 'izq dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1880px; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
+        .cw-std-escritorio { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(280px, .44fr); grid-template-areas: 'foto info hoteles' 'izq dia hoteles' 'cred cred cred'; column-gap: 3.2vw; row-gap: 2.6vh; align-items: center; align-content: center; min-height: 100vh; box-sizing: border-box; max-width: 1880px; margin: 0 auto; padding: 2.6vh 2.4vw 1.4vh 3.4vw; }
         .cw-std-escritorio:not(.cw-std-listo) { visibility: hidden; }
         .cw-std-cuerpo, .cw-std-pie { display: contents; }
         html:has(.cw-std-on) .cw-rama, html:has(.cw-std-on) .cw-flor { opacity: .25 !important; }
@@ -1038,6 +1068,11 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-invitado { font-size: clamp(36px, 6.4vh, 64px); }
         .cw-std-texto { font-size: clamp(18px, 2.7vh, 26px); line-height: 1.3; text-wrap: balance; }
         .cw-std-adultos { font-size: clamp(14.5px, 2.1vh, 19px); line-height: 1.35; text-wrap: balance; }
+        .cw-std-info .cw-pre { gap: 0.8vh; margin-top: 0.6vh; }
+        .cw-std-info .cw-pre-titulo { font-size: clamp(19px, 2.9vh, 27px); }
+        .cw-std-info .cw-pre-ops { gap: 10px !important; }
+        .cw-std-info .cw-pre-op { font-size: clamp(11px, 1.55vh, 13.5px); letter-spacing: .18em; padding: clamp(9px, 1.35vh, 13px) clamp(16px, 1.5vw, 24px); }
+        .cw-std-info .cw-pre-nota { font-size: clamp(13.5px, 1.9vh, 17px); }
         .cw-std-acciones { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin-top: 0.8vh; }
         .cw-std-acciones .cw-chip { font-size: clamp(11.5px, 1.6vh, 14px); padding: clamp(10px, 1.4vh, 14px) clamp(18px, 1.6vw, 26px); }
         .cw-std-dia { grid-area: dia; align-self: start; display: flex; flex-direction: column; gap: 1.4vh; }
@@ -1052,13 +1087,13 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-padre { font-size: clamp(16px, 2.4vh, 22px); }
         .cw-std-hoteles { grid-area: hoteles; align-self: stretch; display: flex; flex-direction: column; gap: 1.2vh; padding-left: 2vw; border-left: 1px solid rgba(173,133,124,.28); }
         .cw-std-hoteles-grid { display: flex; flex-direction: column; justify-content: space-between; gap: 1.4vh; flex: 1; }
-        .cw-std-hotel { border-radius: 14px; padding: 1.8vh 1.2vw; text-align: left; display: flex; flex-direction: column; gap: 0.6vh; }
-        .cw-std-hotel-nombre { font-size: clamp(19px, 2.8vh, 26px); line-height: 1.15; }
+        .cw-std-hotel { border-radius: 14px; padding: 2.2vh 1.3vw; text-align: left; display: flex; flex-direction: column; gap: 0.9vh; }
+        .cw-std-hotel-nombre { font-size: clamp(20px, 3.1vh, 28px); line-height: 1.15; }
         .cw-std-hotel-dir { display: none; }
-        .cw-std-hotel-resena { font-size: clamp(14.5px, 2.05vh, 18px); line-height: 1.35; }
-        .cw-std-hotel-tarifa { font-size: clamp(14px, 1.95vh, 17px); line-height: 1.35; }
+        .cw-std-hotel-resena { font-size: clamp(15px, 2.35vh, 20px); line-height: 1.35; }
+        .cw-std-hotel-tarifa { font-size: clamp(14.5px, 2.2vh, 19px); line-height: 1.35; }
         .cw-std-hotel-tarifa > div:last-child:not(:first-child) { font-size: clamp(10.5px, 1.4vh, 12.5px); }
-        .cw-std-hotel-traslado { font-size: clamp(10.5px, 1.4vh, 12.5px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
+        .cw-std-hotel-traslado { font-size: clamp(11px, 1.55vh, 13.5px); letter-spacing: .1em; text-transform: uppercase; line-height: 1.4; }
         .cw-std-hotel-mapas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 0.4vh; }
         .cw-std-mini { font-size: clamp(10px, 1.35vh, 12px); letter-spacing: .14em; text-transform: uppercase; padding: clamp(7px, 1vh, 10px) clamp(12px, 1vw, 17px); border-radius: 999px; text-decoration: none; white-space: nowrap; }
         .cw-std-credito { grid-area: cred; justify-self: center; }
@@ -1083,6 +1118,10 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-flor-d2 { top: 12px; right: 34px; }
       .cw-mece { animation: cw-mece 10s ease-in-out infinite; }
       @keyframes cw-mece { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(2.2deg); } }
+      .cw-pre-titulo { font-size: 24px; }
+      .cw-pre-ops { gap: 8px !important; }
+      .cw-pre-op { font-size: 10.5px; letter-spacing: .1em; padding: 13px 14px; transition: background .2s ease, color .2s ease; }
+      .cw-pre-nota { font-size: 16px; line-height: 1.35; max-width: 340px; }
       .cw-capa-ligera { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
       .cw-petalo { position: absolute; top: -30px; opacity: 0; will-change: transform, opacity; animation: cw-cae linear infinite; filter: drop-shadow(0 1px 1.5px rgba(150,105,98,.28)); }
       @keyframes cw-cae { 0% { transform: translate3d(0,-6vh,0) rotate(0deg); opacity: 0; } 8% { opacity: .9; } 90% { opacity: .9; } 100% { transform: translate3d(var(--der),108vh,0) rotate(var(--giro)); opacity: 0; } }

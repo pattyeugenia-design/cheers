@@ -19,6 +19,7 @@ export default function SaveTheDate({ params }: { params: Promise<{ codigo: stri
   const [cargando, setCargando] = useState(true)
   const [datos, setDatos] = useState<any>(null)
   const [apartada, setApartada] = useState(false)
+  const [respuesta, setRespuesta] = useState<string | null>(null)
 
   useEffect(() => {
     setLang(getLang())
@@ -29,6 +30,7 @@ export default function SaveTheDate({ params }: { params: Promise<{ codigo: stri
         const info = Array.isArray(data) ? data[0] : data
         setDatos(info ? { ...info, personal: true } : null)
         setApartada(!!info?.fecha_apartada)
+        setRespuesta(info?.std_respuesta || null)
       } else if (CODIGO.test(codigo)) {
         const [{ data }, { data: en }] = await Promise.all([
           supabase.rpc('get_std_boda', { p_codigo: codigo }),
@@ -60,9 +62,16 @@ export default function SaveTheDate({ params }: { params: Promise<{ codigo: stri
     await supabase.rpc('apartar_fecha_std', { p_codigo: codigo })
   }
 
+  async function responder(v: 'si' | 'no' | 'tal_vez') {
+    const antes = respuesta
+    setRespuesta(v)
+    const { data, error } = await supabase.rpc('responder_std', { p_codigo: codigo, p_respuesta: v })
+    if (error || data === false) setRespuesta(antes)
+  }
+
   const nada = () => {}
   const ctl: Control = {
-    ...(datos.personal ? { apartar: { hecho: apartada, accion: apartarFecha } } : {}),
+    ...(datos.personal ? { apartar: { hecho: apartada, accion: apartarFecha }, preRespuesta: { valor: respuesta, responder } } : {}),
     rsvp: { asistencia: '', setAsistencia: nada, numAcompanantes: 0, setNum: nada, menuPrincipal: '', setMenu: nada, acompanantes: [], setAcompanante: nada, notas: '', setNotas: nada, enviar: nada, enviando: false, enviado: false, editar: nada },
     firmas: { lista: [], nombre: '', setNombre: nada, mensaje: '', setMensaje: nada, enviada: false, enviando: false, enviar: nada },
     fotos: { lista: [], subiendo: false, recienSubida: false, subir: nada },
