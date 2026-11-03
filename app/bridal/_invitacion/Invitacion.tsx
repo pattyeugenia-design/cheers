@@ -85,9 +85,7 @@ function PreRespuesta({ p, t, valor, responder }: { p: Paleta; t: (es: string, e
           </button>
         ))}
       </div>
-      <div className="cw-pre-nota" aria-live="polite" style={{ fontFamily: p.serif, fontStyle: 'italic', color: gracias ? p.acento : p.txt3, textAlign: 'center' }}>
-        {gracias || t('Es solo para irnos dando una idea; la confirmación será con la invitación.', "Just to help us plan. We'll ask again with the formal invitation.")}
-      </div>
+      <div className="cw-pre-nota" aria-live="polite" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.acento, textAlign: 'center' }}>{gracias}</div>
     </div>
   )
 }
