@@ -160,6 +160,16 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const parejaCal = [d.nombre_novia, d.nombre_novio].filter(Boolean).join(lang === 'en' ? ' & ' : ' y ')
   const tituloCal = (parejaCal ? (lang === 'en' ? `${parejaCal}'s Wedding` : `Boda ${parejaCal}`) : t('Boda', 'Wedding')) + (ciudadCal ? ` (${ciudadCal})` : '')
   const cal = d.fecha_boda ? enlacesCalendario(tituloCal, d.fecha_boda, std ? null : d.hora_boda, std ? (stdLugar || null) : (lugar1 || null), String(d.slug || d.token || nombreBoda || 'boda'), std ? null : (ultimoItem ? partirHora(ultimoItem.hora).fin : null), std) : null
+  // Save the date: qué pasa y dónde (misa y recepción), con la dirección completa para Maps/Waze.
+  const lugarCompleto = (nombre: string) => {
+    const n = String(nombre || '').trim().toLowerCase()
+    return [lugar1, String(d.lugar2_nombre || '').trim()].find(l => n && l.toLowerCase().startsWith(n)) || nombre
+  }
+  const momentosStd: { hora: string; titulo: string; lugar: string; completo: string }[] = std
+    ? (Array.isArray(d.itinerario) ? d.itinerario : []).filter((it: any) => it && (it.titulo || it.lugar)).slice(0, 4).map((it: any) => ({
+        hora: hora12(partirHora(it.hora).ini), titulo: String(it.titulo || '').slice(0, 60), lugar: String(it.lugar || '').slice(0, 120), completo: lugarCompleto(String(it.lugar || '')),
+      }))
+    : []
   const portada = urlImagenSegura(d.portada_url)
   const encPortada = leerEncuadreTexto(d.portada_posicion)
   const historia: any[] = (Array.isArray(d.historia) ? d.historia : []).filter((h: any) => urlImagenSegura(h?.url))
@@ -336,6 +346,16 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             {(d.fecha_boda || d.versiculo || padresLineas.length > 0) && (
               <div className="cw-std-izq">
                 {d.fecha_boda && <div className="cw-std-cuenta"><Cuenta fecha={d.fecha_boda} hora={null} p={p} lang={lang} compacta /></div>}
+                {momentosStd.length > 0 && (
+                  <div className="cw-std-momentos">
+                    {momentosStd.map((m, i) => (
+                      <div key={i} className="cw-std-momento">
+                        <div className="cw-std-momento-hora" style={{ fontFamily: p.etiqueta, color: p.acento }}>{m.hora}{m.titulo ? ` · ${m.titulo}` : ''}</div>
+                        {m.lugar && <a className="cw-std-momento-lugar" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.completo)}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.serif, color: p.txt, textDecoration: 'none', borderBottom: `1px solid ${p.linea}` }}>{m.lugar}</a>}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {d.versiculo && <p className="cw-std-frase" style={{ fontFamily: p.serif, fontStyle: 'italic', color: p.txt, margin: 0 }}>“{d.versiculo}”</p>}
                 {padresLineas.length > 0 && (
                   <div className="cw-std-padres">
@@ -431,7 +451,21 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
               : <Boton p={p} relleno onClick={() => ctl.apartar?.accion()}>{t('Ya aparté la fecha', "I've saved the date")}</Boton>)}
           </div>}
         </Sec>
-      ) : (
+      ) : null}
+      {std && momentosStd.length > 0 && (
+        <Sec p={p} arriba={10} abajo={20}>
+          <div style={etiqueta}>{t('Así será nuestro día', 'Order of events')}</div>
+          {momentosStd.map((m, i) => (
+            <div key={i} style={{ marginTop: i ? 30 : 22 }}>
+              <div style={{ fontFamily: p.serif, fontSize: 26, fontWeight: 500, color: p.acento, lineHeight: 1.1 }}>{m.hora}</div>
+              {m.titulo && <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt, marginTop: 6 }}>{m.titulo}</div>}
+              {m.lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 4, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>{m.lugar}</div>}
+              {m.lugar && <ComoLlegar p={p} lugar={m.completo} t={t} />}
+            </div>
+          ))}
+        </Sec>
+      )}
+      {!std && (
       <Sec p={p} arriba={34} abajo={20}>
         <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
         <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
@@ -974,6 +1008,10 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-fecha { font-size: clamp(15px, 2.6vh, 24px); }
         .cw-std-ciudad { font-size: clamp(19px, 3.1vh, 29px); margin-top: -0.6vh; }
         .cw-std-cuenta { margin-bottom: 0.6vh; }
+        .cw-std-momentos { display: flex; flex-direction: column; gap: 1.4vh; align-items: center; }
+        .cw-std-momento { display: flex; flex-direction: column; align-items: center; gap: .3vh; }
+        .cw-std-momento-hora { font-size: clamp(11px, 1.55vh, 14px); letter-spacing: .16em; text-transform: uppercase; }
+        .cw-std-momento-lugar { font-size: clamp(16px, 2.4vh, 22px); line-height: 1.25; text-wrap: balance; }
         .cw-std-invitacion { display: flex; flex-direction: column; align-items: center; gap: 0.8vh; margin-top: 0.6vh; max-width: 860px; }
         .cw-std-invitado { font-size: clamp(36px, 6.6vh, 66px); }
         .cw-std-texto { font-size: clamp(19px, 3.1vh, 28px); line-height: 1.35; text-wrap: balance; }
