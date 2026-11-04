@@ -60,17 +60,21 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   const [lista, setLista] = useState<'sin_abrir' | 'sin_contestar' | 'tal_vez' | 'si' | 'no'>('sin_abrir')
   const [registrando, setRegistrando] = useState(false)
   const [fechaEnvio, setFechaEnvio] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [plazos, setPlazos] = useState<Record<string, { desde: string; hasta: string }>>({})
   const t = useCallback((es: string, en: string) => (lang === 'en' ? en : es), [lang])
 
   const cargar = useCallback(async (bodaId: string) => {
     const origen = typeof window !== 'undefined' ? window.location.origin : 'https://joincheers.app'
-    const [{ data: proy }, { data: inv }, { data: ap }, { data: rs }, { data: ds }] = await Promise.all([
+    const [{ data: proy }, { data: inv }, { data: ap }, { data: rs }, { data: ds }, { data: pz }] = await Promise.all([
       supabase.from('proyectos_boda').select('id, nombre_novia, nombre_novio, fecha_boda, std_activo, std_slug').eq('id', bodaId).single(),
       supabase.from('boda_invitados').select('id, nombre, telefono, token, std_codigo, std_visto_en, std_enviado_en, boda_enviado_en, boda_visto_en').eq('boda_id', bodaId).order('nombre'),
       supabase.from('boda_fecha_apartada').select('invitado_id, apartada_en, respuesta, respondida_en').eq('boda_id', bodaId),
       supabase.from('boda_rsvps').select('invitado_id, asistencia, num_acompanantes, created_at').eq('boda_id', bodaId),
       supabase.from('boda_despedidas').select('id, titulo, festejada, created_at').eq('boda_id', bodaId).order('created_at'),
+      supabase.from('boda_envio_plazos').select('invitacion, desde, hasta').eq('boda_id', bodaId),
     ])
+    setPlazos(Object.fromEntries((pz || []).map((x: any) => [x.invitacion, { desde: x.desde, hasta: x.hasta }])))
     if (!proy) { router.push('/bridal'); return }
     setProyecto(proy)
     const invitados = inv || []
@@ -166,7 +170,8 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
     const sinContestar = abiertos.filter(f => !f.respuesta)
     const sinAbrir = filas.filter(f => !f.abierto)
     const envOrden = enviados.map(f => f.enviado as string).sort()
-    const tiemposResp = contestados.map(f => ms(f.respondio) - ms(f.enviado || f.abierto)).filter(x => x >= 0).sort((a, b) => a - b)
+    // Desde el envío; si el envío se registró a mano con una fecha posterior a la apertura, se cuenta desde que la abrió.
+    const tiemposResp = contestados.map(f => ms(f.respondio) - (f.enviado && ms(f.enviado) <= ms(f.abierto) ? ms(f.enviado) : ms(f.abierto))).filter(x => x >= 0).sort((a, b) => a - b)
     const mediana = tiemposResp.length ? tiemposResp[Math.floor(tiemposResp.length / 2)] : null
     return {
       total, enviados: enviados.length, abiertos: abiertos.length, contestados: contestados.length,
@@ -205,16 +210,23 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0)
 
   const plazo = (() => {
-    if (!m.envDesde || !m.envHasta) return null
-    const a = new Date(m.envDesde).toDateString(), b = new Date(m.envHasta).toDateString()
-    return a === b ? `${t('Se envió el', 'Sent on')} ${fDia(m.envDesde)}` : `${t('Se envió entre el', 'Sent between')} ${fDia(m.envDesde)} ${t('y el', 'and')} ${fDia(m.envHasta)}`
+    const guardado = inv ? plazos[inv.key] : undefined
+    const desde = guardado ? guardado.desde + 'T12:00:00' : m.envDesde
+    const hasta = guardado ? guardado.hasta + 'T12:00:00' : m.envHasta
+    if (!desde || !hasta) return null
+    const a = new Date(desde).toDateString(), b = new Date(hasta).toDateString()
+    return a === b ? `${t('Se envió el', 'Sent on')} ${fDia(desde)}` : `${t('Se envió entre el', 'Sent between')} ${fDia(desde)} ${t('y el', 'and')} ${fDia(hasta)}`
   })()
 
+  // Registro manual del plazo de envío (para invitaciones mandadas fuera de la app):
+  // guarda el rango para mostrarlo tal cual y marca como enviados a los que no
+  // tenían registro, con la fecha de inicio del rango.
   async function registrarEnvio() {
     if (!inv || !fechaEnvio) return
+    const hasta = fechaHasta && fechaHasta >= fechaEnvio ? fechaHasta : fechaEnvio
+    await supabase.from('boda_envio_plazos').upsert({ boda_id: id, invitacion: inv.key, desde: fechaEnvio, hasta, updated_at: new Date().toISOString() })
     const ids = inv.filas.filter(f => !f.enviado).map(f => f.id)
-    if (!ids.length) { setRegistrando(false); return }
-    const cuando = new Date(fechaEnvio + 'T12:00:00').toISOString()
+    const cuando = new Date(fechaEnvio + 'T00:00:00').toISOString()
     for (let i = 0; i < ids.length; i += 200) {
       await supabase.from(inv.tabla).update({ [inv.columnaEnvio]: cuando }).in('id', ids.slice(i, i + 200))
     }
@@ -317,19 +329,26 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
               </div>
               {m.mediana != null && <div style={sub}>{t('La mitad contestó en menos de', 'Half replied in under')} {dur(m.mediana)}</div>}
             </div>
-            {m.sinRegistroEnvio > 0 && (registrando ? (
+            {registrando ? (
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>{t('Del', 'From')}</span>
                 <input type="date" value={fechaEnvio} onChange={e => setFechaEnvio(e.target.value)} style={{ background: C.card, color: C.txt, border: `1px solid ${C.borde}`, borderRadius: 10, padding: '8px 10px', fontFamily: F, colorScheme: 'dark' as const }} />
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>{t('al', 'to')}</span>
+                <input type="date" value={fechaHasta} min={fechaEnvio} onChange={e => setFechaHasta(e.target.value)} style={{ background: C.card, color: C.txt, border: `1px solid ${C.borde}`, borderRadius: 10, padding: '8px 10px', fontFamily: F, colorScheme: 'dark' as const }} />
                 <button onClick={registrarEnvio} disabled={!fechaEnvio} style={{ border: 'none', background: GRAD_ROSA, color: '#fff', fontWeight: 800, fontSize: 12, padding: '9px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: F, opacity: fechaEnvio ? 1 : .5 }}>
-                  {t(`Marcar ${m.sinRegistroEnvio} como enviados`, `Mark ${m.sinRegistroEnvio} as sent`)}
+                  {t('Guardar plazo', 'Save')}
                 </button>
                 <button onClick={() => setRegistrando(false)} style={{ border: 'none', background: 'transparent', color: C.muted, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: F }}>{t('Cancelar', 'Cancel')}</button>
               </div>
             ) : (
-              <button onClick={() => { setRegistrando(true); setFechaEnvio(new Date().toISOString().slice(0, 10)) }} style={{ border: `1px solid ${C.borde}`, background: C.card, color: C.txt, fontWeight: 700, fontSize: 12, padding: '9px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
-                {t(`Registrar envío de ${m.sinRegistroEnvio} sin fecha`, `Log send date for ${m.sinRegistroEnvio}`)}
+              <button onClick={() => {
+                const g = inv ? plazos[inv.key] : undefined
+                const hoyLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+                setFechaEnvio(g?.desde || hoyLocal); setFechaHasta(g?.hasta || g?.desde || hoyLocal); setRegistrando(true)
+              }} style={{ border: `1px solid ${C.borde}`, background: C.card, color: C.txt, fontWeight: 700, fontSize: 12, padding: '9px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
+                {plazo ? t('Editar plazo', 'Edit dates') : t('Registrar cuándo se envió', 'Log when it was sent')}
               </button>
-            ))}
+            )}
           </div>
 
           {/* KPIs */}
