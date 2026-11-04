@@ -39,7 +39,6 @@ export default function Bridal() {
   const [nombreNovia, setNombreNovia] = useState('')
   const [nombreNovio, setNombreNovio] = useState('')
   const [fechaBoda, setFechaBoda] = useState('')
-  const [presupuestoTotal, setPresupuestoTotal] = useState('')
   const [invitadosEstimados, setInvitadosEstimados] = useState('')
   const [hayIglesia, setHayIglesia] = useState(true)
   const [hayCivil, setHayCivil] = useState(true)
@@ -127,15 +126,8 @@ export default function Bridal() {
         nombre_novia: nombreNovia.trim() || null,
         nombre_novio: nombreNovio.trim() || null,
         fecha_boda: fechaBoda || null,
-        presupuesto_total: presupuestoTotal ? Number(presupuestoTotal) : null,
         invitados_estimados: invitadosEstimados ? Number(invitadosEstimados) : null,
-        modulos_activos: {
-          iglesia: hayIglesia, civil: hayCivil,
-          presupuesto: true, proveedores: true, invitados: true,
-          novia: true, novio: true, pareja: true,
-          luna_miel: true, vida_despues: true, embarazo: true,
-          contratos: true, pagos: true, inspiracion: true, wedding_planner: true,
-        },
+        modulos_activos: { iglesia: hayIglesia, civil: hayCivil },
       })
       .select('id')
       .single()
@@ -147,18 +139,6 @@ export default function Bridal() {
     }
 
     await supabase.from('proyectos_boda_miembros').insert({ boda_id: boda.id, user_id: user.id, rol: 'creador' })
-
-    // Checklist fijo de trámites, sin IA — solo prende/apaga bloques según los toggles.
-    const tareasCivil = lang === 'en'
-      ? ['Gather documents for the civil ceremony (birth certificates, IDs, witnesses)', 'Schedule appointment at the Civil Registry', 'Civil marriage procedure']
-      : ['Reunir documentos para el matrimonio civil (actas de nacimiento, identificaciones, testigos)', 'Agendar cita en el Registro Civil', 'Trámite del matrimonio civil']
-    const tareasIglesia = lang === 'en'
-      ? ['Schedule premarital counseling classes', 'Church presentation / meeting with the priest', 'Book the church and ceremony time']
-      : ['Agendar pláticas prematrimoniales', 'Presentación en la iglesia / entrevista con el sacerdote', 'Reservar la iglesia y horario de la ceremonia']
-    const tareas = [...(hayCivil ? tareasCivil : []), ...(hayIglesia ? tareasIglesia : [])]
-    if (tareas.length > 0) {
-      await supabase.from('boda_timeline_items').insert(tareas.map(titulo => ({ boda_id: boda.id, titulo })))
-    }
 
     setGuardando(false)
     setCreando(false)
@@ -200,11 +180,10 @@ export default function Bridal() {
                 una vez adentro (ver secciones del dashboard). */}
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12, marginBottom: 22 }}>
               {[
-                { es: 'Logística', en: 'Logistics', esD: 'Presupuesto, timeline, proveedores, contratos, pagos y calendario de pagos.', enD: 'Budget, timeline, vendors, contracts, payments and payment calendar.' },
-                { es: 'Invitados y RSVP', en: 'Guests & RSVP', esD: 'Invitación digital con tu tema y foto, confirmaciones, menú y acompañantes.', enD: 'Digital invitation with your theme and photo, RSVPs, meal choice and plus-ones.' },
-                { es: 'Wedding Planner', en: 'Wedding Planner', esD: 'Compara candidatos, elige uno y da seguimiento a lo que va a hacer.', enD: 'Compare candidates, pick one, and track what they\'re handling.' },
-                { es: 'Para cada quien', en: 'For each of you', esD: 'Pendientes de novia, novio, pareja, y tu Beauty Timeline.', enD: 'To-dos for the bride, groom, the couple, and your beauty timeline.' },
-                { es: 'El gran día y después', en: 'The big day & after', esD: 'Timeline del día B, luna de miel y vida después de la boda.', enD: 'Wedding-day timeline, honeymoon, and life after the wedding.' },
+                { es: 'Invitaciones digitales', en: 'Digital invitations', esD: 'Despedida, save the date, boda y civil, con plantillas, tu tema y tus fotos.', enD: 'Bridal shower, save the date, wedding and civil ceremony, with templates, your theme and photos.' },
+                { es: 'Tus invitados en un solo lugar', en: 'All your guests in one place', esD: 'Una sola lista: importa desde Excel y envía por WhatsApp o correo desde aquí.', enD: 'One list: import from Excel and send by WhatsApp or email from here.' },
+                { es: 'Respuestas al momento', en: 'Responses in real time', esD: 'Quién la abrió, quién contestó, qué contestó y quién falta, con recordatorios.', enD: 'Who opened it, who replied, what they said and who is missing, with reminders.' },
+                { es: 'Álbum de fotos por QR', en: 'QR photo album', esD: 'Tus invitados suben sus fotos de cada evento escaneando un QR.', enD: 'Guests upload their photos from each event by scanning a QR code.' },
               ].map((f, i) => (
                 <div key={i}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: TXT_PRIMARY, marginBottom: 2 }}>{lang === 'en' ? f.en : f.es}</div>
@@ -235,7 +214,6 @@ export default function Bridal() {
             <input value={nombreNovia} onChange={e => setNombreNovia(e.target.value)} placeholder={lang === 'en' ? "Bride's name" : 'Nombre de la novia'} style={inputStyle} />
             <input value={nombreNovio} onChange={e => setNombreNovio(e.target.value)} placeholder={lang === 'en' ? "Groom's name" : 'Nombre del novio'} style={inputStyle} />
             <input type="date" value={fechaBoda} onChange={e => setFechaBoda(e.target.value)} style={{ ...inputStyle, colorScheme: 'light' as const }} />
-            <input type="number" value={presupuestoTotal} onChange={e => setPresupuestoTotal(e.target.value)} placeholder={lang === 'en' ? 'Total budget (optional)' : 'Presupuesto total (opcional)'} style={inputStyle} />
             <input type="number" min={0} value={invitadosEstimados} onChange={e => setInvitadosEstimados(e.target.value)} placeholder={lang === 'en' ? 'Estimated guests (optional)' : 'Invitados estimados (opcional)'} style={inputStyle} />
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px' }}>

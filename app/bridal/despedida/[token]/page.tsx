@@ -31,6 +31,8 @@ export default function InvitacionDespedidaPagina({ params }: { params: Promise<
       const { data } = await supabase.rpc('get_despedida_por_token', { p_token: token })
       const info = Array.isArray(data) ? data[0] : data
       if (info) {
+        // Primera apertura (para el dashboard de respuestas)
+        supabase.rpc('registrar_visita_despedida', { p_token: token }).then(() => {}, () => {})
         // Álbum de fotos con QR de la despedida (solo su código y horario)
         const { data: al } = await supabase.rpc('get_album_despedida_por_token', { p_token: token })
         const a = Array.isArray(al) ? al[0] : al

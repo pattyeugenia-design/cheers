@@ -44,6 +44,8 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
       const fila = Array.isArray(data) ? data[0] : data
       const info = fila ? { ...fila, contenido_en: en || null } : fila
       if (error || !info) { setNoEncontrado(true); setCargando(false); return }
+      // Primera apertura (para el dashboard de respuestas de los novios)
+      supabase.rpc('registrar_visita_boda', { p_token: token }).then(() => {}, () => {})
       // Álbum de fotos con QR de la boda (solo su código y horario)
       const { data: al } = await supabase.rpc('get_album_boda_por_token', { p_token: token })
       const a = Array.isArray(al) ? al[0] : al
