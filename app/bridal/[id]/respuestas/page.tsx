@@ -29,7 +29,7 @@ type Fila = {
   respuesta: Resp; personas: number
 }
 type Invitacion = {
-  key: string; tipo: 'std' | 'boda' | 'despedida'; titulo: string
+  key: string; tipo: 'std' | 'boda' | 'despedida'; titulo: string; fecha: string | null
   tabla: 'boda_invitados' | 'boda_despedida_invitadas'; columnaEnvio: string
   filas: Fila[]; respuestas: { si: string; tal_vez: string; no: string }
 }
@@ -46,6 +46,33 @@ const minimo = (...v: (string | null | undefined)[]) => {
   const xs = v.filter(Boolean) as string[]
   return xs.length ? xs.reduce((a, b) => (ms(a) <= ms(b) ? a : b)) : null
 }
+
+function metricas(filas: Fila[]) {
+  const total = filas.length
+  const enviados = filas.filter(f => f.enviado)
+  const abiertos = filas.filter(f => f.abierto)
+  const contestados = filas.filter(f => f.respondio && f.respuesta)
+  const si = contestados.filter(f => f.respuesta === 'si')
+  const talVez = contestados.filter(f => f.respuesta === 'tal_vez')
+  const no = contestados.filter(f => f.respuesta === 'no')
+  const alMomento = contestados.filter(f => ms(f.respondio) - ms(f.abierto) <= AL_MOMENTO_MIN * 60000)
+  const masTarde = contestados.length - alMomento.length
+  const sinContestar = abiertos.filter(f => !f.respuesta)
+  const sinAbrir = filas.filter(f => !f.abierto)
+  const envOrden = enviados.map(f => f.enviado as string).sort()
+  // Desde el envío; si el envío se registró a mano con una fecha posterior a la apertura, se cuenta desde que la abrió.
+  const tiemposResp = contestados.map(f => ms(f.respondio) - (f.enviado && ms(f.enviado) <= ms(f.abierto) ? ms(f.enviado) : ms(f.abierto))).filter(x => x >= 0).sort((a, b) => a - b)
+  const mediana = tiemposResp.length ? tiemposResp[Math.floor(tiemposResp.length / 2)] : null
+  return {
+    total, enviados: enviados.length, abiertos: abiertos.length, contestados: contestados.length,
+    si: si.length, talVez: talVez.length, no: no.length, personasSi: si.reduce((s, f) => s + f.personas, 0),
+    alMomento: alMomento.length, masTarde, sinContestar, sinAbrir,
+    envDesde: envOrden[0] || null, envHasta: envOrden[envOrden.length - 1] || null, mediana,
+    sinRegistroEnvio: filas.filter(f => !f.enviado).length,
+  }
+}
+
+const ORDEN = { despedida: 0, std: 1, boda: 2 } as const
 
 export default function RespuestasDashboard({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -67,14 +94,15 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   const cargar = useCallback(async (bodaId: string) => {
     const origen = typeof window !== 'undefined' ? window.location.origin : 'https://joincheers.app'
     const [{ data: proy }, { data: inv }, { data: ap }, { data: rs }, { data: ds }, { data: pz }] = await Promise.all([
-      supabase.from('proyectos_boda').select('id, nombre_novia, nombre_novio, fecha_boda, std_activo, std_slug').eq('id', bodaId).single(),
+      supabase.from('proyectos_boda').select('id, nombre_novia, nombre_novio, fecha_boda, std_activo, std_slug, modulos_activos').eq('id', bodaId).single(),
       supabase.from('boda_invitados').select('id, nombre, telefono, token, std_codigo, std_visto_en, std_enviado_en, boda_enviado_en, boda_visto_en').eq('boda_id', bodaId).order('nombre'),
       supabase.from('boda_fecha_apartada').select('invitado_id, apartada_en, respuesta, respondida_en').eq('boda_id', bodaId),
       supabase.from('boda_rsvps').select('invitado_id, asistencia, num_acompanantes, created_at').eq('boda_id', bodaId),
-      supabase.from('boda_despedidas').select('id, titulo, festejada, created_at').eq('boda_id', bodaId).order('created_at'),
+      supabase.from('boda_despedidas').select('id, titulo, festejada, fecha, created_at').eq('boda_id', bodaId).order('created_at'),
       supabase.from('boda_envio_plazos').select('invitacion, desde, hasta').eq('boda_id', bodaId),
     ])
-    setPlazos(Object.fromEntries((pz || []).map((x: any) => [x.invitacion, { desde: x.desde, hasta: x.hasta }])))
+    const pzMap: Record<string, { desde: string; hasta: string }> = Object.fromEntries((pz || []).map((x: any) => [x.invitacion, { desde: x.desde, hasta: x.hasta }]))
+    setPlazos(pzMap)
     if (!proy) { router.push('/bridal'); return }
     setProyecto(proy)
     const invitados = inv || []
@@ -93,12 +121,13 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
       }
     })
     if (proy.std_activo || filasStd.some(f => f.abierto || f.enviado)) {
-      lista.push({ key: 'std', tipo: 'std', titulo: 'Save the date', tabla: 'boda_invitados', columnaEnvio: 'std_enviado_en', filas: filasStd,
+      lista.push({ key: 'std', tipo: 'std', titulo: 'Save the date', fecha: pzMap.std?.desde || filasStd.map(f => f.enviado).filter(Boolean).sort()[0] || null, tabla: 'boda_invitados', columnaEnvio: 'std_enviado_en', filas: filasStd,
         respuestas: { si: t('Sí va', 'Coming'), tal_vez: t('Aún no sabe', 'Not sure yet'), no: t('No podrá', "Can't make it") } })
     }
 
     lista.push({
-      key: 'boda', tipo: 'boda', titulo: t('Boda', 'Wedding'), tabla: 'boda_invitados', columnaEnvio: 'boda_enviado_en',
+      key: 'boda', tipo: 'boda', fecha: proy.fecha_boda || null,
+      titulo: proy.modulos_activos?.iglesia === false ? t('Boda', 'Wedding') : t('Ceremonia religiosa + fiesta', 'Church ceremony + party'), tabla: 'boda_invitados', columnaEnvio: 'boda_enviado_en',
       respuestas: { si: t('Confirmados', 'Confirmed'), tal_vez: t('Tal vez', 'Maybe'), no: t('No van', 'Not going') },
       filas: invitados.map((i: any) => {
         const r: any = rsPor.get(i.id)
@@ -117,7 +146,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
         .in('despedida_id', desp.map((d: any) => d.id)).order('nombre')
       desp.forEach((d: any, n: number) => {
         lista.push({
-          key: `desp-${d.id}`, tipo: 'despedida', tabla: 'boda_despedida_invitadas', columnaEnvio: 'enviado_en',
+          key: `desp-${d.id}`, tipo: 'despedida', fecha: d.fecha || null, tabla: 'boda_despedida_invitadas', columnaEnvio: 'enviado_en',
           titulo: (d.titulo || t('Despedida', 'Bridal shower')) + (desp.length > 1 && d.festejada ? ` · ${d.festejada}` : desp.length > 1 ? ` ${n + 1}` : ''),
           respuestas: { si: t('Van', 'Going'), tal_vez: t('Tal vez', 'Maybe'), no: t('No van', 'Not going') },
           filas: (di || []).filter((x: any) => x.despedida_id === d.id).map((x: any) => ({
@@ -128,9 +157,9 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
         })
       })
     }
+    lista.sort((a, b) => ORDEN[a.tipo] - ORDEN[b.tipo])
     setInvitaciones(lista)
-    setSel(prev => prev && lista.some(l => l.key === prev) ? prev
-      : (lista.find(l => l.filas.some(f => f.enviado || f.abierto))?.key || lista[0]?.key || ''))
+    setSel(prev => prev && (prev === 'resumen' || lista.some(l => l.key === prev)) ? prev : 'resumen')
     setActualizado(Date.now())
     setCargando(false)
   }, [router, t])
@@ -156,31 +185,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   }, [id, cargar])
 
   const inv = invitaciones.find(i => i.key === sel)
-  const m = useMemo(() => {
-    const filas = inv?.filas || []
-    const total = filas.length
-    const enviados = filas.filter(f => f.enviado)
-    const abiertos = filas.filter(f => f.abierto)
-    const contestados = filas.filter(f => f.respondio && f.respuesta)
-    const si = contestados.filter(f => f.respuesta === 'si')
-    const talVez = contestados.filter(f => f.respuesta === 'tal_vez')
-    const no = contestados.filter(f => f.respuesta === 'no')
-    const alMomento = contestados.filter(f => ms(f.respondio) - ms(f.abierto) <= AL_MOMENTO_MIN * 60000)
-    const masTarde = contestados.length - alMomento.length
-    const sinContestar = abiertos.filter(f => !f.respuesta)
-    const sinAbrir = filas.filter(f => !f.abierto)
-    const envOrden = enviados.map(f => f.enviado as string).sort()
-    // Desde el envío; si el envío se registró a mano con una fecha posterior a la apertura, se cuenta desde que la abrió.
-    const tiemposResp = contestados.map(f => ms(f.respondio) - (f.enviado && ms(f.enviado) <= ms(f.abierto) ? ms(f.enviado) : ms(f.abierto))).filter(x => x >= 0).sort((a, b) => a - b)
-    const mediana = tiemposResp.length ? tiemposResp[Math.floor(tiemposResp.length / 2)] : null
-    return {
-      total, enviados: enviados.length, abiertos: abiertos.length, contestados: contestados.length,
-      si: si.length, talVez: talVez.length, no: no.length, personasSi: si.reduce((s, f) => s + f.personas, 0),
-      alMomento: alMomento.length, masTarde, sinContestar, sinAbrir,
-      envDesde: envOrden[0] || null, envHasta: envOrden[envOrden.length - 1] || null, mediana,
-      sinRegistroEnvio: filas.filter(f => !f.enviado).length,
-    }
-  }, [inv])
+  const m = useMemo(() => metricas(inv?.filas || []), [inv])
 
   const actividad = useMemo(() => {
     const filas = inv?.filas || []
@@ -204,6 +209,12 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   }, [inv, lang])
 
   const loc = lang === 'en' ? 'en-US' : 'es-MX'
+  const fFecha = (s: string | null) => {
+    if (!s) return t('Sin fecha', 'No date')
+    const txt = new Date(s.length === 10 ? s + 'T12:00:00' : s).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    return txt.charAt(0).toUpperCase() + txt.slice(1)
+  }
+  const resumenes = invitaciones.map(i => ({ inv: i, mm: metricas(i.filas) }))
   const fDia = (s: string) => new Date(s).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'short' })
   const fHora = (s: string) => new Date(s).toLocaleString(loc, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
   const dur = (x: number) => x < 3600000 ? `${Math.max(1, Math.round(x / 60000))} min` : x < 86400000 ? `${Math.round(x / 3600000)} h` : `${Math.round(x / 86400000)} ${t('días', 'days')}`
@@ -306,16 +317,78 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
 
         {/* Selector de invitación */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto' as const, paddingBottom: 4, marginBottom: 18 }}>
-          {invitaciones.map(i => (
-            <button key={i.key} onClick={() => { setSel(i.key); setRegistrando(false) }} style={{
-              border: sel === i.key ? 'none' : `1px solid ${C.borde}`, cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 800,
-              padding: '9px 16px', borderRadius: 99, whiteSpace: 'nowrap' as const,
-              background: sel === i.key ? GRAD_ROSA : C.card, color: sel === i.key ? '#fff' : C.muted,
-            }}>{i.titulo}</button>
+          {[{ key: 'resumen', titulo: t('Resumen', 'Overview'), sub: t(`${invitaciones.length} invitaciones`, `${invitaciones.length} invitations`) },
+            ...invitaciones.map(i => ({ key: i.key, titulo: i.titulo, sub: i.tipo === 'std' && !i.fecha ? t('Sin fecha de envío', 'No send date') : fFecha(i.fecha) }))].map(b => (
+            <button key={b.key} onClick={() => { setSel(b.key); setRegistrando(false) }} style={{
+              border: sel === b.key ? 'none' : `1px solid ${C.borde}`, cursor: 'pointer', fontFamily: F, textAlign: 'left' as const,
+              padding: '10px 18px', borderRadius: 14, whiteSpace: 'nowrap' as const, flexShrink: 0,
+              background: sel === b.key ? GRAD_ROSA : C.card, color: sel === b.key ? '#fff' : C.txt,
+            }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 800 }}>{b.titulo}</span>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, marginTop: 2, color: sel === b.key ? 'rgba(255,255,255,.85)' : C.muted }}>{b.sub}</span>
+            </button>
           ))}
         </div>
 
-        {m.total === 0 ? (
+        {sel === 'resumen' ? (<>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 14 }}>
+            <Kpi grad={GRAD_ROSA} etiqueta={t('Respuestas recibidas', 'Replies received')} valor={resumenes.reduce((s, x) => s + x.mm.contestados, 0)} de={resumenes.reduce((s, x) => s + x.mm.total, 0)} nota={t('sumando las invitaciones', 'across all invitations')} t={t} />
+            <Kpi grad={GRAD_CIAN} etiqueta={t('Abrieron', 'Opened')} valor={resumenes.reduce((s, x) => s + x.mm.abiertos, 0)} de={resumenes.reduce((s, x) => s + x.mm.total, 0)} t={t} />
+            <Kpi etiqueta={t('Abrieron sin contestar', 'Opened, no reply')} valor={resumenes.reduce((s, x) => s + x.mm.sinContestar.length, 0)} color={C.ambar} t={t} />
+            <Kpi etiqueta={t('Sin abrir', 'Not opened')} valor={resumenes.reduce((s, x) => s + x.mm.sinAbrir.length, 0)} color={C.muted} t={t} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+            {resumenes.map(({ inv: i, mm }) => {
+              const barras = [
+                { label: i.respuestas.si, value: mm.si, color: C.verde },
+                { label: i.respuestas.tal_vez, value: mm.talVez, color: C.ambar },
+                { label: i.respuestas.no, value: mm.no, color: C.rojo },
+                { label: t('Sin respuesta', 'No answer'), value: mm.total - mm.contestados, color: C.gris },
+              ]
+              const filasDato = [
+                [t('Enviados', 'Sent'), mm.enviados],
+                [t('Abrieron', 'Opened'), mm.abiertos],
+                [t('Contestaron al momento', 'Replied right away'), mm.alMomento],
+                [t('Abrieron sin contestar', 'Opened, no reply'), mm.sinContestar.length],
+                [t('Sin abrir', 'Not opened'), mm.sinAbrir.length],
+              ] as [string, number][]
+              return (
+                <div key={i.key} style={{ ...card, display: 'flex', flexDirection: 'column' as const }}>
+                  <h2 style={titulo}>{i.titulo}</h2>
+                  <div style={sub}>{i.tipo === 'std' && !i.fecha ? t('Sin fecha de envío', 'No send date') : fFecha(i.fecha)}</div>
+                  {mm.total === 0 ? (
+                    <p style={{ color: C.muted, fontSize: 13, margin: '18px 0 0' }}>{t('Todavía no hay invitados.', 'No guests yet.')}</p>
+                  ) : (<>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 16 }}>
+                      <span style={{ fontSize: 44, fontWeight: 900, lineHeight: 1, letterSpacing: '-1px' }}>{mm.contestados}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: C.muted }}>{t('de', 'of')} {mm.total} {t('contestaron', 'replied')} · {pct(mm.contestados, mm.total)}%</span>
+                    </div>
+                    <div style={{ display: 'flex', height: 12, borderRadius: 99, overflow: 'hidden', background: C.tenue, margin: '14px 0 10px' }}>
+                      {barras.filter(x => x.value > 0).map(x => <div key={x.label} style={{ width: `${pct(x.value, mm.total)}%`, background: x.color }} />)}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px 14px', marginBottom: 14 }}>
+                      {barras.map(x => (
+                        <span key={x.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.muted, fontWeight: 600 }}>
+                          <span style={{ width: 9, height: 9, borderRadius: 3, background: x.color }} />{x.label} <b style={{ color: C.txt }}>{x.value}</b>
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6, marginBottom: 14 }}>
+                      {filasDato.map(([k, v]) => (
+                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: `1px solid ${C.borde}` }}>
+                          <span style={{ color: C.muted }}>{k}</span><b>{v}</b>
+                        </div>
+                      ))}
+                    </div>
+                  </>)}
+                  <button onClick={() => setSel(i.key)} style={{ marginTop: 'auto', alignSelf: 'flex-start' as const, border: 'none', background: 'rgba(244,114,182,.15)', color: C.rosa, fontWeight: 800, fontSize: 12, padding: '9px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: F }}>
+                    {t('Ver detalle →', 'See details →')}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </>) : m.total === 0 ? (
           <div style={{ ...card, textAlign: 'center' as const, padding: 40 }}>
             <p style={{ color: C.muted, margin: 0 }}>{t('Todavía no hay invitados en esta invitación.', 'No guests on this invitation yet.')}</p>
           </div>
