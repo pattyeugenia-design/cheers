@@ -21,6 +21,8 @@ const GRAD_CIAN = 'linear-gradient(135deg,#22D3EE,#3B82F6)'
 const GRAD_VERDE = 'linear-gradient(135deg,#34D399,#22C55E)'
 const REFRESCO_MS = 15000
 const AL_MOMENTO_MIN = 15
+// Solo se sugiere recordar a quien lleva al menos este tiempo con la invitación.
+const ESPERA_RECORDATORIO_H = 48
 
 type Resp = 'si' | 'no' | 'tal_vez' | null
 type Fila = {
@@ -529,11 +531,17 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
                         {inv?.tipo === 'boda' && f.respuesta === 'si' && f.personas > 1 ? ` · ${f.personas} ${t('personas', 'people')}` : ''}
                       </div>
                     </div>
-                    {(lista === 'sin_abrir' || lista === 'sin_contestar' || lista === 'tal_vez') && numeroWa(f.telefono) && f.link && (
-                      <button onClick={() => recordatorio(f)} style={{ border: 'none', background: '#25D366', color: '#fff', fontSize: 11, fontWeight: 800, padding: '7px 10px', borderRadius: 9, cursor: 'pointer', fontFamily: F, flexShrink: 0 }}>
-                        {t('Recordar', 'Remind')}
-                      </button>
-                    )}
+                    {(lista === 'sin_abrir' || lista === 'sin_contestar' || lista === 'tal_vez') && numeroWa(f.telefono) && f.link && (() => {
+                      const desde = f.enviado || f.abierto
+                      if (!desde) return <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, flexShrink: 0 }}>{t('Sin enviar', 'Not sent')}</span>
+                      const faltan = ESPERA_RECORDATORIO_H * 3600000 - ((ahora || actualizado) - ms(desde))
+                      if (faltan > 0) return <span title={t(`Se sugiere recordar ${ESPERA_RECORDATORIO_H} h después del envío`, `Reminders are suggested ${ESPERA_RECORDATORIO_H}h after sending`)} style={{ fontSize: 11, color: C.muted, fontWeight: 700, flexShrink: 0 }}>{t(`Recordar en ${Math.ceil(faltan / 3600000)} h`, `Remind in ${Math.ceil(faltan / 3600000)}h`)}</span>
+                      return (
+                        <button onClick={() => recordatorio(f)} style={{ border: 'none', background: '#25D366', color: '#fff', fontSize: 11, fontWeight: 800, padding: '7px 10px', borderRadius: 9, cursor: 'pointer', fontFamily: F, flexShrink: 0 }}>
+                          {t('Recordar', 'Remind')}
+                        </button>
+                      )
+                    })()}
                   </div>
                 ))}
               </div>
