@@ -702,9 +702,13 @@ export default function ProyectoBoda({ params }: { params: Promise<{ id: string 
       return
     }
     setSubiendoPortada(true)
-    const ext = file.name.split('.').pop()
+    // Se reduce a 2000 px antes de subir: carga más rápido y la vista previa de WhatsApp
+    // (save the date, invitación) puede incluir la foto. Si no se puede reducir, sube el original.
+    const reducida = await reducirImagen(file, 2000)
+    const archivo = reducida || file
+    const ext = reducida ? 'jpeg' : file.name.split('.').pop()
     const path = `boda-${id}-portada.${ext}`
-    const { error } = await supabase.storage.from('portadas').upload(path, file, { upsert: true })
+    const { error } = await supabase.storage.from('portadas').upload(path, archivo, { upsert: true, contentType: reducida ? 'image/jpeg' : file.type })
     if (error) {
       setSubiendoPortada(false)
       alert(lang === 'en' ? "Couldn't upload the photo. Try a smaller file." : 'No se pudo subir la foto. Intenta con un archivo más chico.')

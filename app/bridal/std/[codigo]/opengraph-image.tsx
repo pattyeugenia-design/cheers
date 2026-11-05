@@ -26,7 +26,7 @@ function aBase64(buf: ArrayBuffer) {
   return btoa(s)
 }
 
-// La foto se descarga aquí (solo de nuestro propio Storage, JPG/PNG, máx. 4 MB):
+// La foto se descarga aquí (solo de nuestro propio Storage, JPG/PNG, máx. 10 MB):
 // si algo falla, la tarjeta sale con las iniciales en lugar de la foto.
 async function fotoSegura(url: string | null) {
   const u = urlImagenSegura(url)
@@ -37,7 +37,7 @@ async function fotoSegura(url: string | null) {
     const tipo = (r.headers.get('content-type') || '').split(';')[0]
     if (tipo !== 'image/jpeg' && tipo !== 'image/png') return null
     const buf = await r.arrayBuffer()
-    if (buf.byteLength > 4_000_000) return null
+    if (buf.byteLength > 10_000_000) return null
     return `data:${tipo};base64,${aBase64(buf)}`
   } catch {
     return null

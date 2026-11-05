@@ -36,7 +36,7 @@ async function fotoSegura(url: string | null) {
     const tipo = (r.headers.get('content-type') || '').split(';')[0]
     if (tipo !== 'image/jpeg' && tipo !== 'image/png') return null
     const buf = await r.arrayBuffer()
-    if (buf.byteLength > 4_000_000) return null
+    if (buf.byteLength > 10_000_000) return null
     return `data:${tipo};base64,${aBase64(buf)}`
   } catch {
     return null
