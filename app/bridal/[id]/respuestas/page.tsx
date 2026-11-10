@@ -71,8 +71,16 @@ function metricas(filas: Fila[]) {
     alMomento: alMomento.length, masTarde, sinContestar, sinAbrir,
     envDesde: envOrden[0] || null, envHasta: envOrden[envOrden.length - 1] || null, mediana,
     sinRegistroEnvio: filas.filter(f => !f.enviado).length,
+    // Las personas detrás de cada número, para que cada tarjeta lleve a su lista.
+    l: {
+      todos: filas, enviados, abiertos, contestados, si, tal_vez: talVez, no,
+      al_momento: alMomento, despues: contestados.filter(f => !alMomento.includes(f)),
+      sin_contestar: sinContestar, sin_abrir: sinAbrir,
+      sin_respuesta: filas.filter(f => !f.respuesta), sin_enviar: filas.filter(f => !f.enviado),
+    },
   }
 }
+type ListaKey = keyof ReturnType<typeof metricas>['l']
 
 const ORDEN = { despedida: 0, std: 1, boda: 2 } as const
 
@@ -86,7 +94,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   const [sel, setSel] = useState('')
   const [actualizado, setActualizado] = useState<number>(0)
   const [ahora, setAhora] = useState<number>(0)
-  const [lista, setLista] = useState<'sin_abrir' | 'sin_contestar' | 'tal_vez' | 'si' | 'no'>('sin_abrir')
+  const [lista, setLista] = useState<ListaKey>('sin_abrir')
   const [registrando, setRegistrando] = useState(false)
   const [fechaEnvio, setFechaEnvio] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
@@ -263,30 +271,37 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   )
 
   const segs = [
-    { label: inv?.respuestas.si || '', value: m.si, color: C.verde },
-    { label: inv?.respuestas.tal_vez || '', value: m.talVez, color: C.ambar },
-    { label: inv?.respuestas.no || '', value: m.no, color: C.rojo },
-    { label: t('Sin respuesta', 'No answer'), value: m.total - m.contestados, color: C.gris },
+    { k: 'si' as ListaKey, label: inv?.respuestas.si || '', value: m.si, color: C.verde },
+    { k: 'tal_vez' as ListaKey, label: inv?.respuestas.tal_vez || '', value: m.talVez, color: C.ambar },
+    { k: 'no' as ListaKey, label: inv?.respuestas.no || '', value: m.no, color: C.rojo },
+    { k: 'sin_respuesta' as ListaKey, label: t('Sin respuesta', 'No answer'), value: m.total - m.contestados, color: C.gris },
   ]
   const velocidad = [
-    { label: t('Contestaron al momento', 'Replied right away'), sub: t(`en menos de ${AL_MOMENTO_MIN} min de abrirla`, `within ${AL_MOMENTO_MIN} min of opening`), value: m.alMomento, color: GRAD_VERDE },
-    { label: t('Contestaron después', 'Replied later'), sub: t('la abrieron y regresaron a contestar', 'opened it and came back later'), value: m.masTarde, color: GRAD_CIAN },
-    { label: t('La abrieron y no contestan', 'Opened, no reply'), sub: t('ya la vieron', 'they have seen it'), value: m.sinContestar.length, color: 'linear-gradient(135deg,#FBBF24,#F59E0B)' },
-    { label: t('No la han abierto', 'Not opened yet'), sub: t('ni la han leído', "haven't read it"), value: m.sinAbrir.length, color: 'linear-gradient(135deg,#64748B,#475077)' },
+    { k: 'al_momento' as ListaKey, label: t('Contestaron al momento', 'Replied right away'), sub: t(`en menos de ${AL_MOMENTO_MIN} min de abrirla`, `within ${AL_MOMENTO_MIN} min of opening`), value: m.alMomento, color: GRAD_VERDE },
+    { k: 'despues' as ListaKey, label: t('Contestaron después', 'Replied later'), sub: t('la abrieron y regresaron a contestar', 'opened it and came back later'), value: m.masTarde, color: GRAD_CIAN },
+    { k: 'sin_contestar' as ListaKey, label: t('La abrieron y no contestan', 'Opened, no reply'), sub: t('ya la vieron', 'they have seen it'), value: m.sinContestar.length, color: 'linear-gradient(135deg,#FBBF24,#F59E0B)' },
+    { k: 'sin_abrir' as ListaKey, label: t('No la han abierto', 'Not opened yet'), sub: t('ni la han leído', "haven't read it"), value: m.sinAbrir.length, color: 'linear-gradient(135deg,#64748B,#475077)' },
   ]
   const embudo = [
-    { label: t('Invitados', 'Guests'), value: m.total },
-    { label: t('Enviados', 'Sent'), value: m.enviados },
-    { label: t('Abrieron', 'Opened'), value: m.abiertos },
-    { label: t('Contestaron', 'Replied'), value: m.contestados },
-    { label: inv?.respuestas.si || '', value: m.si },
+    { k: 'todos' as ListaKey, label: t('Invitados', 'Guests'), value: m.total },
+    { k: 'enviados' as ListaKey, label: t('Enviados', 'Sent'), value: m.enviados },
+    { k: 'abiertos' as ListaKey, label: t('Abrieron', 'Opened'), value: m.abiertos },
+    { k: 'contestados' as ListaKey, label: t('Contestaron', 'Replied'), value: m.contestados },
+    { k: 'si' as ListaKey, label: inv?.respuestas.si || '', value: m.si },
   ]
-  const listas = {
-    sin_abrir: { label: t('Sin abrir', 'Not opened'), filas: m.sinAbrir },
-    sin_contestar: { label: t('Abrieron sin contestar', 'Opened, no reply'), filas: m.sinContestar },
-    tal_vez: { label: inv?.respuestas.tal_vez || '', filas: (inv?.filas || []).filter(f => f.respuesta === 'tal_vez') },
-    si: { label: inv?.respuestas.si || '', filas: (inv?.filas || []).filter(f => f.respuesta === 'si') },
-    no: { label: inv?.respuestas.no || '', filas: (inv?.filas || []).filter(f => f.respuesta === 'no') },
+  const ETIQUETA_LISTA: Record<ListaKey, string> = {
+    todos: t('Todos', 'Everyone'), enviados: t('Enviados', 'Sent'), abiertos: t('Abrieron', 'Opened'), contestados: t('Contestaron', 'Replied'),
+    si: inv?.respuestas.si || '', tal_vez: inv?.respuestas.tal_vez || '', no: inv?.respuestas.no || '',
+    al_momento: t('Al momento', 'Right away'), despues: t('Después', 'Later'),
+    sin_contestar: t('Abrieron sin contestar', 'Opened, no reply'), sin_abrir: t('Sin abrir', 'Not opened'),
+    sin_respuesta: t('Sin respuesta', 'No answer'), sin_enviar: t('Sin enviar', 'Not sent'),
+  }
+  const listas = Object.fromEntries((Object.keys(ETIQUETA_LISTA) as ListaKey[]).map(k => [k, { label: ETIQUETA_LISTA[k], filas: m.l[k] }])) as Record<ListaKey, { label: string; filas: Fila[] }>
+  // Cada número del dashboard lleva a la lista de personas que lo forman.
+  function ver(k: ListaKey, invKey?: string) {
+    if (invKey) setSel(invKey)
+    setLista(k)
+    setTimeout(() => document.getElementById('quien-es-quien')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), invKey ? 120 : 0)
   }
   const hace = Math.max(0, Math.round((ahora - actualizado) / 1000))
 
@@ -296,7 +311,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
 
   return (
     <main style={{ minHeight: '100vh', background: C.bg, fontFamily: F, color: C.txt, padding: '20px 16px 60px' }}>
-      <style>{`@keyframes pulso{0%{box-shadow:0 0 0 0 rgba(74,222,128,.6)}70%{box-shadow:0 0 0 8px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}`}</style>
+      <style>{`@media (hover:hover){.clic{transition:transform .15s,background .15s}.clic:hover{transform:translateY(-2px);background-color:rgba(255,255,255,.04)}}@keyframes pulso{0%{box-shadow:0 0 0 0 rgba(74,222,128,.6)}70%{box-shadow:0 0 0 8px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}`}</style>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
         {/* Encabezado */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' as const, marginBottom: 18 }}>
@@ -348,12 +363,12 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
                 { label: t('Sin respuesta', 'No answer'), value: mm.total - mm.contestados, color: C.gris },
               ]
               const filasDato = [
-                [t('Enviados', 'Sent'), mm.enviados],
-                [t('Abrieron', 'Opened'), mm.abiertos],
-                [t('Contestaron al momento', 'Replied right away'), mm.alMomento],
-                [t('Abrieron sin contestar', 'Opened, no reply'), mm.sinContestar.length],
-                [t('Sin abrir', 'Not opened'), mm.sinAbrir.length],
-              ] as [string, number][]
+                [t('Enviados', 'Sent'), mm.enviados, 'enviados'],
+                [t('Abrieron', 'Opened'), mm.abiertos, 'abiertos'],
+                [t('Contestaron al momento', 'Replied right away'), mm.alMomento, 'al_momento'],
+                [t('Abrieron sin contestar', 'Opened, no reply'), mm.sinContestar.length, 'sin_contestar'],
+                [t('Sin abrir', 'Not opened'), mm.sinAbrir.length, 'sin_abrir'],
+              ] as [string, number, ListaKey][]
               return (
                 <div key={i.key} style={{ ...card, display: 'flex', flexDirection: 'column' as const }}>
                   <h2 style={titulo}>{i.titulo}</h2>
@@ -376,8 +391,8 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
                       ))}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6, marginBottom: 14 }}>
-                      {filasDato.map(([k, v]) => (
-                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: `1px solid ${C.borde}` }}>
+                      {filasDato.map(([k, v, lk]) => (
+                        <div key={k} onClick={() => ver(lk, i.key)} role="button" className="clic" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 4px', borderBottom: `1px solid ${C.borde}`, cursor: 'pointer' }}>
                           <span style={{ color: C.muted }}>{k}</span><b>{v}</b>
                         </div>
                       ))}
@@ -428,12 +443,12 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
 
           {/* KPIs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 14 }}>
-            <Kpi grad={GRAD_ROSA} etiqueta={t('Enviados', 'Sent')} valor={m.enviados} de={m.total} nota={`${pct(m.enviados, m.total)}%`} t={t} />
-            <Kpi grad={GRAD_CIAN} etiqueta={t('Abrieron', 'Opened')} valor={m.abiertos} de={m.total} nota={`${pct(m.abiertos, m.total)}%`} t={t} />
-            <Kpi etiqueta={t('Contestaron', 'Replied')} valor={m.contestados} de={m.total} nota={`${pct(m.contestados, m.total)}%`} color={C.violeta} t={t} />
-            <Kpi etiqueta={inv?.respuestas.si || ''} valor={m.si} nota={inv?.tipo === 'boda' && m.personasSi !== m.si ? t(`${m.personasSi} personas`, `${m.personasSi} people`) : `${pct(m.si, m.total)}%`} color={C.verde} t={t} />
-            <Kpi etiqueta={inv?.respuestas.tal_vez || ''} valor={m.talVez} nota={`${pct(m.talVez, m.total)}%`} color={C.ambar} t={t} />
-            <Kpi etiqueta={inv?.respuestas.no || ''} valor={m.no} nota={`${pct(m.no, m.total)}%`} color={C.rojo} t={t} />
+            <Kpi onClick={() => ver('enviados')} grad={GRAD_ROSA} etiqueta={t('Enviados', 'Sent')} valor={m.enviados} de={m.total} nota={`${pct(m.enviados, m.total)}%`} t={t} />
+            <Kpi onClick={() => ver('abiertos')} grad={GRAD_CIAN} etiqueta={t('Abrieron', 'Opened')} valor={m.abiertos} de={m.total} nota={`${pct(m.abiertos, m.total)}%`} t={t} />
+            <Kpi onClick={() => ver('contestados')} etiqueta={t('Contestaron', 'Replied')} valor={m.contestados} de={m.total} nota={`${pct(m.contestados, m.total)}%`} color={C.violeta} t={t} />
+            <Kpi onClick={() => ver('si')} etiqueta={inv?.respuestas.si || ''} valor={m.si} nota={inv?.tipo === 'boda' && m.personasSi !== m.si ? t(`${m.personasSi} personas`, `${m.personasSi} people`) : `${pct(m.si, m.total)}%`} color={C.verde} t={t} />
+            <Kpi onClick={() => ver('tal_vez')} etiqueta={inv?.respuestas.tal_vez || ''} valor={m.talVez} nota={`${pct(m.talVez, m.total)}%`} color={C.ambar} t={t} />
+            <Kpi onClick={() => ver('no')} etiqueta={inv?.respuestas.no || ''} valor={m.no} nota={`${pct(m.no, m.total)}%`} color={C.rojo} t={t} />
           </div>
 
           {/* Gráficas */}
@@ -445,7 +460,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
                 <Dona segs={segs} centro={`${pct(m.contestados, m.total)}%`} pie={t('contestó', 'replied')} />
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10, flex: 1, minWidth: 140 }}>
                   {segs.map(s => (
-                    <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
+                    <div key={s.label} onClick={() => ver(s.k)} role="button" className="clic" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer', borderRadius: 8, padding: '4px 6px', margin: '-4px -6px' }}>
                       <span style={{ width: 12, height: 12, borderRadius: 4, background: s.color, flexShrink: 0 }} />
                       <span style={{ flex: 1, color: C.txt }}>{s.label}</span>
                       <span style={{ fontWeight: 800 }}>{s.value}</span>
@@ -460,7 +475,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
               <div style={sub}>{t('Desde que abrieron la invitación', 'From when they opened it')}</div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14, marginTop: 16 }}>
                 {velocidad.map(v => (
-                  <div key={v.label}>
+                  <div key={v.label} onClick={() => ver(v.k)} role="button" className="clic" style={{ cursor: 'pointer', borderRadius: 10, padding: '6px 8px', margin: '-6px -8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label} <span style={{ color: C.muted, fontWeight: 500, fontSize: 11 }}>· {v.sub}</span></span>
                       <span style={{ fontSize: 16, fontWeight: 900 }}>{v.value}</span>
@@ -478,7 +493,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
               <div style={sub}>{t('Cuántos van pasando cada paso', 'How many get through each step')}</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 190, marginTop: 16 }}>
                 {embudo.map((e, i) => (
-                  <div key={e.label} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end', minWidth: 0 }}>
+                  <div key={e.label} onClick={() => ver(e.k)} role="button" className="clic" style={{ cursor: 'pointer', borderRadius: 10, flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end', minWidth: 0 }}>
                     <span style={{ fontSize: 14, fontWeight: 900 }}>{e.value}</span>
                     <div style={{ width: '100%', maxWidth: 46, height: `${Math.max(4, pct(e.value, m.total))}%`, borderRadius: '10px 10px 4px 4px', background: [GRAD_ROSA, 'linear-gradient(180deg,#E879F9,#A78BFA)', GRAD_CIAN, 'linear-gradient(180deg,#A78BFA,#6366F1)', GRAD_VERDE][i], transition: 'height .6s' }} />
                     <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'center' as const, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{e.label}</span>
@@ -506,7 +521,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
           )}
 
           {/* Quién falta */}
-          <div style={card}>
+          <div id="quien-es-quien" style={{ ...card, scrollMarginTop: 16 }}>
             <h2 style={titulo}>{t('Quién es quién', 'Who is who')}</h2>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, margin: '12px 0 14px' }}>
               {(Object.keys(listas) as (keyof typeof listas)[]).map(k => (
@@ -531,7 +546,7 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
                         {inv?.tipo === 'boda' && f.respuesta === 'si' && f.personas > 1 ? ` · ${f.personas} ${t('personas', 'people')}` : ''}
                       </div>
                     </div>
-                    {(lista === 'sin_abrir' || lista === 'sin_contestar' || lista === 'tal_vez') && numeroWa(f.telefono) && f.link && (() => {
+                    {(lista === 'sin_abrir' || lista === 'sin_contestar' || lista === 'tal_vez' || lista === 'sin_respuesta' || (lista === 'enviados' && !f.respuesta)) && numeroWa(f.telefono) && f.link && (() => {
                       const desde = f.enviado || f.abierto
                       if (!desde) return <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, flexShrink: 0 }}>{t('Sin enviar', 'Not sent')}</span>
                       const faltan = ESPERA_RECORDATORIO_H * 3600000 - ((ahora || actualizado) - ms(desde))
@@ -553,9 +568,10 @@ export default function RespuestasDashboard({ params }: { params: Promise<{ id: 
   )
 }
 
-function Kpi({ etiqueta, valor, de, nota, grad, color, t }: { etiqueta: string; valor: number; de?: number; nota?: string; grad?: string; color?: string; t: (es: string, en: string) => string }) {
+function Kpi({ etiqueta, valor, de, nota, grad, color, t, onClick }: { etiqueta: string; valor: number; de?: number; nota?: string; grad?: string; color?: string; t: (es: string, en: string) => string; onClick?: () => void }) {
   return (
-    <div style={{
+    <div onClick={onClick} role={onClick ? 'button' : undefined} className={onClick ? 'clic' : undefined} style={{
+      cursor: onClick ? 'pointer' : 'default',
       background: grad || C.card, border: grad ? 'none' : `1px solid ${C.borde}`, borderRadius: 20, padding: '16px 18px', minWidth: 0,
       boxShadow: grad ? '0 10px 30px rgba(232,121,249,.15)' : 'none',
     }}>
