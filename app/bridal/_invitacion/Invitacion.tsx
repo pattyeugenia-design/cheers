@@ -1490,7 +1490,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-mesa > div:first-child { font-size: 21px !important; }
         .cw-dividido .cw-mesa > div:last-child { margin-top: 6px !important; }
         .cw-dividido .cw-firma-card { padding: 16px 18px !important; margin-top: 14px !important; }
-        .cw-dividido .cw-firma-card textarea { height: 2.4em; }
+        .cw-dividido .cw-firma-card textarea { font-size: 15px !important; line-height: 1.4 !important; height: 3.3em; }
         /* Bloque 6: jerarquía de tamaños para que todo quepa */
         .cw-dividido .cw-regalos { padding-bottom: 4px !important; }
         .cw-dividido .cw-fotos-firmas { padding-top: 10px !important; }
