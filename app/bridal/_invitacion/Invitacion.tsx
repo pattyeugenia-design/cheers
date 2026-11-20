@@ -1106,7 +1106,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           {mesas.map((m, i) => {
             const enlace = urlEnlaceSegura(m.link)
             return (
-              <div key={i} style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+              <div key={i} className="cw-mesa" style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
                 <div style={{ fontFamily: p.serif, fontSize: 26, color: p.txt }}>{String(m.nombre).slice(0, 60)}</div>
                 {m.nota && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 6 }}>{String(m.nota).slice(0, 120)}</div>}
                 {enlace
@@ -1178,7 +1178,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         {ctl.firmas.enviada ? (
           <p style={{ ...parrafo, marginTop: 22, color: p.acento }}>{t('Gracias — tu mensaje aparecerá aquí cuando lo aprobemos.', 'Thank you — your message will appear here once we approve it.')}</p>
         ) : (
-          <div style={{ marginTop: 22, textAlign: 'left', padding: '24px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
+          <div className="cw-firma-card" style={{ marginTop: 22, textAlign: 'left', padding: '24px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
             <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Tu nombre', 'Your name')}</label>
             <input className="cw-campo" maxLength={100} value={ctl.firmas.nombre} onChange={e => ctl.firmas.setNombre(e.target.value)} style={{ fontFamily: p.serif, color: p.txt }} />
             <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginTop: 18 }}>{t('Tu mensaje', 'Your message')}</label>
@@ -1202,6 +1202,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       </>)}
 
+      {!std && <div className="cw-sep" style={{ padding: '22px 0 26px' }}><Orn p={p} /></div>}
+      </div>
+
+      {/* ═══ BLOQUE 7: cierre ═══ */}
+      <div className="cw-grupo cw-bloque">
       {/* ───────── CIERRE ───────── */}
       <footer style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
         {/* En el Save the date no va (en computadora tampoco aparece) */}
@@ -1466,6 +1471,14 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-dos, .cw-dividido .cw-par, .cw-dividido .cw-hoteles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cw-dividido .cw-arco { display: none; }
         .cw-dividido .cw-historia { display: none; }
+        .cw-dividido .cw-grupo > section { padding-top: 20px !important; padding-bottom: 20px !important; }
+        .cw-dividido .cw-sep { padding: 8px 0 10px !important; }
+        .cw-dividido .cw-mesa { padding: 12px 16px !important; }
+        .cw-dividido .cw-mesa > div:first-child { font-size: 21px !important; }
+        .cw-dividido .cw-mesa > div:last-child { margin-top: 6px !important; }
+        .cw-dividido .cw-firma-card { padding: 16px 18px !important; margin-top: 14px !important; }
+        .cw-dividido .cw-firma-card textarea { height: 2.6em; }
+        .cw-dividido .cw-album-qr { width: 76px; height: 76px; padding: 5px; }
         .cw-dividido .cw-grupo { display: flex; flex-direction: column; justify-content: center; min-height: calc(100vh / 1.15); }
         .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
       }
