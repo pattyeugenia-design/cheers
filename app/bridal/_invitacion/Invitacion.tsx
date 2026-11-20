@@ -903,14 +903,14 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       {!std && (<>
       {/* ───────── NUESTRA HISTORIA ───────── */}
       {historia.length > 0 && (
-        <Sec p={p} ancho={600} abajo={26} clase="cw-historia">
+        <Sec p={p} ancho={1040} abajo={26} clase="cw-historia">
           <div style={etiqueta}>{t('Momentos que nos trajeron aquí', 'Moments that brought us here')}</div>
           <h2 style={titulo}>{t('Nuestra historia', 'Our story')}</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: '16px 12px', marginTop: 28, textAlign: 'center' }}>
             {historia.map((h, i) => {
               const ar = h.w && h.h ? aspectoFoto(h.w, h.h) : (medidas[urlImagenSegura(h.url) || ''] || 0.8)
               return (
-                <figure key={i} className="cw-polaroid" style={{ margin: 0, width: `calc(104px * ${ar} + 12px)`, ['--giro' as string]: `${[-1.8, 1.4, 1.1, -1.5, -1, 1.7][i % 6]}deg` } as React.CSSProperties}>
+                <figure key={i} className="cw-polaroid" style={{ margin: 0, width: `calc(var(--cw-foto-alto, 104px) * ${ar} + 12px)`, ['--giro' as string]: `${[-1.8, 1.4, 1.1, -1.5, -1, 1.7][i % 6]}deg` } as React.CSSProperties}>
                   <button type="button" onClick={() => setVisor(urlImagenSegura(h.url))} style={{ all: 'unset', cursor: 'zoom-in', display: 'block', width: '100%' }} aria-label={t('Ampliar foto', 'Enlarge photo')}>
                     <FotoEncuadrada src={urlImagenSegura(h.url) || ''} alt={h.pie || ''} enc={h} aspecto={String(ar)} fondo={p.acento2} />
                   </button>
@@ -1549,6 +1549,7 @@ export function Estilos({ p }: { p: Paleta }) {
       @media (hover: hover) and (pointer: fine) and (min-width: 700px) { .cw-album-qr { display: block; } }
       .cw-polaroid { background: #fff; padding: 6px 6px 8px; box-sizing: border-box; box-shadow: 0 14px 26px -14px rgba(90,60,55,.45), 0 1px 3px rgba(0,0,0,.08); position: relative; transform: rotate(var(--giro, 0deg)); transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s ease; }
       .cw-polaroid img { transition: transform .9s ease; }
+      @media (min-width: 700px) { .cw-historia { --cw-foto-alto: 150px; } .cw-historia > div:last-child { gap: 18px 16px !important; margin-top: 32px !important; } }
       /* Fotos vivas: al pasar el cursor se enderezan y crecen (solo con mouse; en celular se quedan quietas) */
       @media (hover: hover) and (pointer: fine) {
         .cw-polaroid:hover { transform: rotate(0deg) scale(1.16) translateY(-6px); z-index: 5; box-shadow: 0 26px 40px -16px rgba(90,60,55,.55), 0 2px 6px rgba(0,0,0,.1); }
