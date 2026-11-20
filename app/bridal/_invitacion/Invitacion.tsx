@@ -43,8 +43,8 @@ export type Control = {
   preRespuesta?: { valor: string | null; responder: (v: 'si' | 'no' | 'tal_vez') => void }
 }
 
-function Sec({ p, id, children, innerRef, ancho, arriba, abajo }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number }) {
-  return <section id={id} ref={innerRef} className="cw-aparece" style={{ padding: `${arriba ?? 42}px 26px ${abajo ?? 42}px`, maxWidth: ancho || 560, margin: '0 auto', textAlign: 'center', position: 'relative' }}>{children}</section>
+function Sec({ p, id, children, innerRef, ancho, arriba, abajo, bloque }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number; bloque?: boolean }) {
+  return <section id={id} ref={innerRef} className={bloque ? 'cw-aparece cw-bloque' : 'cw-aparece'} style={{ padding: `${arriba ?? 42}px 26px ${abajo ?? 42}px`, maxWidth: ancho || 560, margin: '0 auto', textAlign: 'center', position: 'relative' }}>{children}</section>
 }
 function Orn({ p }: { p: Paleta }) {
   return (
@@ -311,9 +311,12 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   useEffect(() => {
     if (!dividido || !sobreAbierto || fotosPanel.length < 2) return
     const n = fotosPanel.length
+    // Una foto por bloque: la foto cambia cuando el bloque llega a media pantalla y regresa si subes.
     const fn = () => {
-      const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
-      setFotoIdx(Math.min(n - 1, Math.floor((window.scrollY / max) * n)))
+      const bloques = Array.from(document.querySelectorAll('.cw-pagina .cw-bloque'))
+      let k = 0
+      bloques.forEach((b, j) => { if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) k = j })
+      setFotoIdx(k % n)
     }
     window.addEventListener('scroll', fn, { passive: true })
     fn()
@@ -560,7 +563,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       {/* ───────── PORTADA ───────── */}
-      <header style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
+      <header className="cw-bloque" style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
         <div style={etiqueta}>{std ? 'Save the date' : t('Nos casamos', "We're getting married")}</div>
         <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: `calc(clamp(42px, 12.4vw, 80px) * ${factorNombres})`, lineHeight: 1.1, color: p.acento, margin: '16px auto 0', padding: '0 10px', whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
           {d.nombre_novia}
@@ -623,7 +626,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </Sec>
       )}
       {!std && (
-      <Sec p={p} arriba={34} abajo={20}>
+      <Sec p={p} arriba={34} abajo={20} bloque>
         <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
         <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
         <div style={{ display: 'inline-block', marginTop: 14, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '6px 14px' }}>
@@ -655,14 +658,14 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         const unaLinea = largo <= 60
         const estiloFrase = { fontFamily: p.serif, fontStyle: 'italic', fontSize: unaLinea ? `clamp(14px, ${(214 / Math.max(largo, 28)).toFixed(2)}vw, 27px)` : 26, lineHeight: 1.4, color: p.txt, margin: 0, whiteSpace: unaLinea ? 'nowrap' : 'normal', textWrap: 'balance' } as React.CSSProperties
         return (
-          <Sec p={p} ancho={unaLinea ? 660 : 480} arriba={32} abajo={d.mensaje_padres ? 26 : 42}>
+          <Sec p={p} ancho={unaLinea ? 660 : 480} arriba={32} abajo={d.mensaje_padres ? 26 : 42} bloque>
             <p style={estiloFrase}>“{d.versiculo}”</p>
             {d.versiculo_autor && <div style={{ ...etiqueta, color: p.txt3, marginTop: 16 }}>{d.versiculo_autor}</div>}
           </Sec>
         )
       })()}
       {d.mensaje_padres && (
-        <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32}>
+        <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32} bloque={!d.versiculo}>
           <div style={{ ...etiqueta, whiteSpace: 'nowrap', fontSize: 'clamp(9px, 2.75vw, 11px)', letterSpacing: '.2em' }}>{t('Con la bendición de nuestras familias', 'Together with our families')}</div>
           {(() => {
             // "Padres de la novia: José y Patricia" -> etiqueta chica arriba y los nombres abajo
@@ -700,7 +703,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       {!std && (<>
       {/* ───────── NUESTRA HISTORIA ───────── */}
       {historia.length > 0 && (
-        <Sec p={p} ancho={600} abajo={26}>
+        <Sec p={p} ancho={600} abajo={26} bloque>
           <div style={etiqueta}>{t('Momentos que nos trajeron aquí', 'Moments that brought us here')}</div>
           <h2 style={titulo}>{t('Nuestra historia', 'Our story')}</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: '16px 12px', marginTop: 28, textAlign: 'center' }}>
@@ -720,7 +723,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       {/* ───────── EL GRAN DÍA ───────── */}
-      <Sec p={p} ancho={itinerario.length > 1 ? 820 : undefined}>
+      <Sec p={p} ancho={itinerario.length > 1 ? 820 : undefined} bloque>
         <div style={etiqueta}>{t('Nuestra boda', 'Our wedding')}</div>
         <h2 style={titulo}>{t('El gran día', 'The big day')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{(() => { const f = fechaLarga(d.fecha_boda, lang); return f.charAt(0).toUpperCase() + f.slice(1) })()}</p>
@@ -741,7 +744,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 const completo = lugarCompleto(String(it.lugar || ''))
                 const zona = completo.split(',').slice(1).join(',').trim()
                 return (
-                  <div key={i} style={{ padding: '24px 18px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+                  <div key={i} className="cw-momento" style={{ padding: '24px 18px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+                    <div>
                     <div style={{ width: 50, height: 50, borderRadius: '50%', border: `1px solid ${p.linea}`, color: p.acento, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
                       <IconoItinerario emoji={it.icono} titulo={it.titulo} tam={25} />
                     </div>
@@ -749,9 +753,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                     <div style={{ fontFamily: p.serif, fontSize: 24, fontWeight: 500, color: p.acento, marginTop: 6, lineHeight: 1.1, fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>
                       {hora12(h.ini)}{h.fin && <span style={{ fontFamily: p.etiqueta, fontSize: 10.5, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginLeft: 8 }}>{t('hasta', 'until')} {hora12(h.fin)}</span>}
                     </div>
-                    {it.lugar && <div className="cw-momento-lugar" style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, lineHeight: 1.3, color: p.txt2, marginTop: 10 }}>{it.lugar}</div>}
-                    {zona && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15, color: p.txt3, marginTop: 4 }}>{zona}</div>}
-                    {it.lugar && <ComoLlegar p={p} lugar={completo} t={t} />}
+                    </div>
+                    <div>{it.lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, lineHeight: 1.3, color: p.txt2, marginTop: 10 }}>{it.lugar}</div>}</div>
+                    <div>{zona && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15, color: p.txt3, marginTop: 4 }}>{zona}</div>}</div>
+                    <div>{it.lugar && <ComoLlegar p={p} lugar={completo} t={t} />}</div>
                   </div>
                 )
               })}
@@ -762,7 +767,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       {/* ───────── DÓNDE ───────── */}
       {itinerario.length === 0 && (lugar1 || d.lugar2_nombre) && (
-        <Sec p={p}>
+        <Sec p={p} bloque>
           <h2 style={{ ...titulo, marginTop: 0 }}>{t('¿Dónde será?', 'Where to find us')}</h2>
           {[{ etq: d.lugar2_nombre ? t('Ceremonia', 'Ceremony') : '', lugar: lugar1 }, { etq: t('Recepción', 'Reception'), lugar: (d.lugar2_nombre || '').trim() }].filter(x => x.lugar).map((x, i) => {
             const [nom, ...resto] = x.lugar.split(',')
@@ -780,26 +785,32 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       {/* ───────── VESTIMENTA Y PEINADO (lado a lado en pantallas anchas) ───────── */}
       {(d.vestimenta_tipo || colores.length > 0 || linkAyuda) && (
-        <Sec p={p} ancho={(d.vestimenta_tipo || colores.length > 0) && linkAyuda ? 820 : 460}>
-          <div className="cw-dos" style={{ alignItems: 'start', rowGap: 56 }}>
+        <Sec p={p} ancho={(d.vestimenta_tipo || colores.length > 0) && linkAyuda ? 820 : 460} bloque>
+          <div className="cw-dos" style={{ rowGap: 56 }}>
             {(d.vestimenta_tipo || colores.length > 0) && (
-              <div>
-                <svg width="40" height="30" viewBox="0 0 40 30" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
+              <div className="cw-col5">
+                <div><svg width="40" height="30" viewBox="0 0 40 30" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
                   <path d="M20 9.5a3.2 3.2 0 1 1 3.2 3.2c-1.8 0-3.2 1.2-3.2 3v1.6L3 26.2a1.4 1.4 0 0 0 .7 2.6h32.6a1.4 1.4 0 0 0 .7-2.6L20 17.3" fill="none" stroke={p.acento} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                </svg></div>
                 <div style={{ ...etiqueta, marginTop: 14 }}>{t('Código de vestimenta', 'Dress code')}</div>
-                {d.vestimenta_tipo && <div style={{ fontFamily: p.script, fontSize: 'clamp(54px,15vw,68px)', color: p.acento, lineHeight: 1.05, marginTop: 6 }}>{d.vestimenta_tipo}</div>}
-                {colores.length > 0 && <CirculosColor colores={colores} p={p} />}
-                {d.vestimenta_nota && <p style={{ ...parrafo, fontStyle: 'italic', marginTop: 14, fontSize: 18, whiteSpace: 'pre-wrap' }}>{d.vestimenta_nota}</p>}
+                <h2 style={titulo}>{d.vestimenta_tipo || ''}</h2>
+                <div>
+                  {colores.length > 0 && <CirculosColor colores={colores} p={p} />}
+                  {d.vestimenta_nota && <p style={{ ...parrafo, marginTop: 14, whiteSpace: 'pre-wrap' }}>{d.vestimenta_nota}</p>}
+                </div>
+                <div />
               </div>
             )}
             {linkAyuda && (
-              <div>
-                <div style={etiqueta}>{t('Para que luzcas increíble', 'Getting ready')}</div>
+              <div className="cw-col5">
+                <div><svg width="40" height="30" viewBox="0 0 40 30" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
+                  <path d="M16 28h8V17h-8zM17 17v-4h6v4M17.5 13V6.5L22.5 3.5V13" fill="none" stroke={p.acento} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg></div>
+                <div style={{ ...etiqueta, marginTop: 14 }}>{t('Para que luzcas increíble', 'Getting ready')}</div>
                 <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Need hair and makeup?')}</h2>
-                <p style={{ ...parrafo, marginTop: 14 }}>{ayudaNombre
+                <div><p style={{ ...parrafo, marginTop: 14 }}>{ayudaNombre
                   ? t(`Te recomendamos a ${ayudaNombre}, de toda nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.`, `We recommend ${ayudaNombre}, someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.`)
-                  : t('Te recomendamos a alguien de nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.', 'We recommend someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.')}</p>
+                  : t('Te recomendamos a alguien de nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.', 'We recommend someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.')}</p></div>
                 <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{ayudaPrimer ? t(`Escribirle a ${ayudaPrimer}`, `Message ${ayudaPrimer}`) : t('Escribir por WhatsApp', 'Message on WhatsApp')}</Boton></div>
               </div>
             )}
@@ -811,7 +822,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
-        <Sec p={p} ancho={hoteles.length > 1 ? 1040 : undefined}>
+        <Sec p={p} ancho={hoteles.length > 1 ? 1040 : undefined} bloque>
           <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For out-of-town guests')}</div>
           <h2 style={titulo}>{t('Hospedaje', 'Where to stay')}</h2>
           {d.info_viaje && <p style={{ ...parrafo, marginTop: 16, whiteSpace: 'pre-wrap', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>{d.info_viaje}</p>}
@@ -843,7 +854,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       {!std && (<>
       {/* ───────── REGALOS ───────── */}
       {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
-        <Sec p={p} ancho={mesas.length > 1 ? 720 : 520}>
+        <Sec p={p} ancho={mesas.length > 1 ? 720 : 520} bloque>
           <div style={etiqueta}>{t('Si deseas obsequiarnos algo', "If you'd like to give a gift")}</div>
           <h2 style={titulo}>{t('Mesa de regalos', 'Gift registry')}</h2>
           {d.mesa_regalos_nota && <p style={{ ...parrafo, marginTop: 14 }}>{d.mesa_regalos_nota}</p>}
@@ -872,17 +883,19 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       {/* ───────── CONFIRMAR ───────── */}
-      <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={520}>
+      <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={d.faq ? 1040 : 520} bloque>
         <div style={etiqueta}>{t('Nos encantaría contar contigo', 'We hope you can join us')}</div>
         <h2 style={titulo}>{t('Confirma tu asistencia', 'Please RSVP')}</h2>
         {!r.enviado && !limitePasado && (
-          <p style={{ ...parrafo, marginTop: 14 }}>
+          <p style={{ ...parrafo, marginTop: 14, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
             {limite
               ? t(`Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes antes del ${fechaCorta(limite, lang)}, aunque no puedas acompañarnos.`, `Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know by ${fechaCorta(limite, lang)}, even if you can't make it.`)
               : t('Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes lo antes posible, aunque no puedas acompañarnos.', "Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know as soon as you can, even if you can't make it.")}
           </p>
         )}
 
+        <div className="cw-par">
+        <div>
         {r.enviado ? (
           <div style={{ marginTop: 28, padding: '30px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
             <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}><circle cx="22" cy="22" r="20" fill="none" stroke={p.acento} strokeWidth="1.2" /><path d="m13 23 6.5 6.5L31 16" fill="none" stroke={p.acento} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -955,8 +968,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           </div>
         )}
 
+        </div>
         {d.faq && (
-          <div style={{ marginTop: 40, textAlign: 'left' }}>
+          <div style={{ marginTop: 28, textAlign: 'left' }}>
             <div style={{ ...etiqueta, textAlign: 'center', marginBottom: 14 }}>{t('Preguntas frecuentes', 'FAQ')}</div>
             {String(d.faq).split('\n').map(l => l.trim()).filter(Boolean).map((linea, i) => {
               const q = linea.indexOf('?')
@@ -967,10 +981,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             })}
           </div>
         )}
+        </div>
       </Sec>
 
       {/* ───────── FOTOS Y FIRMAS (lado a lado en pantallas anchas) ───────── */}
-      <Sec p={p} ancho={1040}>
+      <Sec p={p} ancho={1040} bloque>
       <div className="cw-par">
       <div>
         <div style={etiqueta}>{t('El álbum de todos', 'Shared photo album')}</div>
@@ -1045,7 +1060,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       </>)}
 
       {/* ───────── CIERRE ───────── */}
-      <footer style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
+      <footer className="cw-bloque" style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
         {/* En el Save the date no va (en computadora tampoco aparece) */}
         {!std && (
         <div className="cw-aparece" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', borderRadius: 26, overflow: 'hidden', border: `1px solid ${p.linea}`, background: 'linear-gradient(180deg, rgba(255,255,255,.78), rgba(250,236,231,.78))', boxShadow: '0 30px 50px -34px rgba(90,60,55,.45)', padding: '60px 24px 180px' }}>
@@ -1257,6 +1272,8 @@ export function Estilos({ p }: { p: Paleta }) {
       @media (min-width: 600px) { .cw-momento-lugar { min-height: 2.6em; display: flex; align-items: center; justify-content: center; } }
       .cw-par { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 56px 44px; align-items: start; }
       @media (min-width: 600px) { .cw-hotel-nombre { min-height: 2.4em; display: flex; align-items: center; justify-content: center; } }
+      .cw-momento { display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: 0; align-content: start; }
+      .cw-col5 { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; align-content: start; }
       .cw-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
       .cw-hoteles { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 26px; text-align: center; }
       .cw-hotel { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; align-content: start; }
