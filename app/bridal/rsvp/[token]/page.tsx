@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../supabase'
-import { getLang } from '../../../i18n'
 import Invitacion, { type Control, type Asistencia } from '../../_invitacion/Invitacion'
 
 // Página real que abre cada invitado con su link personal (token). Aquí vive
@@ -34,7 +33,10 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
   const [fotoRecienSubida, setFotoRecienSubida] = useState(false)
 
   useEffect(() => {
-    setLang(getLang())
+    // Por defecto en español; el invitado puede cambiar a inglés con el botón y se recuerda.
+    let guardado = ''
+    try { guardado = localStorage.getItem('cw-idioma-boda') || '' } catch {}
+    setLang(guardado === 'en' ? 'en' : 'es')
     params.then(async ({ token }) => {
       setToken(token)
       const [{ data, error }, { data: en }] = await Promise.all([
@@ -180,5 +182,5 @@ export default function RsvpBoda({ params }: { params: Promise<{ token: string }
   }
 
   // El link personal siempre es la invitación completa; el Save the date tiene su propio link general (/bridal/std/...).
-  return <Invitacion d={{ ...invitado, token, modo_invitacion: 'completa' }} lang={lang} modo="real" ctl={ctl} />
+  return <Invitacion d={{ ...invitado, token, modo_invitacion: 'completa' }} lang={lang} modo="real" ctl={ctl} cambiarIdioma={() => { const n = lang === 'en' ? 'es' : 'en'; setLang(n); try { localStorage.setItem('cw-idioma-boda', n) } catch {} }} />
 }

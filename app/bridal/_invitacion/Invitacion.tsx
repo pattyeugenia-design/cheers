@@ -216,7 +216,7 @@ function nombreParaIdioma(nombre: string, lang: string) {
   return nombre.replace(/ y /g, ' & ')
 }
 
-export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }: { d: any; lang: string; modo: 'real' | 'preview'; ctl: Control; volverHref?: string }) {
+export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, cambiarIdioma }: { d: any; lang: string; modo: 'real' | 'preview'; ctl: Control; volverHref?: string; cambiarIdioma?: () => void }) {
   const d = conIngles(dOriginal, lang)
   const p = paletaDe(d.tema, d.fuente)
   const t = (es: string, en: string) => (lang === 'en' ? en : es)
@@ -520,6 +520,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       <div className={`cw-pagina${std ? ' cw-std-on' : ''}`}>
+      {cambiarIdioma && (
+        <button type="button" className="cw-idioma" onClick={cambiarIdioma} style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}`, background: p.papel }}>{lang === 'en' ? 'Español' : 'English'}</button>
+      )}
       {preview && (
         <div className="cw-barra" style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(60,40,36,.92)', color: '#fff', padding: '9px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase' }}>
           <span>{t('Vista previa — nada se manda', 'Preview — nothing is sent')}</span>
@@ -612,8 +615,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 <div className="cw-std-etq" style={{ fontFamily: p.etiqueta, textTransform: 'uppercase', color: p.acento, textAlign: 'center' }}>{t('Dónde hospedarse', 'Where to stay')}</div>
                 <div className="cw-std-hoteles-grid">
                   {hoteles.slice(0, 3).map((h, i) => {
-                    const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
-                    const lugarH = `${h.nombre} ${h.direccion || ''}`.trim()
+                    const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion}`)}` : null)
+                    const lugarH = `${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion || ''}`.trim()
                     return (
                       <div key={i} className="cw-std-hotel" style={{ border: `1px solid ${p.cardBorde}`, background: p.card }}>
                         <div className="cw-std-hotel-nombre" style={{ fontFamily: p.serif, color: p.txt }}>{h.nombre}</div>
@@ -795,7 +798,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           </p>
         )}
         </div>
-        <div style={{ ...etiqueta, marginTop: 40 }}>{t('Nos encantaría contar contigo', 'We hope you can join us')}</div>
+        <div className="cw-rsvp-etq" style={{ ...etiqueta, marginTop: 40 }}>{t('Nos encantaría contar contigo', 'We hope you can join us')}</div>
         <h2 style={titulo}>{t('Confirma tu asistencia', 'Please RSVP')}</h2>
         {!r.enviado && !limitePasado && (
           <p style={{ ...parrafo, marginTop: 14, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
@@ -1016,7 +1019,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 <div style={{ ...etiqueta, marginTop: 14 }}>{t('Para que luzcas increíble', 'Getting ready')}</div>
                 <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Need hair and makeup?')}</h2>
                 <div><p style={{ ...parrafo, marginTop: 14 }}>{ayudaNombre
-                  ? t(`Te recomendamos a ${ayudaNombre}, de toda nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.`, `We recommend ${ayudaNombre}, someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.`)
+                  ? t(`Te recomendamos a ${ayudaNombre}, de toda nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.`, `We recommend ${ayudaNombre}, someone we trust. Message her directly on WhatsApp to book your hair and/or makeup.`)
                   : t('Te recomendamos a alguien de nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.', 'We recommend someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.')}</p></div>
                 <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{ayudaPrimer ? t(`Escribirle a ${ayudaPrimer}`, `Message ${ayudaPrimer}`) : t('Escribir por WhatsApp', 'Message on WhatsApp')}</Boton></div>
               </div>
@@ -1039,7 +1042,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           {d.info_viaje && <p style={{ ...parrafo, fontSize: 17.5, lineHeight: 1.5, marginTop: 14, whiteSpace: 'pre-wrap', maxWidth: 900, marginLeft: 'auto', marginRight: 'auto', textWrap: 'balance' } as React.CSSProperties}>{d.info_viaje}</p>}
           <div className="cw-hoteles">
           {hotelesTarjeta.map((h, i) => {
-            const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
+            const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion}`)}` : null)
             return (
               <div key={i} className="cw-hotel" style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
                 <div>
@@ -1062,12 +1065,12 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                     {String(h.traslado).slice(0, 160)}
                   </div>
                 )}</div></div>
-                <div><div className="cw-movil"><ComoLlegar p={p} lugar={`${h.nombre} ${h.direccion || ''}`.trim()} google={enlace} t={t} /></div>
+                <div><div className="cw-movil"><ComoLlegar p={p} lugar={`${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion || ''}`.trim()} google={enlace} t={t} /></div>
                 <div className="cw-escritorio" style={{ marginTop: 14 }}>
                   {urlEnlaceSegura(h.reservar) && <Boton p={p} relleno ancho compacto href={urlEnlaceSegura(h.reservar)!}>{t('Reservar con tarifa especial', 'Book with the wedding rate')}</Boton>}
                   <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <div style={{ flex: 1 }}><Boton p={p} ancho compacto href={enlace || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion || ''}`)}`}>Maps</Boton></div>
-                    <div style={{ flex: 1 }}><Boton p={p} ancho compacto href={`https://waze.com/ul?q=${encodeURIComponent(`${h.nombre} ${h.direccion || ''}`)}&navigate=yes`}>Waze</Boton></div>
+                    <div style={{ flex: 1 }}><Boton p={p} ancho compacto href={enlace || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion || ''}`)}`}>Maps</Boton></div>
+                    <div style={{ flex: 1 }}><Boton p={p} ancho compacto href={`https://waze.com/ul?q=${encodeURIComponent(`${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion || ''}`)}&navigate=yes`}>Waze</Boton></div>
                   </div>
                 </div></div>
               </div>
@@ -1427,6 +1430,8 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-cred2 { font-size: clamp(14px, 1.9vh, 17px); }
       }
       .cw-pagina { position: relative; z-index: 2; }
+      .cw-idioma { position: fixed; top: 14px; right: 16px; z-index: 95; font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; padding: 8px 14px; border-radius: 999px; cursor: pointer; opacity: .9; }
+      @media print { .cw-idioma { display: none !important; } }
       @media (min-width: 600px) { .cw-momento-lugar { min-height: 2.6em; display: flex; align-items: center; justify-content: center; } }
       .cw-par { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 56px 44px; align-items: start; }
       @media (min-width: 600px) { .cw-hotel-nombre { min-height: 2.4em; display: flex; align-items: center; justify-content: center; } }
@@ -1480,6 +1485,9 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-dos, .cw-dividido .cw-par, .cw-dividido .cw-hoteles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cw-dividido .cw-arco { display: none; }
         .cw-dividido .cw-historia { display: none; }
+        .cw-dividido #confirmar { padding-top: 8px !important; }
+        .cw-dividido #confirmar > div:first-child p { margin-top: 8px !important; }
+        .cw-dividido .cw-rsvp-etq { margin-top: 20px !important; }
         /* Bloque de hospedaje en una sola pantalla */
         .cw-dividido .cw-hospedaje h2 { font-size: 30px !important; margin-top: 4px !important; }
         .cw-dividido .cw-hospedaje > p { margin-top: 8px !important; font-size: 16.5px !important; }
