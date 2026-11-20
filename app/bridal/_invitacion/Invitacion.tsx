@@ -819,18 +819,20 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           {hoteles.map((h, i) => {
             const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
             return (
-              <div key={i} style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+              <div key={i} className="cw-hotel" style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+                <div>
                 <div className="cw-hotel-nombre" style={{ fontFamily: p.serif, fontSize: 24, lineHeight: 1.2, color: p.txt, whiteSpace: 'pre-line' }}>{h.nombre}</div>
                 {h.tarifa_especial && !h.tarifa && <span style={{ display: 'inline-block', marginTop: 8, fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '4px 11px' }}>{t('Tarifa especial de boda', 'Special wedding rate')}</span>}
                 {h.direccion && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 10 }}>{h.direccion}</div>}
-                {h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ display: 'block', marginTop: 6, color: p.acento }}>{x}</em> : x)}</p>}
-                <TarifaHotel p={p} h={h} t={t} />
-                {h.traslado && (
+                </div>
+                <div>{h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ display: 'block', marginTop: 6, color: p.acento }}>{x}</em> : x)}</p>}</div>
+                <div><TarifaHotel p={p} h={h} t={t} /></div>
+                <div>{h.traslado && (
                   <div style={{ marginTop: 14, padding: '10px 14px', border: `1px solid ${p.linea}`, borderRadius: 12, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.acento, lineHeight: 1.6 }}>
                     {String(h.traslado).slice(0, 160)}
                   </div>
-                )}
-                <ComoLlegar p={p} lugar={`${h.nombre} ${h.direccion || ''}`.trim()} google={enlace} t={t} />
+                )}</div>
+                <div><ComoLlegar p={p} lugar={`${h.nombre} ${h.direccion || ''}`.trim()} google={enlace} t={t} /></div>
               </div>
             )
           })}
@@ -1256,7 +1258,8 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-par { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 56px 44px; align-items: start; }
       @media (min-width: 600px) { .cw-hotel-nombre { min-height: 2.4em; display: flex; align-items: center; justify-content: center; } }
       .cw-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
-      .cw-hoteles { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; margin-top: 26px; text-align: center; }
+      .cw-hoteles { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 26px; text-align: center; }
+      .cw-hotel { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; align-content: start; }
       /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
       .cw-rama { position: fixed; z-index: 1; pointer-events: none; }
       .cw-rama-i { top: -44px; left: -52px; opacity: .92; }
