@@ -874,8 +874,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, 
             )}
 
             <div style={{ marginTop: 22 }}>
-              <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Alergias o un mensaje para nosotros (opcional)', 'Dietary restrictions or a note for us (optional)')}</label>
-              <textarea className="cw-campo" maxLength={1000} rows={2} value={r.notas} onChange={e => r.setNotas(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
+              <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('¿Alguna alergia o restricción alimentaria? (opcional)', 'Any allergies or dietary restrictions? (optional)')}</label>
+              <textarea className="cw-campo" maxLength={300} rows={2} placeholder={t('Ej. nueces, mariscos, gluten…', 'E.g. nuts, shellfish, gluten…')} value={r.notas} onChange={e => r.setNotas(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
             </div>
             <div style={{ marginTop: 24 }}>
               <Boton p={p} relleno ancho onClick={r.enviar} deshabilitado={preview || !r.asistencia || r.enviando}>{r.enviando ? '…' : (d.ya_respondio ? t('Actualizar respuesta', 'Update reply') : t('Enviar respuesta', 'Send reply'))}</Boton>
