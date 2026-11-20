@@ -320,13 +320,14 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, 
     ...historia.map((h: any) => urlImagenSegura(h.url)),
   ].filter(Boolean) as string[])).slice(0, 14)
   useEffect(() => {
-    if (!dividido || !sobreAbierto || fotosPanel.length < 2) return
+    if (!sobreAbierto || fotosPanel.length < 2) return
     const n = fotosPanel.length
     // Una foto por bloque: la foto cambia cuando el bloque llega a media pantalla y regresa si subes.
     const fn = () => {
       const bloques = Array.from(document.querySelectorAll('.cw-pagina .cw-bloque'))
       let k = 0
-      bloques.forEach((b, j) => { if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) k = j })
+      const umbral = window.matchMedia('(max-width: 899px)').matches ? 0.92 : 0.5
+      bloques.forEach((b, j) => { if (b.getBoundingClientRect().top <= window.innerHeight * umbral) k = j })
       setBloqueIdx(prev => { if (prev !== k) setFotoSale(prev % n); return k })
       setNumBloques(bloques.length)
       // Parallax dentro del bloque: la foto sube un poco más lento que el texto
@@ -502,11 +503,12 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, 
       <DefsBotanicos />
       <Estilos p={p} />
       <Ambiente p={p} />
-      {dividido && fotosPanel.length > 0 && (
+      {fotosPanel.length > 0 && (
         <div className="cw-panel" aria-hidden="true" ref={panelRef}>
           <div className="cw-panel-fotos">
             {fotosPanel.map((u, i) => <img key={u} src={u} alt="" className={i === bloqueIdx % fotosPanel.length ? 'cw-panel-on' : i === fotoSale ? 'cw-panel-sale' : ''} loading={i < 2 ? 'eager' : 'lazy'} />)}
           </div>
+          {numBloques > 1 && <div className="cw-historias">{Array.from({ length: numBloques }, (_, i) => <span key={i} className={i < bloqueIdx ? 'on' : i === bloqueIdx ? 'on actual' : ''} />)}</div>}
           <div className="cw-panel-pie">
             <div style={{ fontFamily: p.script, fontSize: 52, lineHeight: 1 }}>{nombreBoda}</div>
             <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', marginTop: 12, opacity: .9 }}>{fechaPuntos(d.fecha_boda, lang)}</div>
@@ -646,7 +648,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, 
       )}
 
       {/* ═══ BLOQUE 1: portada, frase y familias ═══ */}
-      <div className="cw-grupo cw-bloque">
+      <div className="cw-grupo cw-bloque cw-grupo-1">
       {/* ───────── PORTADA ───────── */}
       <header className="cw-portada" style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
         <div style={etiqueta}>{std ? 'Save the date' : t('Nos casamos', "We're getting married")}</div>
@@ -1525,6 +1527,47 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
       }
       @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(38vw / 1.3); } .cw-dividido .cw-grupo { min-height: calc(100vh / 1.3); } }
+      /* ═══ CELULAR: las dos opciones en formato historias (primas, no gemelas) ═══ */
+      .cw-historias { display: none; }
+      @media (max-width: 899px) {
+        .cw-raiz .cw-panel { display: block; position: fixed; z-index: 1; overflow: hidden; background: #3a2a26; }
+        .cw-raiz .cw-panel-fotos { position: absolute; left: 0; right: 0; top: -4%; height: 112%; transform: translateY(var(--cw-px, 0%)); transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+        .cw-raiz .cw-panel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+        .cw-raiz .cw-panel img.cw-panel-on { opacity: 1; z-index: 1; }
+        .cw-raiz .cw-panel-pie { position: absolute; left: 0; right: 0; z-index: 2; text-align: center; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.4); }
+        .cw-raiz .cw-panel-puntos { display: none; }
+        .cw-raiz .cw-historias { display: flex; position: fixed; z-index: 60; }
+        .cw-raiz .cw-pagina { position: relative; z-index: 2; padding-bottom: 40vh; }
+        .cw-raiz .cw-grupo { position: relative; background: ${p.papel}; padding: 8px 0 18px; overflow: hidden; }
+        .cw-raiz .cw-arco, .cw-raiz .cw-historia, .cw-raiz .cw-sep { display: none !important; }
+        .cw-raiz:not(.cw-dividido) .cw-panel { top: 46px; left: 16px; right: 16px; height: 60vh; border-radius: 999px 999px 26px 26px; box-shadow: 0 26px 44px -24px rgba(90,60,55,.55); }
+        .cw-raiz:not(.cw-dividido) .cw-panel::before { content: ''; position: absolute; inset: 9px; z-index: 3; border: 1px solid rgba(255,255,255,.6); border-radius: 999px 999px 18px 18px; pointer-events: none; }
+        .cw-raiz:not(.cw-dividido) .cw-panel::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(40,25,22,0) 55%, rgba(40,25,22,.55)); pointer-events: none; }
+        .cw-raiz:not(.cw-dividido) .cw-panel img { transform: translateY(10%); transition: opacity .9s ease, transform 1.3s cubic-bezier(.2,.7,.2,1); }
+        .cw-raiz:not(.cw-dividido) .cw-panel img.cw-panel-on { transform: translateY(0); }
+        .cw-raiz:not(.cw-dividido) .cw-panel-pie { bottom: 26px; }
+        .cw-raiz:not(.cw-dividido) .cw-historias { flex-direction: column; gap: 7px; right: 7px; top: 50%; transform: translateY(-50%); }
+        .cw-raiz:not(.cw-dividido) .cw-historias span { width: 5px; height: 5px; border-radius: 5px; background: ${p.linea}; transition: height .4s, background .4s; }
+        .cw-raiz:not(.cw-dividido) .cw-historias span.on { background: ${p.acento2}; }
+        .cw-raiz:not(.cw-dividido) .cw-historias span.actual { height: 18px; background: ${p.acento}; }
+        .cw-raiz:not(.cw-dividido) .cw-grupo { margin: 56vh 12px 0; border-radius: 50% 50% 22px 22px / 54px 54px 22px 22px; box-shadow: 0 -10px 34px -12px rgba(90,60,55,.35); border: 1px solid ${p.cardBorde}; padding-top: 22px; }
+        .cw-raiz:not(.cw-dividido) .cw-grupo-1 { margin-top: 70vh; }
+        .cw-dividido .cw-panel { inset: 0; }
+        .cw-dividido .cw-panel::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(40,25,22,.35) 0%, rgba(40,25,22,0) 22%, rgba(40,25,22,0) 50%, rgba(40,25,22,.55)); pointer-events: none; }
+        .cw-dividido .cw-panel img { transform: scale(1.12); transition: opacity 1.1s ease, transform 2.4s cubic-bezier(.2,.7,.2,1); }
+        .cw-dividido .cw-panel img.cw-panel-on { transform: scale(1.02); }
+        .cw-dividido .cw-panel-pie { top: 34vh; }
+        .cw-dividido .cw-historias { gap: 4px; top: 10px; left: 12px; right: 12px; }
+        .cw-dividido .cw-historias span { flex: 1; height: 3px; border-radius: 3px; background: rgba(255,255,255,.4); box-shadow: 0 0 6px rgba(0,0,0,.25); transition: background .4s; }
+        .cw-dividido .cw-historias span.on { background: #fff; }
+        .cw-dividido .cw-grupo { margin: 64vh 10px 0; border-radius: 28px; box-shadow: 0 -12px 40px rgba(40,25,22,.28); }
+        .cw-dividido .cw-grupo-1 { margin-top: 78vh; }
+        .cw-dividido .cw-grupo::before { content: ''; display: block; width: 42px; height: 4px; border-radius: 4px; background: ${p.linea}; margin: 6px auto 0; }
+        .cw-dividido .cw-rama, .cw-dividido .cw-flor { display: none !important; }
+        .cw-dividido .cw-idioma { top: 24px; }
+      }
+      @media print { .cw-historias { display: none !important; } }
+      @media (prefers-reduced-motion: reduce) { .cw-raiz .cw-panel img { transform: none !important; } }
       @media print { .cw-panel { display: none !important; } .cw-dividido .cw-pagina { margin-left: 0 !important; } .cw-dividido .cw-arco { display: block !important; } }
       @keyframes cw-mece { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(2.2deg); } }
       .cw-pre-titulo { font-size: 24px; }
