@@ -640,7 +640,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       {/* ═══ BLOQUE 1: portada, frase y familias ═══ */}
       <div className="cw-grupo cw-bloque">
       {/* ───────── PORTADA ───────── */}
-      <header style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
+      <header className="cw-portada" style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
         <div style={etiqueta}>{std ? 'Save the date' : t('Nos casamos', "We're getting married")}</div>
         <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: `calc(clamp(42px, 12.4vw, 80px) * ${factorNombres})`, lineHeight: 1.1, color: p.acento, margin: '16px auto 0', padding: '0 10px', whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
           {d.nombre_novia}
@@ -1326,7 +1326,7 @@ export function Cuenta({ fecha, hora, p, lang, compacta }: { fecha: string; hora
   if (!r) return null
   const u = [[r.d, lang === 'en' ? 'days' : 'días'], [r.h, lang === 'en' ? 'hours' : 'horas'], [r.m, 'min'], [r.s, lang === 'en' ? 'sec' : 'seg']] as [number, string][]
   return (
-    <div style={{ marginTop: compacta ? 0 : 52 }}>
+    <div className="cw-cuenta" style={{ marginTop: compacta ? 0 : 52 }}>
       <div style={{ fontFamily: p.etiqueta, fontSize: compacta ? 'clamp(11px, 1.6vh, 14px)' : 10.5, letterSpacing: p.tracking, textTransform: 'uppercase', color: p.acento }}>{lang === 'en' ? 'Countdown' : 'Faltan'}</div>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: compacta ? 8 : 16 }}>
         {u.map(([n, l], i) => (
@@ -1471,6 +1471,10 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-dos, .cw-dividido .cw-par, .cw-dividido .cw-hoteles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cw-dividido .cw-arco { display: none; }
         .cw-dividido .cw-historia { display: none; }
+        /* Bloque 1 (portada) en una sola pantalla: menos aire, mismas letras */
+        .cw-dividido .cw-portada { padding: 10px 0 0 !important; }
+        .cw-dividido .cw-portada h1 { margin-top: 8px !important; font-size: 70px !important; }
+        .cw-dividido .cw-cuenta { margin-top: 22px !important; }
         .cw-dividido .cw-grupo > section { padding-top: 20px !important; padding-bottom: 20px !important; }
         .cw-dividido .cw-sep { padding: 8px 0 10px !important; }
         .cw-dividido .cw-mesa { padding: 12px 16px !important; }
