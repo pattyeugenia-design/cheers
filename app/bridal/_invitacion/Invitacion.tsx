@@ -303,11 +303,12 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
   // Diseño 2 (?diseno=2): en computadora, fotos fijas a la izquierda que cambian con el scroll
   // y la información a la derecha. En celular se ve igual que el diseño normal.
-  const [dividido, setDividido] = useState(false)
+  const [dividido] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('diseno') === '2')
   const [bloqueIdx, setBloqueIdx] = useState(0)
   const [numBloques, setNumBloques] = useState(0)
+  const [fotoSale, setFotoSale] = useState(-1) // foto que va saliendo (para el efecto parallax)
+  const panelRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { setDividido(new URLSearchParams(window.location.search).get('diseno') === '2') }, [])
   const fotosPanel: string[] = Array.from(new Set([
     ...(Array.isArray(d.fotos_sesion) ? d.fotos_sesion.map((x: any) => urlImagenSegura(typeof x === 'string' ? x : x?.url)) : []),
     portada,
@@ -321,34 +322,21 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       const bloques = Array.from(document.querySelectorAll('.cw-pagina .cw-bloque'))
       let k = 0
       bloques.forEach((b, j) => { if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) k = j })
-      setBloqueIdx(k); setNumBloques(bloques.length)
+      setBloqueIdx(prev => { if (prev !== k) setFotoSale(prev % n); return k })
+      setNumBloques(bloques.length)
+      // Parallax dentro del bloque: la foto sube un poco más lento que el texto
+      const r = bloques[k]?.getBoundingClientRect()
+      if (r && panelRef.current) {
+        const avance = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - window.innerHeight * 0.6)))
+        panelRef.current.style.setProperty('--cw-px', `${(-avance * 4).toFixed(2)}%`)
+      }
     }
     window.addEventListener('scroll', fn, { passive: true })
     fn()
     return () => window.removeEventListener('scroll', fn)
   }, [dividido, sobreAbierto, fotosPanel.length])
 
-  // Diseño 2: cada bloque ocupa al menos una pantalla completa. La letra nunca se reduce.
-  useEffect(() => {
-    if (!dividido || !sobreAbierto) return
-    const ajustar = () => {
-      const grupos = Array.from(document.querySelectorAll<HTMLElement>('.cw-grupo'))
-      const ancho = window.matchMedia('(min-width: 900px)').matches
-      const pagina = document.querySelector<HTMLElement>('.cw-pagina')
-      const zp = pagina ? (parseFloat(getComputedStyle(pagina).zoom || '1') || 1) : 1
-      grupos.forEach(g => {
-        g.style.zoom = ''; g.style.minHeight = ''
-        if (!ancho) return
-        g.style.minHeight = `${window.innerHeight / zp}px`
-      })
-    }
-    ajustar()
-    const t1 = window.setTimeout(ajustar, 700)
-    const t2 = window.setTimeout(ajustar, 2000)
-    document.fonts?.ready.then(ajustar).catch(() => {})
-    window.addEventListener('resize', ajustar)
-    return () => { window.clearTimeout(t1); window.clearTimeout(t2); window.removeEventListener('resize', ajustar) }
-  }, [dividido, sobreAbierto])
+  // Diseño 2: cada bloque ocupa al menos una pantalla completa (por CSS, desde el primer pintado). La letra nunca se reduce.
 
   // Diseño 2 en computadora: el scroll avanza un bloque completo por gesto (rueda, trackpad o
   // teclado). Si un bloque no cabe en la pantalla, primero se recorre y luego salta al siguiente.
@@ -510,8 +498,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       <Estilos p={p} />
       <Ambiente p={p} />
       {dividido && fotosPanel.length > 0 && (
-        <div className="cw-panel" aria-hidden="true">
-          {fotosPanel.map((u, i) => <img key={u} src={u} alt="" className={i === bloqueIdx % fotosPanel.length ? 'cw-panel-on' : ''} loading={i < 2 ? 'eager' : 'lazy'} />)}
+        <div className="cw-panel" aria-hidden="true" ref={panelRef}>
+          <div className="cw-panel-fotos">
+            {fotosPanel.map((u, i) => <img key={u} src={u} alt="" className={i === bloqueIdx % fotosPanel.length ? 'cw-panel-on' : i === fotoSale ? 'cw-panel-sale' : ''} loading={i < 2 ? 'eager' : 'lazy'} />)}
+          </div>
           <div className="cw-panel-pie">
             <div style={{ fontFamily: p.script, fontSize: 52, lineHeight: 1 }}>{nombreBoda}</div>
             <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', marginTop: 12, opacity: .9 }}>{fechaPuntos(d.fecha_boda, lang)}</div>
@@ -660,9 +650,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em', padding: '0 14px' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
         {std && stdLugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{stdLugar}</div>}
         {!std && (lugar1Nombre || d.lugar2_nombre) && (
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '18px auto 0', maxWidth: 620, padding: '0 12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '20px auto 0', maxWidth: 780, padding: '0 12px' }}>
             {[[t('Ceremonia', 'Ceremony'), lugar1Nombre], [t('Recepción', 'Reception'), String(d.lugar2_nombre || '').split(',')[0]]].filter(x => x[1]).map(([etq, nom], i) => (
-              <div key={i} style={{ flex: '1 1 0', padding: '2px 18px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+              <div key={i} className="cw-familia" style={{ flex: '1 1 0', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
                 <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, fontWeight: 500, letterSpacing: '.24em', textTransform: 'uppercase', color: p.acento }}>{etq}</div>
                 <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 18, lineHeight: 1.3, color: p.txt3, marginTop: 6 }}>{nom}</div>
               </div>
@@ -738,7 +728,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         )
       })()}
       {d.mensaje_padres && (
-        <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32}>
+        <Sec p={p} ancho={760} arriba={d.versiculo ? 6 : 32}>
           <div style={{ ...etiqueta, whiteSpace: 'nowrap', fontSize: 'clamp(9px, 2.75vw, 11px)', letterSpacing: '.2em' }}>{t('Con la bendición de nuestras familias', 'Together with our families')}</div>
           {(() => {
             // "Padres de la novia: José y Patricia" -> etiqueta chica arriba y los nombres abajo
@@ -750,11 +740,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             // Dos familias, cada una en un solo renglón: van lado a lado, a la misma altura.
             const enColumnas = lineas.length === 2 && lineas.every(x => x.nombres.length <= 22 && x.etq.length <= 22)
             if (enColumnas) return (
-              <div style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'start' }}>
+              <div style={{ marginTop: 26, display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'start' }}>
                 {lineas.map((x, i) => (
-                  <div key={i} style={{ padding: '2px 8px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
-                    {x.etq && <div style={{ ...etiqueta, color: p.txt3, fontSize: 10, letterSpacing: '.14em', whiteSpace: 'nowrap' }}>{x.etq}</div>}
-                    <div style={{ fontFamily: p.serif, fontSize: 'clamp(16px, 4.9vw, 24px)', color: p.txt, lineHeight: 1.3, marginTop: x.etq ? 8 : 0, whiteSpace: 'nowrap' }}>{x.nombres}</div>
+                  <div key={i} className="cw-familia" style={{ borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+                    {x.etq && <div style={{ ...etiqueta, color: p.txt3, fontSize: 10.5, letterSpacing: '.18em', whiteSpace: 'nowrap' }}>{x.etq}</div>}
+                    <div style={{ fontFamily: p.serif, fontSize: 'clamp(17px, 4.9vw, 28px)', color: p.txt, lineHeight: 1.3, marginTop: x.etq ? 8 : 0, whiteSpace: 'nowrap' }}>{x.nombres}</div>
                   </div>
                 ))}
               </div>
@@ -1428,6 +1418,8 @@ export function Estilos({ p }: { p: Paleta }) {
       @media (min-width: 600px) { .cw-hotel-nombre { min-height: 2.4em; display: flex; align-items: center; justify-content: center; } }
       .cw-momento { display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: 0; align-content: start; }
       .cw-col5 { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; align-content: start; }
+      .cw-familia { padding: 4px 10px; }
+      @media (min-width: 700px) { .cw-familia { padding: 4px 36px; } }
       .cw-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
       .cw-escritorio { display: none; }
       @media (min-width: 900px) {
@@ -1459,8 +1451,12 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-panel { display: none; }
       @media (min-width: 900px) {
         .cw-dividido .cw-panel { display: block; position: fixed; top: 0; left: 0; bottom: 0; width: 38vw; z-index: 3; overflow: hidden; background: #3a2a26; }
-        .cw-panel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity 1.2s ease, transform 7s ease; }
-        .cw-panel img.cw-panel-on { opacity: 1; transform: scale(1); }
+        /* Parallax: la capa de fotos es más alta que la pantalla y se desliza más lento que el texto */
+        .cw-panel-fotos { position: absolute; left: 0; right: 0; top: -4%; height: 112%; transform: translateY(var(--cw-px, 0%)); transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+        .cw-panel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: translateY(9%) scale(1.1); transition: opacity 1.1s ease, transform 1.5s cubic-bezier(.2,.7,.2,1); }
+        .cw-panel img.cw-panel-on { opacity: 1; transform: translateY(0) scale(1.03); z-index: 1; }
+        .cw-panel img.cw-panel-sale { opacity: 0; transform: translateY(-7%) scale(1.03); }
+        @media (prefers-reduced-motion: reduce) { .cw-panel img, .cw-panel-fotos { transition: opacity .6s ease !important; transform: none !important; } }
         .cw-panel::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(40,25,22,0) 55%, rgba(40,25,22,.6)); pointer-events: none; }
         .cw-panel-pie { position: absolute; left: 0; right: 0; bottom: 36px; z-index: 2; text-align: center; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
         .cw-panel-puntos { display: flex; gap: 7px; justify-content: center; margin-top: 16px; }
@@ -1470,10 +1466,10 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-dos, .cw-dividido .cw-par, .cw-dividido .cw-hoteles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cw-dividido .cw-arco { display: none; }
         .cw-dividido .cw-historia { display: none; }
-        .cw-dividido .cw-grupo { display: flex; flex-direction: column; justify-content: center; }
+        .cw-dividido .cw-grupo { display: flex; flex-direction: column; justify-content: center; min-height: calc(100vh / 1.15); }
         .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
       }
-      @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(38vw / 1.3); } }
+      @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(38vw / 1.3); } .cw-dividido .cw-grupo { min-height: calc(100vh / 1.3); } }
       @media print { .cw-panel { display: none !important; } .cw-dividido .cw-pagina { margin-left: 0 !important; } .cw-dividido .cw-arco { display: block !important; } }
       @keyframes cw-mece { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(2.2deg); } }
       .cw-pre-titulo { font-size: 24px; }
