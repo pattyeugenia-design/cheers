@@ -43,8 +43,8 @@ export type Control = {
   preRespuesta?: { valor: string | null; responder: (v: 'si' | 'no' | 'tal_vez') => void }
 }
 
-function Sec({ p, id, children, innerRef, ancho, arriba, abajo, bloque }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number; bloque?: boolean }) {
-  return <section id={id} ref={innerRef} className={bloque ? 'cw-aparece cw-bloque' : 'cw-aparece'} style={{ padding: `${arriba ?? 42}px 26px ${abajo ?? 42}px`, maxWidth: ancho || 560, margin: '0 auto', textAlign: 'center', position: 'relative' }}>{children}</section>
+function Sec({ p, id, children, innerRef, ancho, arriba, abajo, bloque, clase }: { p: Paleta; id?: string; children: React.ReactNode; innerRef?: React.Ref<HTMLElement>; ancho?: number; arriba?: number; abajo?: number; bloque?: boolean; clase?: string }) {
+  return <section id={id} ref={innerRef} className={['cw-aparece', bloque ? 'cw-bloque' : '', clase || ''].filter(Boolean).join(' ')} style={{ padding: `${arriba ?? 42}px 26px ${abajo ?? 42}px`, maxWidth: ancho || 560, margin: '0 auto', textAlign: 'center', position: 'relative' }}>{children}</section>
 }
 function Orn({ p }: { p: Paleta }) {
   return (
@@ -572,6 +572,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </h1>
         <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em', padding: '0 14px' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
         {(std ? stdLugar : lugar1Nombre) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{std ? stdLugar : lugar1Nombre}</div>}
+        {!std && d.lugar2_nombre && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '4px auto 0', maxWidth: 320, padding: '0 16px' }}>{String(d.lugar2_nombre).split(',')[0]}</div>}
 
         <div className="cw-arco" style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: -11, border: `1px solid ${p.linea}`, borderRadius: '999px 999px 22px 22px' }} />
@@ -625,29 +626,6 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           ))}
         </Sec>
       )}
-      {!std && (
-      <Sec p={p} arriba={34} abajo={20} bloque>
-        <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
-        <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
-        <div style={{ display: 'inline-block', marginTop: 14, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '6px 14px' }}>
-          {permitidos === 0 ? t('Pase para 1 persona', 'Admits 1') : t(`Pase para ${permitidos + 1} personas`, `Admits ${permitidos + 1}`)}
-        </div>
-        <p style={{ ...parrafo, marginTop: 14 }}>
-          {permitidos === 0
-            ? t('Esta invitación es individual. Guardamos un lugar especial para ti.', "This invitation is just for you. We've saved a special seat for you.")
-            : permitidos === 1
-              ? t('Guardamos un lugar para ti y para tu acompañante.', "We've saved seats for you and a guest.")
-              : t(`Guardamos un lugar para ti y hasta ${permitidos} personas más.`, `We've saved seats for you and up to ${permitidos} guests.`)}
-        </p>
-        {d.solo_adultos && (
-          <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
-            {t('Será una celebración solo para adultos. Gracias por tu comprensión.', "We've planned an adults-only celebration. Thank you for understanding.")}
-          </p>
-        )}
-        <div style={{ marginTop: 24 }}><Boton p={p} relleno onClick={() => irA('confirmar')}>{r.enviado || d.ya_respondio ? t('Ver mi respuesta', 'See my reply') : t('Confirmar asistencia', 'RSVP')}</Boton></div>
-        {limite && <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginTop: 16 }}>{t('Responde antes del', 'Reply by')} {fechaCorta(limite, lang)}</div>}
-      </Sec>
-      )}
 
       {/* ───────── FRASE Y FAMILIAS ───────── */}
       {(d.versiculo || d.mensaje_padres) && <div style={{ padding: '14px 0 0' }}><Orn p={p} /></div>}
@@ -658,14 +636,14 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         const unaLinea = largo <= 60
         const estiloFrase = { fontFamily: p.serif, fontStyle: 'italic', fontSize: unaLinea ? `clamp(14px, ${(214 / Math.max(largo, 28)).toFixed(2)}vw, 27px)` : 26, lineHeight: 1.4, color: p.txt, margin: 0, whiteSpace: unaLinea ? 'nowrap' : 'normal', textWrap: 'balance' } as React.CSSProperties
         return (
-          <Sec p={p} ancho={unaLinea ? 660 : 480} arriba={32} abajo={d.mensaje_padres ? 26 : 42} bloque>
+          <Sec p={p} ancho={unaLinea ? 660 : 480} arriba={32} abajo={d.mensaje_padres ? 26 : 42}>
             <p style={estiloFrase}>“{d.versiculo}”</p>
             {d.versiculo_autor && <div style={{ ...etiqueta, color: p.txt3, marginTop: 16 }}>{d.versiculo_autor}</div>}
           </Sec>
         )
       })()}
       {d.mensaje_padres && (
-        <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32} bloque={!d.versiculo}>
+        <Sec p={p} ancho={460} arriba={d.versiculo ? 6 : 32}>
           <div style={{ ...etiqueta, whiteSpace: 'nowrap', fontSize: 'clamp(9px, 2.75vw, 11px)', letterSpacing: '.2em' }}>{t('Con la bendición de nuestras familias', 'Together with our families')}</div>
           {(() => {
             // "Padres de la novia: José y Patricia" -> etiqueta chica arriba y los nombres abajo
@@ -700,10 +678,133 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </Sec>
       )}
 
+      {/* ───────── TU INVITACIÓN Y CONFIRMACIÓN (bloque 2) ───────── */}
+      {!std && (
+      <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={d.faq ? 1040 : 560} arriba={34} bloque>
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+        <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
+        <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
+        <div style={{ display: 'inline-block', marginTop: 14, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '6px 14px' }}>
+          {permitidos === 0 ? t('Pase para 1 persona', 'Admits 1') : t(`Pase para ${permitidos + 1} personas`, `Admits ${permitidos + 1}`)}
+        </div>
+        <p style={{ ...parrafo, marginTop: 14 }}>
+          {permitidos === 0
+            ? t('Esta invitación es individual. Guardamos un lugar especial para ti.', "This invitation is just for you. We've saved a special seat for you.")
+            : permitidos === 1
+              ? t('Guardamos un lugar para ti y para tu acompañante.', "We've saved seats for you and a guest.")
+              : t(`Guardamos un lugar para ti y hasta ${permitidos} personas más.`, `We've saved seats for you and up to ${permitidos} guests.`)}
+        </p>
+        {d.solo_adultos && (
+          <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 17, color: p.txt3, margin: '12px auto 0', maxWidth: 380 }}>
+            {t('Será una celebración solo para adultos. Gracias por tu comprensión.', "We've planned an adults-only celebration. Thank you for understanding.")}
+          </p>
+        )}
+        </div>
+        <div style={{ ...etiqueta, marginTop: 40 }}>{t('Nos encantaría contar contigo', 'We hope you can join us')}</div>
+        <h2 style={titulo}>{t('Confirma tu asistencia', 'Please RSVP')}</h2>
+        {!r.enviado && !limitePasado && (
+          <p style={{ ...parrafo, marginTop: 14, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+            {limite
+              ? t(`Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes antes del ${fechaCorta(limite, lang)}, aunque no puedas acompañarnos.`, `Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know by ${fechaCorta(limite, lang)}, even if you can't make it.`)
+              : t('Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes lo antes posible, aunque no puedas acompañarnos.', "Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know as soon as you can, even if you can't make it.")}
+          </p>
+        )}
+
+        <div className="cw-par">
+        <div>
+        {r.enviado ? (
+          <div style={{ marginTop: 28, padding: '30px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
+            <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}><circle cx="22" cy="22" r="20" fill="none" stroke={p.acento} strokeWidth="1.2" /><path d="m13 23 6.5 6.5L31 16" fill="none" stroke={p.acento} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <div style={{ fontFamily: p.script, fontSize: 44, color: p.acento, marginTop: 8, lineHeight: 1.1 }}>{t('¡Gracias!', 'Thank you!')}</div>
+            <p style={{ ...parrafo, marginTop: 8 }}>{respuestaTxt}{r.numAcompanantes > 0 && r.asistencia !== 'no' ? ` · +${r.numAcompanantes}` : ''}</p>
+            <p style={{ ...parrafo, fontSize: 16, color: p.txt3, marginTop: 6 }}>{t('Tu respuesta quedó guardada.', 'Your reply has been saved.')}</p>
+            <div style={{ marginTop: 20 }}><button type="button" className="cw-enlace" onClick={r.editar} style={{ color: p.acento, fontFamily: p.etiqueta }}>{t('Cambiar mi respuesta', 'Change my reply')}</button></div>
+          </div>
+        ) : (
+          <div style={{ marginTop: 28, textAlign: 'left', padding: '28px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
+            {(d.ya_respondio) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.acento, textAlign: 'center', marginBottom: 14 }}>{t('Ya habías respondido — aquí puedes cambiar tu respuesta.', "You've already replied — you can update your response here.")}</div>}
+            {limite && limitePasado && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: limitePasado ? '#A8575F' : p.txt3, textAlign: 'center', marginBottom: 16 }}>{limitePasado ? t(`La fecha límite fue el ${fechaCorta(limite, lang)}. Si necesitas confirmar o cambiar algo, escríbenos.`, `The RSVP deadline was ${fechaCorta(limite, lang)}. If you need to confirm or make a change, please reach out to us.`) : t(`Por favor responde antes del ${fechaCorta(limite, lang)}.`, `Please reply by ${fechaCorta(limite, lang)}.`)}</div>}
+            <div style={{ fontFamily: p.serif, fontSize: 22, color: p.txt, textAlign: 'center', marginBottom: 16 }}>{t(`${invitado ? invitado + ', ' : ''}¿nos acompañas?`, `${invitado ? invitado + ', ' : ''}will you join us?`)}</div>
+            <div role="radiogroup" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              {([['si', t('Sí', 'Yes')], ['tal_vez', t('Tal vez', 'Maybe')], ['no', t('No', 'No')]] as [Asistencia, string][]).map(([k, label]) => (
+                <button key={k} type="button" role="radio" aria-checked={r.asistencia === k} onClick={() => r.setAsistencia(k)} className="cw-opcion" style={{ fontFamily: p.etiqueta, border: `1px solid ${r.asistencia === k ? p.acento : p.linea}`, background: r.asistencia === k ? p.acento : 'transparent', color: r.asistencia === k ? p.botonTxt : p.txt2 }}>{label}</button>
+              ))}
+            </div>
+
+            {(r.asistencia === 'si' || r.asistencia === 'tal_vez') && (
+              <div style={{ marginTop: 22 }}>
+                <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Tu platillo', 'Your meal')}</label>
+                <select className="cw-campo" value={r.menuPrincipal} onChange={e => r.setMenu(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, colorScheme: p.dark ? 'dark' : 'light' }}>
+                  <option value="">{t('Elige una opción', 'Choose an option')}</option>
+                  {MENU_OPCIONES.map(m => <option key={m} value={m}>{lang === 'en' ? MENU_LABEL[m].en : MENU_LABEL[m].es}</option>)}
+                </select>
+
+                {permitidos === 1 && (
+                  <div style={{ marginTop: 22 }}>
+                    <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginBottom: 10 }}>{t('¿Vienes acompañado?', 'Are you bringing a guest?')}</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {([[0, t('No, solo yo', 'No, just me')], [1, t('Sí, con mi acompañante', 'Yes, with my guest')]] as [number, string][]).map(([n, label]) => (
+                        <button key={n} type="button" onClick={() => r.setNum(n)} className="cw-opcion" style={{ flex: 1, fontFamily: p.etiqueta, border: `1px solid ${r.numAcompanantes === n ? p.acento : p.linea}`, background: r.numAcompanantes === n ? p.acento : 'transparent', color: r.numAcompanantes === n ? p.botonTxt : p.txt2, letterSpacing: '.1em', padding: '13px 8px' }}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {permitidos > 1 && (
+                  <div style={{ marginTop: 22 }}>
+                    <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginBottom: 10 }}>{t(`¿Cuántos acompañantes traes? (hasta ${permitidos})`, `How many guests are you bringing? (up to ${permitidos})`)}</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {Array.from({ length: permitidos + 1 }, (_, n) => n).map(n => (
+                        <button key={n} type="button" onClick={() => r.setNum(n)} className="cw-num" style={{ fontFamily: p.serif, border: `1px solid ${r.numAcompanantes === n ? p.acento : p.linea}`, background: r.numAcompanantes === n ? p.acento : 'transparent', color: r.numAcompanantes === n ? p.botonTxt : p.txt2 }}>{n}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {r.acompanantes.map((a, i) => (
+                  <div key={i} style={{ marginTop: 20 }}>
+                    <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{permitidos === 1 ? t('Tu acompañante', 'Your guest') : t(`Acompañante ${i + 1}`, `Guest ${i + 1}`)}</label>
+                    <input className="cw-campo" maxLength={100} value={a.nombre} onChange={e => r.setAcompanante(i, 'nombre', e.target.value)} placeholder={t('Nombre completo', 'Full name')} style={{ fontFamily: p.serif, color: p.txt }} />
+                    <select className="cw-campo" value={a.menu} onChange={e => r.setAcompanante(i, 'menu', e.target.value)} style={{ fontFamily: p.serif, color: p.txt, colorScheme: p.dark ? 'dark' : 'light' }}>
+                      <option value="">{t('Platillo', 'Meal')}</option>
+                      {MENU_OPCIONES.map(m => <option key={m} value={m}>{lang === 'en' ? MENU_LABEL[m].en : MENU_LABEL[m].es}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 22 }}>
+              <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Alergias o un mensaje para nosotros (opcional)', 'Dietary restrictions or a note for us (optional)')}</label>
+              <textarea className="cw-campo" maxLength={1000} rows={2} value={r.notas} onChange={e => r.setNotas(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <Boton p={p} relleno ancho onClick={r.enviar} deshabilitado={preview || !r.asistencia || r.enviando}>{r.enviando ? '…' : (d.ya_respondio ? t('Actualizar respuesta', 'Update reply') : t('Enviar respuesta', 'Send reply'))}</Boton>
+              {preview && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 14.5, color: p.txt3, textAlign: 'center', marginTop: 10 }}>{t('En la vista previa no se envía nada.', 'Nothing is sent in preview.')}</div>}
+            </div>
+          </div>
+        )}
+
+        </div>
+        {d.faq && (
+          <div style={{ marginTop: 28, textAlign: 'left', alignSelf: 'center' }}>
+            <div style={{ ...etiqueta, textAlign: 'center', marginBottom: 14 }}>{t('Preguntas frecuentes', 'FAQ')}</div>
+            {String(d.faq).split('\n').map(l => l.trim()).filter(Boolean).map((linea, i) => {
+              const q = linea.indexOf('?')
+              const ultima = i === String(d.faq).split('\n').map(l => l.trim()).filter(Boolean).length - 1
+              return q > 0 && q < linea.length - 1
+                ? <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: ultima ? 0 : 10 }}><b style={{ fontWeight: 600, color: p.txt }}>{linea.slice(0, q + 1)}</b>{linea.slice(q + 1)}</p>
+                : <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: ultima ? 0 : 10 }}>{linea}</p>
+            })}
+          </div>
+        )}
+        </div>
+      </Sec>
+      )}
+
       {!std && (<>
       {/* ───────── NUESTRA HISTORIA ───────── */}
       {historia.length > 0 && (
-        <Sec p={p} ancho={600} abajo={26} bloque>
+        <Sec p={p} ancho={600} abajo={26} clase="cw-historia">
           <div style={etiqueta}>{t('Momentos que nos trajeron aquí', 'Moments that brought us here')}</div>
           <h2 style={titulo}>{t('Nuestra historia', 'Our story')}</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: '16px 12px', marginTop: 28, textAlign: 'center' }}>
@@ -822,7 +923,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
-        <Sec p={p} ancho={hoteles.length > 1 ? 1040 : undefined} bloque>
+        <Sec p={p} ancho={hoteles.length > 1 ? 1040 : undefined}>
           <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For out-of-town guests')}</div>
           <h2 style={titulo}>{t('Hospedaje', 'Where to stay')}</h2>
           {d.info_viaje && <p style={{ ...parrafo, marginTop: 16, whiteSpace: 'pre-wrap', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>{d.info_viaje}</p>}
@@ -882,110 +983,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </Sec>
       )}
 
-      {/* ───────── CONFIRMAR ───────── */}
-      <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={d.faq ? 1040 : 520} bloque>
-        <div style={etiqueta}>{t('Nos encantaría contar contigo', 'We hope you can join us')}</div>
-        <h2 style={titulo}>{t('Confirma tu asistencia', 'Please RSVP')}</h2>
-        {!r.enviado && !limitePasado && (
-          <p style={{ ...parrafo, marginTop: 14, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
-            {limite
-              ? t(`Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes antes del ${fechaCorta(limite, lang)}, aunque no puedas acompañarnos.`, `Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know by ${fechaCorta(limite, lang)}, even if you can't make it.`)
-              : t('Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes lo antes posible, aunque no puedas acompañarnos.', "Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know as soon as you can, even if you can't make it.")}
-          </p>
-        )}
-
-        <div className="cw-par">
-        <div>
-        {r.enviado ? (
-          <div style={{ marginTop: 28, padding: '30px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
-            <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}><circle cx="22" cy="22" r="20" fill="none" stroke={p.acento} strokeWidth="1.2" /><path d="m13 23 6.5 6.5L31 16" fill="none" stroke={p.acento} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <div style={{ fontFamily: p.script, fontSize: 44, color: p.acento, marginTop: 8, lineHeight: 1.1 }}>{t('¡Gracias!', 'Thank you!')}</div>
-            <p style={{ ...parrafo, marginTop: 8 }}>{respuestaTxt}{r.numAcompanantes > 0 && r.asistencia !== 'no' ? ` · +${r.numAcompanantes}` : ''}</p>
-            <p style={{ ...parrafo, fontSize: 16, color: p.txt3, marginTop: 6 }}>{t('Tu respuesta quedó guardada.', 'Your reply has been saved.')}</p>
-            <div style={{ marginTop: 20 }}><button type="button" className="cw-enlace" onClick={r.editar} style={{ color: p.acento, fontFamily: p.etiqueta }}>{t('Cambiar mi respuesta', 'Change my reply')}</button></div>
-          </div>
-        ) : (
-          <div style={{ marginTop: 28, textAlign: 'left', padding: '28px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
-            {(d.ya_respondio) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.acento, textAlign: 'center', marginBottom: 14 }}>{t('Ya habías respondido — aquí puedes cambiar tu respuesta.', "You've already replied — you can update your response here.")}</div>}
-            {limite && limitePasado && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: limitePasado ? '#A8575F' : p.txt3, textAlign: 'center', marginBottom: 16 }}>{limitePasado ? t(`La fecha límite fue el ${fechaCorta(limite, lang)}. Si necesitas confirmar o cambiar algo, escríbenos.`, `The RSVP deadline was ${fechaCorta(limite, lang)}. If you need to confirm or make a change, please reach out to us.`) : t(`Por favor responde antes del ${fechaCorta(limite, lang)}.`, `Please reply by ${fechaCorta(limite, lang)}.`)}</div>}
-            <div style={{ fontFamily: p.serif, fontSize: 22, color: p.txt, textAlign: 'center', marginBottom: 16 }}>{t(`${invitado ? invitado + ', ' : ''}¿nos acompañas?`, `${invitado ? invitado + ', ' : ''}will you join us?`)}</div>
-            <div role="radiogroup" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-              {([['si', t('Sí', 'Yes')], ['tal_vez', t('Tal vez', 'Maybe')], ['no', t('No', 'No')]] as [Asistencia, string][]).map(([k, label]) => (
-                <button key={k} type="button" role="radio" aria-checked={r.asistencia === k} onClick={() => r.setAsistencia(k)} className="cw-opcion" style={{ fontFamily: p.etiqueta, border: `1px solid ${r.asistencia === k ? p.acento : p.linea}`, background: r.asistencia === k ? p.acento : 'transparent', color: r.asistencia === k ? p.botonTxt : p.txt2 }}>{label}</button>
-              ))}
-            </div>
-
-            {(r.asistencia === 'si' || r.asistencia === 'tal_vez') && (
-              <div style={{ marginTop: 22 }}>
-                <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Tu platillo', 'Your meal')}</label>
-                <select className="cw-campo" value={r.menuPrincipal} onChange={e => r.setMenu(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, colorScheme: p.dark ? 'dark' : 'light' }}>
-                  <option value="">{t('Elige una opción', 'Choose an option')}</option>
-                  {MENU_OPCIONES.map(m => <option key={m} value={m}>{lang === 'en' ? MENU_LABEL[m].en : MENU_LABEL[m].es}</option>)}
-                </select>
-
-                {permitidos === 1 && (
-                  <div style={{ marginTop: 22 }}>
-                    <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginBottom: 10 }}>{t('¿Vienes acompañado?', 'Are you bringing a guest?')}</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {([[0, t('No, solo yo', 'No, just me')], [1, t('Sí, con mi acompañante', 'Yes, with my guest')]] as [number, string][]).map(([n, label]) => (
-                        <button key={n} type="button" onClick={() => r.setNum(n)} className="cw-opcion" style={{ flex: 1, fontFamily: p.etiqueta, border: `1px solid ${r.numAcompanantes === n ? p.acento : p.linea}`, background: r.numAcompanantes === n ? p.acento : 'transparent', color: r.numAcompanantes === n ? p.botonTxt : p.txt2, letterSpacing: '.1em', padding: '13px 8px' }}>{label}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {permitidos > 1 && (
-                  <div style={{ marginTop: 22 }}>
-                    <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginBottom: 10 }}>{t(`¿Cuántos acompañantes traes? (hasta ${permitidos})`, `How many guests are you bringing? (up to ${permitidos})`)}</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {Array.from({ length: permitidos + 1 }, (_, n) => n).map(n => (
-                        <button key={n} type="button" onClick={() => r.setNum(n)} className="cw-num" style={{ fontFamily: p.serif, border: `1px solid ${r.numAcompanantes === n ? p.acento : p.linea}`, background: r.numAcompanantes === n ? p.acento : 'transparent', color: r.numAcompanantes === n ? p.botonTxt : p.txt2 }}>{n}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {r.acompanantes.map((a, i) => (
-                  <div key={i} style={{ marginTop: 20 }}>
-                    <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{permitidos === 1 ? t('Tu acompañante', 'Your guest') : t(`Acompañante ${i + 1}`, `Guest ${i + 1}`)}</label>
-                    <input className="cw-campo" maxLength={100} value={a.nombre} onChange={e => r.setAcompanante(i, 'nombre', e.target.value)} placeholder={t('Nombre completo', 'Full name')} style={{ fontFamily: p.serif, color: p.txt }} />
-                    <select className="cw-campo" value={a.menu} onChange={e => r.setAcompanante(i, 'menu', e.target.value)} style={{ fontFamily: p.serif, color: p.txt, colorScheme: p.dark ? 'dark' : 'light' }}>
-                      <option value="">{t('Platillo', 'Meal')}</option>
-                      {MENU_OPCIONES.map(m => <option key={m} value={m}>{lang === 'en' ? MENU_LABEL[m].en : MENU_LABEL[m].es}</option>)}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{ marginTop: 22 }}>
-              <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Alergias o un mensaje para nosotros (opcional)', 'Dietary restrictions or a note for us (optional)')}</label>
-              <textarea className="cw-campo" maxLength={1000} rows={2} value={r.notas} onChange={e => r.setNotas(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
-            </div>
-            <div style={{ marginTop: 24 }}>
-              <Boton p={p} relleno ancho onClick={r.enviar} deshabilitado={preview || !r.asistencia || r.enviando}>{r.enviando ? '…' : (d.ya_respondio ? t('Actualizar respuesta', 'Update reply') : t('Enviar respuesta', 'Send reply'))}</Boton>
-              {preview && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 14.5, color: p.txt3, textAlign: 'center', marginTop: 10 }}>{t('En la vista previa no se envía nada.', 'Nothing is sent in preview.')}</div>}
-            </div>
-          </div>
-        )}
-
-        </div>
-        {d.faq && (
-          <div style={{ marginTop: 28, textAlign: 'left' }}>
-            <div style={{ ...etiqueta, textAlign: 'center', marginBottom: 14 }}>{t('Preguntas frecuentes', 'FAQ')}</div>
-            {String(d.faq).split('\n').map(l => l.trim()).filter(Boolean).map((linea, i) => {
-              const q = linea.indexOf('?')
-              const ultima = i === String(d.faq).split('\n').map(l => l.trim()).filter(Boolean).length - 1
-              return q > 0 && q < linea.length - 1
-                ? <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: ultima ? 0 : 10 }}><b style={{ fontWeight: 600, color: p.txt }}>{linea.slice(0, q + 1)}</b>{linea.slice(q + 1)}</p>
-                : <p key={i} style={{ ...parrafo, fontSize: 17, marginBottom: ultima ? 0 : 10 }}>{linea}</p>
-            })}
-          </div>
-        )}
-        </div>
-      </Sec>
 
       {/* ───────── FOTOS Y FIRMAS (lado a lado en pantallas anchas) ───────── */}
-      <Sec p={p} ancho={1040} bloque>
+      <Sec p={p} ancho={1040}>
       <div className="cw-par">
       <div>
         <div style={etiqueta}>{t('El álbum de todos', 'Shared photo album')}</div>
@@ -1060,7 +1060,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       </>)}
 
       {/* ───────── CIERRE ───────── */}
-      <footer className="cw-bloque" style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
+      <footer style={{ position: 'relative', textAlign: 'center', padding: '24px 18px 70px' }}>
         {/* En el Save the date no va (en computadora tampoco aparece) */}
         {!std && (
         <div className="cw-aparece" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', borderRadius: 26, overflow: 'hidden', border: `1px solid ${p.linea}`, background: 'linear-gradient(180deg, rgba(255,255,255,.78), rgba(250,236,231,.78))', boxShadow: '0 30px 50px -34px rgba(90,60,55,.45)', padding: '60px 24px 180px' }}>
@@ -1308,6 +1308,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-panel-puntos span.on { background: #fff; transform: scale(1.3); }
         .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.15); }
         .cw-dividido .cw-arco { display: none; }
+        .cw-dividido .cw-historia { display: none; }
         .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
       }
       @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.3); } }
