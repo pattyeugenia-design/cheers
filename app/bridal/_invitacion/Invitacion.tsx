@@ -323,6 +323,33 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
     return () => window.removeEventListener('scroll', fn)
   }, [dividido, sobreAbierto, fotosPanel.length])
 
+  // Diseño 2: cada bloque ocupa una pantalla completa. Si su contenido es más alto que la
+  // pantalla, se reduce lo justo para que quepa entero (nunca menos del 70%).
+  useEffect(() => {
+    if (!dividido || !sobreAbierto) return
+    const ajustar = () => {
+      const grupos = Array.from(document.querySelectorAll<HTMLElement>('.cw-grupo'))
+      const ancho = window.matchMedia('(min-width: 900px)').matches
+      const pagina = document.querySelector<HTMLElement>('.cw-pagina')
+      const zp = pagina ? (parseFloat(getComputedStyle(pagina).zoom || '1') || 1) : 1
+      grupos.forEach(g => {
+        g.style.zoom = ''; g.style.minHeight = ''
+        if (!ancho) return
+        const alto = g.getBoundingClientRect().height
+        const disp = window.innerHeight
+        const z = alto > disp * 0.98 ? Math.max(0.7, (disp * 0.96) / alto) : 1
+        if (z < 1) g.style.zoom = String(z)
+        g.style.minHeight = `${disp / (zp * z)}px`
+      })
+    }
+    ajustar()
+    const t1 = window.setTimeout(ajustar, 700)
+    const t2 = window.setTimeout(ajustar, 2000)
+    document.fonts?.ready.then(ajustar).catch(() => {})
+    window.addEventListener('resize', ajustar)
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); window.removeEventListener('resize', ajustar) }
+  }, [dividido, sobreAbierto])
+
   // Flores fijas de las esquinas: transparentes en cuanto el invitado baja (ver .cw-bajo).
   useEffect(() => {
     if (!sobreAbierto) return
@@ -562,8 +589,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </div>
       )}
 
+      {/* ═══ BLOQUE 1: portada, frase y familias ═══ */}
+      <div className="cw-grupo cw-bloque">
       {/* ───────── PORTADA ───────── */}
-      <header className="cw-bloque" style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
+      <header style={{ position: 'relative', textAlign: 'center', padding: '54px 0 18px' }}>
         <div style={etiqueta}>{std ? 'Save the date' : t('Nos casamos', "We're getting married")}</div>
         <h1 style={{ fontFamily: p.script, fontWeight: 400, fontSize: `calc(clamp(42px, 12.4vw, 80px) * ${factorNombres})`, lineHeight: 1.1, color: p.acento, margin: '16px auto 0', padding: '0 10px', whiteSpace: largoNombres > 26 ? 'normal' : 'nowrap' }}>
           {d.nombre_novia}
@@ -628,7 +657,6 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       {/* ───────── FRASE Y FAMILIAS ───────── */}
-      {(d.versiculo || d.mensaje_padres) && <div style={{ padding: '14px 0 0' }}><Orn p={p} /></div>}
       {d.versiculo && (() => {
         // Frases de hasta 60 letras van en un solo renglón: el tamaño se ajusta al largo y a la pantalla.
         // Las más largas se acomodan en varios renglones parejos.
@@ -678,9 +706,14 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </Sec>
       )}
 
+      {!std && <div className="cw-sep" style={{ padding: '22px 0 26px' }}><Orn p={p} /></div>}
+      </div>
+
+      {/* ═══ BLOQUE 2 ═══ */}
+      <div className="cw-grupo cw-bloque">
       {/* ───────── TU INVITACIÓN Y CONFIRMACIÓN (bloque 2) ───────── */}
       {!std && (
-      <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={d.faq ? 1040 : 560} arriba={34} bloque>
+      <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={d.faq ? 1040 : 560} arriba={34}>
         <div style={{ maxWidth: 560, margin: '0 auto' }}>
         <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
         <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
@@ -800,7 +833,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </div>
       </Sec>
       )}
+      {!std && <div className="cw-sep" style={{ padding: '22px 0 26px' }}><Orn p={p} /></div>}
+      </div>
 
+      {/* ═══ BLOQUE 3: el gran día ═══ */}
+      <div className="cw-grupo cw-bloque">
       {!std && (<>
       {/* ───────── NUESTRA HISTORIA ───────── */}
       {historia.length > 0 && (
@@ -824,7 +861,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       {/* ───────── EL GRAN DÍA ───────── */}
-      <Sec p={p} ancho={itinerario.length > 1 ? 820 : undefined} bloque>
+      <Sec p={p} ancho={itinerario.length > 1 ? 820 : undefined}>
         <div style={etiqueta}>{t('Nuestra boda', 'Our wedding')}</div>
         <h2 style={titulo}>{t('El gran día', 'The big day')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{(() => { const f = fechaLarga(d.fecha_boda, lang); return f.charAt(0).toUpperCase() + f.slice(1) })()}</p>
@@ -868,7 +905,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       {/* ───────── DÓNDE ───────── */}
       {itinerario.length === 0 && (lugar1 || d.lugar2_nombre) && (
-        <Sec p={p} bloque>
+        <Sec p={p}>
           <h2 style={{ ...titulo, marginTop: 0 }}>{t('¿Dónde será?', 'Where to find us')}</h2>
           {[{ etq: d.lugar2_nombre ? t('Ceremonia', 'Ceremony') : '', lugar: lugar1 }, { etq: t('Recepción', 'Reception'), lugar: (d.lugar2_nombre || '').trim() }].filter(x => x.lugar).map((x, i) => {
             const [nom, ...resto] = x.lugar.split(',')
@@ -884,9 +921,16 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </Sec>
       )}
 
+      </>)}
+      {!std && <div className="cw-sep" style={{ padding: '22px 0 26px' }}><Orn p={p} /></div>}
+      </div>
+
+      {/* ═══ BLOQUE 4: vestimenta, peinado y hospedaje ═══ */}
+      <div className="cw-grupo cw-bloque">
+      {!std && (<>
       {/* ───────── VESTIMENTA Y PEINADO (lado a lado en pantallas anchas) ───────── */}
       {(d.vestimenta_tipo || colores.length > 0 || linkAyuda) && (
-        <Sec p={p} ancho={(d.vestimenta_tipo || colores.length > 0) && linkAyuda ? 820 : 460} bloque>
+        <Sec p={p} ancho={(d.vestimenta_tipo || colores.length > 0) && linkAyuda ? 820 : 460}>
           <div className="cw-dos" style={{ rowGap: 56 }}>
             {(d.vestimenta_tipo || colores.length > 0) && (
               <div className="cw-col5">
@@ -951,11 +995,15 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           </div>
         </Sec>
       )}
+      {!std && <div className="cw-sep" style={{ padding: '22px 0 26px' }}><Orn p={p} /></div>}
+      </div>
 
+      {/* ═══ BLOQUE 5: regalos, fotos, firmas y cierre ═══ */}
+      <div className="cw-grupo cw-bloque">
       {!std && (<>
       {/* ───────── REGALOS ───────── */}
       {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
-        <Sec p={p} ancho={mesas.length > 1 ? 720 : 520} bloque>
+        <Sec p={p} ancho={mesas.length > 1 ? 720 : 520}>
           <div style={etiqueta}>{t('Si deseas obsequiarnos algo', "If you'd like to give a gift")}</div>
           <h2 style={titulo}>{t('Mesa de regalos', 'Gift registry')}</h2>
           {d.mesa_regalos_nota && <p style={{ ...parrafo, marginTop: 14 }}>{d.mesa_regalos_nota}</p>}
@@ -1087,6 +1135,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           <span style={{ display: 'block', fontFamily: p.serif, fontStyle: 'italic', fontSize: 14, color: p.txt3, marginTop: 3 }}>{t('de Patty Eugenia', 'by Patty Eugenia')}</span>
         </a>
       </footer>
+      </div>
 
       </div>{/* /cw-pagina */}
 
@@ -1309,6 +1358,8 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.15); }
         .cw-dividido .cw-arco { display: none; }
         .cw-dividido .cw-historia { display: none; }
+        .cw-dividido .cw-grupo { display: flex; flex-direction: column; justify-content: center; scroll-snap-align: start; }
+        html:has(.cw-dividido) { scroll-snap-type: y mandatory; }
         .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
       }
       @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.3); } }
