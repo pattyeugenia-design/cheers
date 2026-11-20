@@ -749,7 +749,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                     <div style={{ fontFamily: p.serif, fontSize: 24, fontWeight: 500, color: p.acento, marginTop: 6, lineHeight: 1.1, fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>
                       {hora12(h.ini)}{h.fin && <span style={{ fontFamily: p.etiqueta, fontSize: 10.5, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginLeft: 8 }}>{t('hasta', 'until')} {hora12(h.fin)}</span>}
                     </div>
-                    {it.lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, lineHeight: 1.3, color: p.txt2, marginTop: 10 }}>{it.lugar}</div>}
+                    {it.lugar && <div className="cw-momento-lugar" style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, lineHeight: 1.3, color: p.txt2, marginTop: 10 }}>{it.lugar}</div>}
                     {zona && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15, color: p.txt3, marginTop: 4 }}>{zona}</div>}
                     {it.lugar && <ComoLlegar p={p} lugar={completo} t={t} />}
                   </div>
@@ -820,10 +820,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
             return (
               <div key={i} style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
-                <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt }}>{h.nombre}</div>
+                <div className="cw-hotel-nombre" style={{ fontFamily: p.serif, fontSize: 24, lineHeight: 1.2, color: p.txt, whiteSpace: 'pre-line' }}>{h.nombre}</div>
                 {h.tarifa_especial && !h.tarifa && <span style={{ display: 'inline-block', marginTop: 8, fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '4px 11px' }}>{t('Tarifa especial de boda', 'Special wedding rate')}</span>}
                 {h.direccion && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 10 }}>{h.direccion}</div>}
-                {h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ color: p.acento }}>{x}</em> : x)}</p>}
+                {h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ display: 'block', marginTop: 6, color: p.acento }}>{x}</em> : x)}</p>}
                 <TarifaHotel p={p} h={h} t={t} />
                 {h.traslado && (
                   <div style={{ marginTop: 14, padding: '10px 14px', border: `1px solid ${p.linea}`, borderRadius: 12, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.acento, lineHeight: 1.6 }}>
@@ -967,8 +967,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         )}
       </Sec>
 
-      {/* ───────── FOTOS ───────── */}
-      <Sec p={p} ancho={520}>
+      {/* ───────── FOTOS Y FIRMAS (lado a lado en pantallas anchas) ───────── */}
+      <Sec p={p} ancho={1040}>
+      <div className="cw-par">
+      <div>
         <div style={etiqueta}>{t('El álbum de todos', 'Shared photo album')}</div>
         <h2 style={titulo}>{t('Comparte tus fotos', 'Share your photos')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{t('Ayúdanos a guardar cada instante del día: sube las fotos que tomes, queremos verlo todo desde tus ojos.', "Help us capture every moment by uploading the photos you take. We'd love to see the day through your eyes.")}</p>
@@ -1006,10 +1008,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             })}
           </div>
         )}
-      </Sec>
+      </div>
 
       {/* ───────── FIRMAS ───────── */}
-      <Sec p={p} ancho={520}>
+      <div>
         <div style={etiqueta}>{t('Recuerdos que quedan', 'Lasting memories')}</div>
         <h2 style={titulo}>{t('Libro de firmas', 'Guest book')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{t('Déjanos unas palabras para volver a este día una y otra vez.', 'Leave us a few words we can come back to again and again.')}</p>
@@ -1034,6 +1036,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             ))}
           </div>
         )}
+      </div>
+      </div>
       </Sec>
 
       </>)}
@@ -1248,6 +1252,9 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-cred2 { font-size: clamp(14px, 1.9vh, 17px); }
       }
       .cw-pagina { position: relative; z-index: 2; }
+      @media (min-width: 600px) { .cw-momento-lugar { min-height: 2.6em; display: flex; align-items: center; justify-content: center; } }
+      .cw-par { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 56px 44px; align-items: start; }
+      @media (min-width: 600px) { .cw-hotel-nombre { min-height: 2.4em; display: flex; align-items: center; justify-content: center; } }
       .cw-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
       .cw-hoteles { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; margin-top: 26px; text-align: center; }
       /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
