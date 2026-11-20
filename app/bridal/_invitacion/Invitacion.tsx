@@ -833,14 +833,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, 
 
             {(r.asistencia === 'si' || r.asistencia === 'tal_vez') && (
               <div style={{ marginTop: 22 }}>
-                <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Tu platillo', 'Your meal')}</label>
-                <select className="cw-campo" value={r.menuPrincipal} onChange={e => r.setMenu(e.target.value)} style={{ fontFamily: p.serif, color: p.txt, colorScheme: p.dark ? 'dark' : 'light' }}>
-                  <option value="">{t('Elige una opción', 'Choose an option')}</option>
-                  {MENU_OPCIONES.map(m => <option key={m} value={m}>{lang === 'en' ? MENU_LABEL[m].en : MENU_LABEL[m].es}</option>)}
-                </select>
 
                 {permitidos === 1 && (
-                  <div style={{ marginTop: 22 }}>
+                  <div style={{ marginTop: 4 }}>
                     <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginBottom: 10 }}>{t('¿Vienes acompañado?', 'Are you bringing a guest?')}</label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {([[0, t('No, solo yo', 'No, just me')], [1, t('Sí, con mi acompañante', 'Yes, with my guest')]] as [number, string][]).map(([n, label]) => (
@@ -864,10 +859,6 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, 
                   <div key={i} style={{ marginTop: 20 }}>
                     <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{permitidos === 1 ? t('Tu acompañante', 'Your guest') : t(`Acompañante ${i + 1}`, `Guest ${i + 1}`)}</label>
                     <input className="cw-campo" maxLength={100} value={a.nombre} onChange={e => r.setAcompanante(i, 'nombre', e.target.value)} placeholder={t('Nombre completo', 'Full name')} style={{ fontFamily: p.serif, color: p.txt }} />
-                    <select className="cw-campo" value={a.menu} onChange={e => r.setAcompanante(i, 'menu', e.target.value)} style={{ fontFamily: p.serif, color: p.txt, colorScheme: p.dark ? 'dark' : 'light' }}>
-                      <option value="">{t('Platillo', 'Meal')}</option>
-                      {MENU_OPCIONES.map(m => <option key={m} value={m}>{lang === 'en' ? MENU_LABEL[m].en : MENU_LABEL[m].es}</option>)}
-                    </select>
                   </div>
                 ))}
               </div>
