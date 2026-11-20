@@ -6,16 +6,18 @@ import type { Paleta } from './tema'
 // Portada de entrada: un sobre dirigido al invitado por su nombre. Al tocarlo
 // se abre la solapa, la carta sube y la portada se desvanece. Es solo
 // decoración: el contenido de la invitación ya está debajo y accesible.
-export default function Sobre({ p, para, iniciales, etiqueta, fecha, hint, onAbierto, lang, carta }: {
+export default function Sobre({ p, para, iniciales, etiqueta, fecha, hint, onAbierto, lang, carta, nombres, lugar }: {
   p: Paleta; para: string; iniciales: string; etiqueta: string; fecha: string; hint: string; onAbierto: () => void; lang: string
   carta?: string // texto de la carta que sale del sobre; si no viene, se usan las iniciales
+  nombres?: string // boda: la carta muestra los nombres, la fecha y la ciudad
+  lugar?: string
 }) {
   const [fase, setFase] = useState<'cerrado' | 'abriendo' | 'fuera'>('cerrado')
 
   function abrir() {
     if (fase !== 'cerrado') return
     setFase('abriendo')
-    window.setTimeout(() => { setFase('fuera'); onAbierto() }, 2000)
+    window.setTimeout(() => { setFase('fuera'); onAbierto() }, 4450)
   }
 
   useEffect(() => {
@@ -35,13 +37,21 @@ export default function Sobre({ p, para, iniciales, etiqueta, fecha, hint, onAbi
         </>
       )}
       <div className="cw-sobre-wrap" style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '0 24px' }}>
-        <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: p.tracking, color: p.acento, textTransform: 'uppercase', marginBottom: 26 }}>{etiqueta}</div>
+        <div className="cw-sobre-etq" style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: p.tracking, color: p.acento, textTransform: 'uppercase', marginBottom: 26 }}>{etiqueta}</div>
 
         <button type="button" onClick={abrir} aria-label={lang === 'en' ? 'Open invitation' : 'Abrir invitación'} className="cw-sobre">
           <div className="cw-sobre-cuerpo" />
-          <div className="cw-sobre-carta">
-            <div style={{ fontFamily: p.script, fontSize: 30, color: p.acento, lineHeight: 1 }}>{carta || iniciales}</div>
-            <div style={{ fontFamily: p.etiqueta, fontSize: 8.5, letterSpacing: '.3em', color: p.txt3, marginTop: 8 }}>{fecha}</div>
+          <div className="cw-sobre-carta" style={{ padding: '6% 7%' }}>
+            {nombres ? (<>
+              <div style={{ fontFamily: p.etiqueta, fontSize: 8, letterSpacing: '.32em', textTransform: 'uppercase', color: p.txt3 }}>{lang === 'en' ? 'Our wedding' : 'Nuestra boda'}</div>
+              <div style={{ fontFamily: p.script, fontSize: 'clamp(26px,8.4vw,34px)', color: p.acento, lineHeight: 1.05, marginTop: 6, whiteSpace: 'nowrap' }}>{nombres}</div>
+              <div aria-hidden="true" style={{ width: 46, height: 1, background: p.linea, margin: '9px auto 8px' }} />
+              <div style={{ fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.24em', textTransform: 'uppercase', color: p.txt2 }}>{fecha}</div>
+              {lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 13.5, color: p.txt3, marginTop: 5 }}>{lugar}</div>}
+            </>) : (<>
+              <div style={{ fontFamily: p.script, fontSize: 30, color: p.acento, lineHeight: 1 }}>{carta || iniciales}</div>
+              <div style={{ fontFamily: p.etiqueta, fontSize: 8.5, letterSpacing: '.3em', color: p.txt3, marginTop: 8 }}>{fecha}</div>
+            </>)}
           </div>
           <div className="cw-sobre-frente">
             <div className="cw-sobre-dest">

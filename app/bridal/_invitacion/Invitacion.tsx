@@ -125,8 +125,8 @@ function ComoLlegar({ p, lugar, google, t }: { p: Paleta; lugar: string; google?
     <div style={{ marginTop: 18 }}>
       <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase', color: p.txt3, marginBottom: 10 }}>{t('Cómo llegar', 'Directions')}</div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho compacto href={google || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`}>Google Maps</Boton></div>
-        <div style={{ flex: '1 1 140px', maxWidth: 168 }}><Boton p={p} ancho compacto href={`https://waze.com/ul?q=${encodeURIComponent(lugar)}&navigate=yes`}>Waze</Boton></div>
+        <div style={{ flex: '1 1 118px', maxWidth: 168 }}><Boton p={p} ancho compacto href={google || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`}>Google Maps</Boton></div>
+        <div style={{ flex: '1 1 118px', maxWidth: 168 }}><Boton p={p} ancho compacto href={`https://waze.com/ul?q=${encodeURIComponent(lugar)}&navigate=yes`}>Waze</Boton></div>
       </div>
     </div>
   )
@@ -279,6 +279,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const waDigitos = String(d.ayuda_whatsapp || '').replace(/\D/g, '')
   const waNumero = /^\d{10}$/.test(waDigitos) ? '52' + waDigitos : (/^\d{11,15}$/.test(waDigitos) ? waDigitos : '')
   const waMensaje = String(d.ayuda_mensaje || t('Hola, ¿me puedes ayudar a conseguir cita para maquillaje y/o peinado?', "Hi! I'd like to book hair and/or makeup. Do you have availability?")).replace(/\{nombre\}/g, invitado).slice(0, 300)
+  const ayudaNombre = String(d.ayuda_nombre || '').trim().slice(0, 60)
+  const ayudaPrimer = ayudaNombre.split(' ')[0]
   const linkAyuda = waNumero ? `https://wa.me/${waNumero}?text=${encodeURIComponent(waMensaje)}` : null
   const mesas: any[] = (Array.isArray(d.mesas_regalos) ? d.mesas_regalos : []).filter((m: any) => m && String(m.nombre || '').trim()).slice(0, 4)
   const limite = d.fecha_limite_rsvp as string | undefined
@@ -295,6 +297,28 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const albumAbre = d.album_abre ? new Date(d.album_abre) : null
   const albumAunNo = !!albumAbre && albumAbre.getTime() > Date.now()
   const limitePasado = !!limite && new Date(limite + 'T23:59:59') < new Date()
+
+  // Diseño 2 (?diseno=2): en computadora, fotos fijas a la izquierda que cambian con el scroll
+  // y la información a la derecha. En celular se ve igual que el diseño normal.
+  const [dividido, setDividido] = useState(false)
+  const [fotoIdx, setFotoIdx] = useState(0)
+  useEffect(() => { setDividido(new URLSearchParams(window.location.search).get('diseno') === '2') }, [])
+  const fotosPanel: string[] = Array.from(new Set([
+    ...(Array.isArray(d.fotos_sesion) ? d.fotos_sesion.map((x: any) => urlImagenSegura(typeof x === 'string' ? x : x?.url)) : []),
+    portada,
+    ...historia.map((h: any) => urlImagenSegura(h.url)),
+  ].filter(Boolean) as string[])).slice(0, 14)
+  useEffect(() => {
+    if (!dividido || !sobreAbierto || fotosPanel.length < 2) return
+    const n = fotosPanel.length
+    const fn = () => {
+      const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+      setFotoIdx(Math.min(n - 1, Math.floor((window.scrollY / max) * n)))
+    }
+    window.addEventListener('scroll', fn, { passive: true })
+    fn()
+    return () => window.removeEventListener('scroll', fn)
+  }, [dividido, sobreAbierto, fotosPanel.length])
 
   // Flores fijas de las esquinas: transparentes en cuanto el invitado baja (ver .cw-bajo).
   useEffect(() => {
@@ -393,13 +417,23 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const respuestaTxt = r.asistencia === 'si' ? t('Sí, ahí estaré', "Yes, I'll be there") : r.asistencia === 'no' ? t('No podré asistir', "I can't make it") : t('Tal vez', 'Maybe')
 
   return (
-    <div className="cw-raiz" style={{ background: p.bg, backgroundColor: p.papel, color: p.txt, minHeight: '100vh', position: 'relative', overflowX: 'hidden', fontFamily: p.serif }}>
+    <div className={`cw-raiz${dividido ? ' cw-dividido' : ''}`} style={{ background: p.bg, backgroundColor: p.papel, color: p.txt, minHeight: '100vh', position: 'relative', overflowX: 'hidden', fontFamily: p.serif }}>
       <DefsBotanicos />
       <Estilos p={p} />
       <Ambiente p={p} />
+      {dividido && fotosPanel.length > 0 && (
+        <div className="cw-panel" aria-hidden="true">
+          {fotosPanel.map((u, i) => <img key={u} src={u} alt="" className={i === fotoIdx ? 'cw-panel-on' : ''} loading={i < 2 ? 'eager' : 'lazy'} />)}
+          <div className="cw-panel-pie">
+            <div style={{ fontFamily: p.script, fontSize: 52, lineHeight: 1 }}>{nombreBoda}</div>
+            <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', marginTop: 12, opacity: .9 }}>{fechaPuntos(d.fecha_boda, lang)}</div>
+            {fotosPanel.length > 1 && <div className="cw-panel-puntos">{fotosPanel.map((u, i) => <span key={u} className={i === fotoIdx ? 'on' : ''} />)}</div>}
+          </div>
+        </div>
+      )}
 
       {!sobreAbierto && (
-        <Sobre p={p} lang={lang} para={invitado || t('ti', 'you')} iniciales={iniciales(d)} etiqueta={t('Nos casamos', "We're getting married")} fecha={fechaPuntos(d.fecha_boda, lang)} hint={t('Toca el sobre para abrirlo', 'Tap the envelope to open')} onAbierto={() => setSobreAbierto(true)} />
+        <Sobre p={p} lang={lang} para={invitado || t('ti', 'you')} iniciales={iniciales(d)} etiqueta={t('Nos casamos', "We're getting married")} fecha={fechaPuntos(d.fecha_boda, lang)} hint={t('Toca el sobre para abrirlo', 'Tap the envelope to open')} nombres={nombreBoda} lugar={String(d.std_lugar || '').trim() || lugar1Nombre} onAbierto={() => setSobreAbierto(true)} />
       )}
 
       <div className={`cw-pagina${std ? ' cw-std-on' : ''}`}>
@@ -536,7 +570,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em', padding: '0 14px' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
         {(std ? stdLugar : lugar1Nombre) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{std ? stdLugar : lugar1Nombre}</div>}
 
-        <div style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
+        <div className="cw-arco" style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: -11, border: `1px solid ${p.linea}`, borderRadius: '999px 999px 22px 22px' }} />
           <div className="cw-foto-vida" style={{ position: 'relative', aspectRatio: '3/4', borderRadius: '999px 999px 18px 18px', overflow: 'hidden', background: `linear-gradient(160deg,${p.acento2},${p.papel})`, boxShadow: '0 24px 40px -22px rgba(90,60,55,.45)' }}>
             {portada
@@ -592,9 +626,12 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       <Sec p={p} arriba={34} abajo={20}>
         <div style={etiqueta}>{t('Tu invitación', 'Your invitation')}</div>
         <div style={{ fontFamily: p.script, fontSize: 'clamp(40px,12vw,54px)', color: p.acento, lineHeight: 1.05, marginTop: 10 }}>{invitado || t('Invitado', 'Guest')}</div>
+        <div style={{ display: 'inline-block', marginTop: 14, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '6px 14px' }}>
+          {permitidos === 0 ? t('Pase para 1 persona', 'Admits 1') : t(`Pase para ${permitidos + 1} personas`, `Admits ${permitidos + 1}`)}
+        </div>
         <p style={{ ...parrafo, marginTop: 14 }}>
           {permitidos === 0
-            ? t('Guardamos un lugar especial para ti.', "We've saved a seat for you.")
+            ? t('Esta invitación es individual. Guardamos un lugar especial para ti.', "This invitation is just for you. We've saved a special seat for you.")
             : permitidos === 1
               ? t('Guardamos un lugar para ti y para tu acompañante.', "We've saved seats for you and a guest.")
               : t(`Guardamos un lugar para ti y hasta ${permitidos} personas más.`, `We've saved seats for you and up to ${permitidos} guests.`)}
@@ -683,12 +720,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       {/* ───────── EL GRAN DÍA ───────── */}
-      <Sec p={p}>
+      <Sec p={p} ancho={itinerario.length > 1 ? 820 : undefined}>
         <div style={etiqueta}>{t('Nuestra boda', 'Our wedding')}</div>
         <h2 style={titulo}>{t('El gran día', 'The big day')}</h2>
         <p style={{ ...parrafo, marginTop: 14 }}>{(() => { const f = fechaLarga(d.fecha_boda, lang); return f.charAt(0).toUpperCase() + f.slice(1) })()}</p>
         {d.hora_boda && <p style={{ ...parrafo, fontSize: 19, color: p.acento, fontWeight: 500, marginTop: 2 }}>{horaBonita(d.hora_boda)}</p>}
-        {lugar1Nombre && <p style={{ ...parrafo, fontStyle: 'italic', fontSize: 18, color: p.txt3, margin: '4px auto 0', maxWidth: 400 }}>{lugar1Nombre}</p>}
         {cal && (
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
             <a className="cw-chip" href={cal.googleUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>+ Google Calendar</a>
@@ -697,29 +733,35 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         )}
 
         {itinerario.length > 0 && (
-          <div style={{ marginTop: 46 }}>
-            <div style={{ ...etiqueta, marginBottom: 30 }}>{t('Así será nuestro día', 'Order of events')}</div>
-            {itinerario.map((it, i) => {
-              const h = partirHora(it.hora)
-              return (
-                <div key={i}>
-                  <div style={{ width: 54, height: 54, borderRadius: '50%', border: `1px solid ${p.linea}`, background: p.card, color: p.acento, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-                    <IconoItinerario emoji={it.icono} titulo={it.titulo} tam={27} />
+          <div style={{ marginTop: 44 }}>
+            <div style={{ ...etiqueta, marginBottom: 22 }}>{t('Así será nuestro día', 'Order of events')}</div>
+            <div className="cw-dos">
+              {itinerario.map((it, i) => {
+                const h = partirHora(it.hora)
+                const completo = lugarCompleto(String(it.lugar || ''))
+                const zona = completo.split(',').slice(1).join(',').trim()
+                return (
+                  <div key={i} style={{ padding: '24px 18px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+                    <div style={{ width: 50, height: 50, borderRadius: '50%', border: `1px solid ${p.linea}`, color: p.acento, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                      <IconoItinerario emoji={it.icono} titulo={it.titulo} tam={25} />
+                    </div>
+                    <div style={{ fontFamily: p.serif, fontSize: 25, color: p.txt, marginTop: 12, lineHeight: 1.2 }}>{it.titulo}</div>
+                    <div style={{ fontFamily: p.serif, fontSize: 24, fontWeight: 500, color: p.acento, marginTop: 6, lineHeight: 1.1, fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>
+                      {hora12(h.ini)}{h.fin && <span style={{ fontFamily: p.etiqueta, fontSize: 10.5, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginLeft: 8 }}>{t('hasta', 'until')} {hora12(h.fin)}</span>}
+                    </div>
+                    {it.lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, lineHeight: 1.3, color: p.txt2, marginTop: 10 }}>{it.lugar}</div>}
+                    {zona && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15, color: p.txt3, marginTop: 4 }}>{zona}</div>}
+                    {it.lugar && <ComoLlegar p={p} lugar={completo} t={t} />}
                   </div>
-                  <div style={{ fontFamily: p.serif, fontSize: 28, fontWeight: 500, color: p.acento, marginTop: 14, lineHeight: 1.1, fontVariantNumeric: 'lining-nums', fontFeatureSettings: '"lnum" 1' }}>{hora12(h.ini)}</div>
-                  {h.fin && <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase', color: p.txt3, marginTop: 5 }}>{t('hasta', 'until')} {hora12(h.fin)}</div>}
-                  <div style={{ fontFamily: p.serif, fontSize: 25, color: p.txt, marginTop: 12, lineHeight: 1.2 }}>{it.titulo}</div>
-                  {it.lugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 5, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>{it.lugar}</div>}
-                  {i < itinerario.length - 1 && <div aria-hidden="true" style={{ width: 1, height: 40, background: p.linea, margin: '26px auto' }} />}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
       </Sec>
 
       {/* ───────── DÓNDE ───────── */}
-      {(lugar1 || d.lugar2_nombre) && (
+      {itinerario.length === 0 && (lugar1 || d.lugar2_nombre) && (
         <Sec p={p}>
           <h2 style={{ ...titulo, marginTop: 0 }}>{t('¿Dónde será?', 'Where to find us')}</h2>
           {[{ etq: d.lugar2_nombre ? t('Ceremonia', 'Ceremony') : '', lugar: lugar1 }, { etq: t('Recepción', 'Reception'), lugar: (d.lugar2_nombre || '').trim() }].filter(x => x.lugar).map((x, i) => {
@@ -736,26 +778,32 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         </Sec>
       )}
 
-      {/* ───────── VESTIMENTA ───────── */}
-      {(d.vestimenta_tipo || colores.length > 0) && (
-        <Sec p={p} ancho={460}>
-          <svg width="40" height="30" viewBox="0 0 40 30" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
-            <path d="M20 9.5a3.2 3.2 0 1 1 3.2 3.2c-1.8 0-3.2 1.2-3.2 3v1.6L3 26.2a1.4 1.4 0 0 0 .7 2.6h32.6a1.4 1.4 0 0 0 .7-2.6L20 17.3" fill="none" stroke={p.acento} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div style={{ ...etiqueta, marginTop: 14 }}>{t('Código de vestimenta', 'Dress code')}</div>
-          {d.vestimenta_tipo && <div style={{ fontFamily: p.script, fontSize: 'clamp(54px,15vw,68px)', color: p.acento, lineHeight: 1.05, marginTop: 6 }}>{d.vestimenta_tipo}</div>}
-          {colores.length > 0 && <CirculosColor colores={colores} p={p} />}
-          {d.vestimenta_nota && <p style={{ ...parrafo, fontStyle: 'italic', marginTop: 14, fontSize: 18 }}>{d.vestimenta_nota}</p>}
-        </Sec>
-      )}
-
-      {/* ───────── AYUDA: PEINADO Y MAQUILLAJE ───────── */}
-      {linkAyuda && (
-        <Sec p={p} ancho={460}>
-          <div style={etiqueta}>{t('Para que luzcas increíble', 'Getting ready')}</div>
-          <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Need hair and makeup?')}</h2>
-          <p style={{ ...parrafo, marginTop: 14 }}>{t('Te recomendamos a alguien de nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.', 'We recommend someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.')}</p>
-          <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{t('Escribir por WhatsApp', 'Message on WhatsApp')}</Boton></div>
+      {/* ───────── VESTIMENTA Y PEINADO (lado a lado en pantallas anchas) ───────── */}
+      {(d.vestimenta_tipo || colores.length > 0 || linkAyuda) && (
+        <Sec p={p} ancho={(d.vestimenta_tipo || colores.length > 0) && linkAyuda ? 820 : 460}>
+          <div className="cw-dos" style={{ alignItems: 'start', rowGap: 56 }}>
+            {(d.vestimenta_tipo || colores.length > 0) && (
+              <div>
+                <svg width="40" height="30" viewBox="0 0 40 30" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
+                  <path d="M20 9.5a3.2 3.2 0 1 1 3.2 3.2c-1.8 0-3.2 1.2-3.2 3v1.6L3 26.2a1.4 1.4 0 0 0 .7 2.6h32.6a1.4 1.4 0 0 0 .7-2.6L20 17.3" fill="none" stroke={p.acento} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div style={{ ...etiqueta, marginTop: 14 }}>{t('Código de vestimenta', 'Dress code')}</div>
+                {d.vestimenta_tipo && <div style={{ fontFamily: p.script, fontSize: 'clamp(54px,15vw,68px)', color: p.acento, lineHeight: 1.05, marginTop: 6 }}>{d.vestimenta_tipo}</div>}
+                {colores.length > 0 && <CirculosColor colores={colores} p={p} />}
+                {d.vestimenta_nota && <p style={{ ...parrafo, fontStyle: 'italic', marginTop: 14, fontSize: 18, whiteSpace: 'pre-wrap' }}>{d.vestimenta_nota}</p>}
+              </div>
+            )}
+            {linkAyuda && (
+              <div>
+                <div style={etiqueta}>{t('Para que luzcas increíble', 'Getting ready')}</div>
+                <h2 style={titulo}>{t('¿Buscas quién te arregle?', 'Need hair and makeup?')}</h2>
+                <p style={{ ...parrafo, marginTop: 14 }}>{ayudaNombre
+                  ? t(`Te recomendamos a ${ayudaNombre}, de toda nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.`, `We recommend ${ayudaNombre}, someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.`)
+                  : t('Te recomendamos a alguien de nuestra confianza. Escríbele directo por WhatsApp para agendar tu cita de maquillaje y/o peinado.', 'We recommend someone we trust. Message them directly on WhatsApp to book your hair and/or makeup.')}</p>
+                <div style={{ marginTop: 22 }}><Boton p={p} relleno href={linkAyuda}>{ayudaPrimer ? t(`Escribirle a ${ayudaPrimer}`, `Message ${ayudaPrimer}`) : t('Escribir por WhatsApp', 'Message on WhatsApp')}</Boton></div>
+              </div>
+            )}
+          </div>
         </Sec>
       )}
 
@@ -763,18 +811,19 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
-        <Sec p={p}>
+        <Sec p={p} ancho={hoteles.length > 1 ? 1040 : undefined}>
           <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For out-of-town guests')}</div>
           <h2 style={titulo}>{t('Hospedaje', 'Where to stay')}</h2>
-          {d.info_viaje && <p style={{ ...parrafo, marginTop: 16, whiteSpace: 'pre-wrap' }}>{d.info_viaje}</p>}
+          {d.info_viaje && <p style={{ ...parrafo, marginTop: 16, whiteSpace: 'pre-wrap', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>{d.info_viaje}</p>}
+          <div className="cw-hoteles">
           {hoteles.map((h, i) => {
             const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
             return (
-              <div key={i} style={{ marginTop: 26, padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+              <div key={i} style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
                 <div style={{ fontFamily: p.serif, fontSize: 24, color: p.txt }}>{h.nombre}</div>
                 {h.tarifa_especial && !h.tarifa && <span style={{ display: 'inline-block', marginTop: 8, fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '4px 11px' }}>{t('Tarifa especial de boda', 'Special wedding rate')}</span>}
                 {h.direccion && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 10 }}>{h.direccion}</div>}
-                {h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700)}</p>}
+                {h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ color: p.acento }}>{x}</em> : x)}</p>}
                 <TarifaHotel p={p} h={h} t={t} />
                 {h.traslado && (
                   <div style={{ marginTop: 14, padding: '10px 14px', border: `1px solid ${p.linea}`, borderRadius: 12, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.acento, lineHeight: 1.6 }}>
@@ -785,20 +834,22 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
               </div>
             )
           })}
+          </div>
         </Sec>
       )}
 
       {!std && (<>
       {/* ───────── REGALOS ───────── */}
       {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
-        <Sec p={p} ancho={520}>
+        <Sec p={p} ancho={mesas.length > 1 ? 720 : 520}>
           <div style={etiqueta}>{t('Si deseas obsequiarnos algo', "If you'd like to give a gift")}</div>
           <h2 style={titulo}>{t('Mesa de regalos', 'Gift registry')}</h2>
           {d.mesa_regalos_nota && <p style={{ ...parrafo, marginTop: 14 }}>{d.mesa_regalos_nota}</p>}
+          <div className="cw-dos" style={{ marginTop: 24 }}>
           {mesas.map((m, i) => {
             const enlace = urlEnlaceSegura(m.link)
             return (
-              <div key={i} style={{ marginTop: 24, padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
+              <div key={i} style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
                 <div style={{ fontFamily: p.serif, fontSize: 26, color: p.txt }}>{String(m.nombre).slice(0, 60)}</div>
                 {m.nota && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 6 }}>{String(m.nota).slice(0, 120)}</div>}
                 {enlace
@@ -807,6 +858,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
               </div>
             )
           })}
+          </div>
           {mesas.length === 0 && linkRegalos && <div style={{ marginTop: 22 }}><Boton p={p} href={linkRegalos}>{t('Ver mesa de regalos', 'View registry')}</Boton></div>}
           {d.lluvia_sobres && (
             <div style={{ marginTop: 24, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', color: p.txt2 }}>
@@ -821,6 +873,13 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       <Sec p={p} id="confirmar" innerRef={rsvpRef} ancho={520}>
         <div style={etiqueta}>{t('Nos encantaría contar contigo', 'We hope you can join us')}</div>
         <h2 style={titulo}>{t('Confirma tu asistencia', 'Please RSVP')}</h2>
+        {!r.enviado && !limitePasado && (
+          <p style={{ ...parrafo, marginTop: 14 }}>
+            {limite
+              ? t(`Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes antes del ${fechaCorta(limite, lang)}, aunque no puedas acompañarnos.`, `Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know by ${fechaCorta(limite, lang)}, even if you can't make it.`)
+              : t('Tu respuesta nos ayuda muchísimo a organizar cada detalle: mesas, platillos y lugares. Te agradeceremos de corazón que nos confirmes lo antes posible, aunque no puedas acompañarnos.', "Your reply helps us plan every detail, from seating to meals. We'd be so grateful if you could let us know as soon as you can, even if you can't make it.")}
+          </p>
+        )}
 
         {r.enviado ? (
           <div style={{ marginTop: 28, padding: '30px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
@@ -833,7 +892,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         ) : (
           <div style={{ marginTop: 28, textAlign: 'left', padding: '28px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
             {(d.ya_respondio) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: p.acento, textAlign: 'center', marginBottom: 14 }}>{t('Ya habías respondido — aquí puedes cambiar tu respuesta.', "You've already replied — you can update your response here.")}</div>}
-            {limite && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: limitePasado ? '#A8575F' : p.txt3, textAlign: 'center', marginBottom: 16 }}>{limitePasado ? t(`La fecha límite fue el ${fechaCorta(limite, lang)}. Si necesitas confirmar o cambiar algo, escríbenos.`, `The RSVP deadline was ${fechaCorta(limite, lang)}. If you need to confirm or make a change, please reach out to us.`) : t(`Por favor responde antes del ${fechaCorta(limite, lang)}.`, `Please reply by ${fechaCorta(limite, lang)}.`)}</div>}
+            {limite && limitePasado && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 16, color: limitePasado ? '#A8575F' : p.txt3, textAlign: 'center', marginBottom: 16 }}>{limitePasado ? t(`La fecha límite fue el ${fechaCorta(limite, lang)}. Si necesitas confirmar o cambiar algo, escríbenos.`, `The RSVP deadline was ${fechaCorta(limite, lang)}. If you need to confirm or make a change, please reach out to us.`) : t(`Por favor responde antes del ${fechaCorta(limite, lang)}.`, `Please reply by ${fechaCorta(limite, lang)}.`)}</div>}
             <div style={{ fontFamily: p.serif, fontSize: 22, color: p.txt, textAlign: 'center', marginBottom: 16 }}>{t(`${invitado ? invitado + ', ' : ''}¿nos acompañas?`, `${invitado ? invitado + ', ' : ''}will you join us?`)}</div>
             <div role="radiogroup" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {([['si', t('Sí', 'Yes')], ['tal_vez', t('Tal vez', 'Maybe')], ['no', t('No', 'No')]] as [Asistencia, string][]).map(([k, label]) => (
@@ -1052,6 +1111,8 @@ export function Ambiente({ p }: { p: Paleta }) {
       <div className="cw-flor cw-flor-i2"><div className="cw-mece" style={{ animationDelay: '-4s' }}><Peonia ancho={46} tono="oscuro" rotar={18} /></div></div>
       <div className="cw-flor cw-flor-d1"><div className="cw-mece" style={{ animationDelay: '-2s' }}><Peonia ancho={74} tono="claro" rotar={14} /></div></div>
       <div className="cw-flor cw-flor-d2"><div className="cw-mece" style={{ animationDelay: '-6s' }}><Peonia ancho={44} tono="oscuro" rotar={-16} /></div></div>
+      <div className="cw-flor cw-flor-i3"><div className="cw-mece" style={{ animationDelay: '-3s' }}><Ramillete ancho={150} espejo /></div></div>
+      <div className="cw-flor cw-flor-d3"><div className="cw-mece" style={{ animationDelay: '-5s' }}><Peonia ancho={56} tono="oscuro" rotar={32} /></div></div>
       <div className="cw-capa-ligera">
         {PETALOS.map(([x, tam, dur, del, der, giro, tono], i) => (
           <svg key={'p' + i} className="cw-petalo" viewBox="-12 -25 24 27" width={tam} height={Math.round(tam * 1.1)} style={{ left: `${x}%`, animationDuration: `${dur}s`, animationDelay: `-${del}s`, ['--der' as string]: `${der}px`, ['--giro' as string]: `${giro}deg` } as React.CSSProperties}>
@@ -1187,6 +1248,8 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-std-cred2 { font-size: clamp(14px, 1.9vh, 17px); }
       }
       .cw-pagina { position: relative; z-index: 2; }
+      .cw-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+      .cw-hoteles { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; margin-top: 26px; text-align: center; }
       /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
       .cw-rama { position: fixed; z-index: 1; pointer-events: none; }
       .cw-rama-i { top: -44px; left: -52px; opacity: .92; }
@@ -1202,7 +1265,26 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-flor-i2 { top: 4px; left: 38px; }
       .cw-flor-d1 { top: 46px; right: -28px; }
       .cw-flor-d2 { top: 12px; right: 34px; }
+      .cw-flor-i3 { top: 58vh; left: -64px; opacity: .7; transform: rotate(-78deg); }
+      .cw-flor-d3 { top: 40vh; right: -18px; opacity: .55; filter: blur(.4px) saturate(.85); }
       .cw-mece { animation: cw-mece 10s ease-in-out infinite; }
+      /* Diseño 2: fotos a la izquierda, información a la derecha (solo pantallas anchas) */
+      .cw-panel { display: none; }
+      @media (min-width: 900px) {
+        .cw-dividido .cw-panel { display: block; position: fixed; top: 0; left: 0; bottom: 0; width: 46vw; z-index: 3; overflow: hidden; background: #3a2a26; }
+        .cw-panel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity 1.2s ease, transform 7s ease; }
+        .cw-panel img.cw-panel-on { opacity: 1; transform: scale(1); }
+        .cw-panel::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(40,25,22,0) 55%, rgba(40,25,22,.6)); pointer-events: none; }
+        .cw-panel-pie { position: absolute; left: 0; right: 0; bottom: 36px; z-index: 2; text-align: center; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
+        .cw-panel-puntos { display: flex; gap: 7px; justify-content: center; margin-top: 16px; }
+        .cw-panel-puntos span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.45); transition: background .4s, transform .4s; }
+        .cw-panel-puntos span.on { background: #fff; transform: scale(1.3); }
+        .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.15); }
+        .cw-dividido .cw-arco { display: none; }
+        .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
+      }
+      @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.3); } }
+      @media print { .cw-panel { display: none !important; } .cw-dividido .cw-pagina { margin-left: 0 !important; } .cw-dividido .cw-arco { display: block !important; } }
       @keyframes cw-mece { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(2.2deg); } }
       .cw-pre-titulo { font-size: 24px; }
       .cw-pre-ops { gap: 8px !important; }
@@ -1256,28 +1338,38 @@ export function Estilos({ p }: { p: Paleta }) {
 
       /* Portada de sobre */
       .cw-sobre-capa { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-      .cw-sobre-capa.cw-abriendo { animation: cw-desvanece .9s ease 1.15s forwards; }
+      .cw-sobre-capa.cw-abriendo { animation: cw-desvanece 1s ease 3.4s forwards; }
       @keyframes cw-desvanece { to { opacity: 0; visibility: hidden; } }
       .cw-sobre { all: unset; box-sizing: border-box; position: relative; display: block; width: min(82vw, 340px); aspect-ratio: 1.42 / 1; cursor: pointer; perspective: 1100px; filter: drop-shadow(0 22px 24px rgba(95,64,58,.3)); }
       .cw-sobre:focus-visible { outline: 2px solid ${p.acento}; outline-offset: 8px; }
       .cw-sobre-cuerpo { position: absolute; inset: 0; background: linear-gradient(165deg, #CDB1A5, #BE9C8F); border-radius: 6px; }
-      .cw-sobre-carta { position: absolute; left: 8%; right: 8%; top: 7%; bottom: 12%; background: #FDFAF6; border-radius: 3px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.14); z-index: 2; transition: transform 1s cubic-bezier(.4,.1,.2,1) .55s; }
-      .cw-abriendo .cw-sobre-carta { transform: translateY(-62%); }
+      .cw-sobre-carta { position: absolute; left: 8%; right: 8%; top: 7%; bottom: 12%; background: #FDFAF6; border-radius: 3px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.14); z-index: 2; }
+      .cw-abriendo .cw-sobre-carta { animation: cw-carta 2.6s cubic-bezier(.4,0,.2,1) .9s forwards; }
+      .cw-abriendo .cw-sobre-frente, .cw-abriendo .cw-sobre-cuerpo { animation: cw-se-va 1.3s ease 1.5s forwards; }
+      @keyframes cw-se-va { to { opacity: 0; } }
+      .cw-abriendo .cw-sobre-etq { opacity: 0; transition: opacity .7s ease .5s; }
+      @keyframes cw-carta { from { transform: translateY(0) scale(1); } to { transform: translateY(-20%) scale(1.42); box-shadow: 0 20px 44px rgba(95,64,58,.25); } }
       .cw-sobre-frente { position: absolute; inset: 0; clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%); background: linear-gradient(180deg, #E8D5CA, #D8BDB1); border-radius: 6px; z-index: 3; display: flex; align-items: flex-end; justify-content: center; }
       .cw-sobre-dest { margin-bottom: 5.5%; text-align: center; }
       .cw-sobre-solapa { position: absolute; left: 0; right: 0; top: 0; height: 60%; clip-path: polygon(0 0, 100% 0, 50% 100%); background: linear-gradient(180deg, #F0E2D8, #DEC7BB); transform-origin: 50% 0; z-index: 4; }
-      .cw-abriendo .cw-sobre-solapa { animation: cw-solapa .8s cubic-bezier(.5,.05,.25,1) forwards; }
+      .cw-abriendo .cw-sobre-solapa { animation: cw-solapa 1.6s cubic-bezier(.5,.05,.25,1) forwards, cw-se-va 1.1s ease 1.6s forwards; }
       @keyframes cw-solapa { 0% { transform: rotateX(0); z-index: 4; } 49% { z-index: 4; } 50% { z-index: 1; } 100% { transform: rotateX(180deg); z-index: 1; } }
-      .cw-sello { position: absolute; left: 50%; top: 54%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 48% 52% 50% 50% / 52% 48% 52% 48%; background: radial-gradient(circle at 35% 30%, #D9ABA5, #B7827B 55%, #8E5D58); box-shadow: 0 3px 7px rgba(70,35,30,.4), inset 0 -3px 5px rgba(60,25,22,.35), inset 0 2px 3px rgba(255,225,219,.45), 0 0 0 3px rgba(183,130,123,.45); display: flex; align-items: center; justify-content: center; z-index: 5; transition: opacity .3s ease, transform .3s ease; }
+      .cw-sello { position: absolute; left: 50%; top: 54%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 48% 52% 50% 50% / 52% 48% 52% 48%; background: radial-gradient(circle at 35% 30%, #D9ABA5, #B7827B 55%, #8E5D58); box-shadow: 0 3px 7px rgba(70,35,30,.4), inset 0 -3px 5px rgba(60,25,22,.35), inset 0 2px 3px rgba(255,225,219,.45), 0 0 0 3px rgba(183,130,123,.45); display: flex; align-items: center; justify-content: center; z-index: 5; transition: opacity .6s ease, transform .6s ease; }
       .cw-abriendo .cw-sello { opacity: 0; transform: scale(.7); }
+      .cw-sello > * { transform: translateX(-2px); }
       .cw-hint { animation: cw-pulso 2.6s ease-in-out infinite; }
       .cw-abriendo .cw-hint { opacity: 0; animation: none; transition: opacity .3s; }
       @keyframes cw-pulso { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
 
+      @media print {
+        .cw-aparece { opacity: 1 !important; transform: none !important; transition: none !important; }
+        .cw-sobre-capa { display: none !important; }
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
       @media (prefers-reduced-motion: reduce) {
         .cw-js .cw-aparece:not(.cw-in) { opacity: 1; transform: none; }
         .cw-aparece { transition: none; }
-        .cw-sobre-carta, .cw-sobre-solapa, .cw-sello { transition-duration: .01s !important; transition-delay: 0s !important; animation-duration: .01s !important; }
+        .cw-sobre-carta, .cw-sobre-solapa, .cw-sello, .cw-sobre-frente, .cw-sobre-cuerpo { transition-duration: .01s !important; transition-delay: 0s !important; animation-duration: .01s !important; }
         .cw-sobre-capa.cw-abriendo { animation-delay: .3s; animation-duration: .3s; }
         .cw-hint, .cw-flota { animation: none; }
         .cw-capa-ligera { display: none; }
