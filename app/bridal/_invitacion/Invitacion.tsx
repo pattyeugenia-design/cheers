@@ -1033,7 +1033,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       <div className="cw-grupo cw-bloque">
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
-        <Sec p={p} ancho={hotelesTarjeta.length > 2 ? 1040 : hotelesTarjeta.length === 2 ? 880 : undefined}>
+        <Sec p={p} ancho={hotelesTarjeta.length > 2 ? 1040 : hotelesTarjeta.length === 2 ? 880 : undefined} clase="cw-hospedaje">
           <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For out-of-town guests')}</div>
           <h2 style={titulo}>{t('Hospedaje', 'Where to stay')}</h2>
           {d.info_viaje && <p style={{ ...parrafo, fontSize: 17.5, lineHeight: 1.5, marginTop: 14, whiteSpace: 'pre-wrap', maxWidth: 900, marginLeft: 'auto', marginRight: 'auto', textWrap: 'balance' } as React.CSSProperties}>{d.info_viaje}</p>}
@@ -1078,7 +1078,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
             const q = encodeURIComponent(`${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion || ''}`.trim())
             const partes = String(h.resena || '').split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i)
             return (
-              <div key={i} style={{ marginTop: 30, maxWidth: 760, marginLeft: 'auto', marginRight: 'auto' }}>
+              <div key={i} className="cw-otro-hotel" style={{ marginTop: 30, maxWidth: 760, marginLeft: 'auto', marginRight: 'auto' }}>
                 <div style={{ ...etiqueta, color: p.txt3 }}>{t('Otra opción cercana', 'Another option nearby')}</div>
                 <p style={{ ...parrafo, fontSize: 18, marginTop: 10 }}>
                   <span style={{ color: p.txt, fontWeight: 500 }}>{String(h.nombre).replace(/\s+/g, ' ')}</span>
@@ -1480,6 +1480,18 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-dos, .cw-dividido .cw-par, .cw-dividido .cw-hoteles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cw-dividido .cw-arco { display: none; }
         .cw-dividido .cw-historia { display: none; }
+        /* Bloque de hospedaje en una sola pantalla */
+        .cw-dividido .cw-hospedaje h2 { font-size: 30px !important; margin-top: 4px !important; }
+        .cw-dividido .cw-hospedaje > p { margin-top: 8px !important; font-size: 16.5px !important; }
+        .cw-dividido .cw-hospedaje .cw-hoteles { margin-top: 16px !important; }
+        .cw-dividido .cw-hotel { padding: 16px 16px !important; }
+        .cw-dividido .cw-hotel-nombre { font-size: 21px !important; min-height: 0 !important; }
+        .cw-dividido .cw-hotel > div:first-child div[style*="italic"] { font-size: 15px !important; margin-top: 6px !important; }
+        .cw-dividido .cw-hotel-resena { display: none !important; }
+        .cw-dividido .cw-hotel .cw-btn { padding-top: 10px !important; padding-bottom: 10px !important; }
+        .cw-dividido .cw-otro-hotel { margin-top: 16px !important; }
+        .cw-dividido .cw-otro-hotel p { font-size: 16px !important; margin-top: 6px !important; line-height: 1.45 !important; }
+        .cw-dividido .cw-otro-hotel > div:last-child { margin-top: 8px !important; }
         /* Bloque 1 (portada) en una sola pantalla: menos aire, mismas letras */
         .cw-dividido .cw-portada { padding: 10px 0 0 !important; }
         .cw-dividido .cw-portada h1 { margin-top: 8px !important; font-size: 70px !important; }
