@@ -300,6 +300,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const albumAbre = d.album_abre ? new Date(d.album_abre) : null
   const albumAunNo = !!albumAbre && albumAbre.getTime() > Date.now()
   const limitePasado = !!limite && new Date(limite + 'T23:59:59') < new Date()
+  // Libro de firmas: el nombre del invitado ya va puesto
+  useEffect(() => {
+    if (invitado && !ctl.firmas.nombre.trim()) ctl.firmas.setNombre(invitado)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invitado])
 
   // Diseño 2 (?diseno=2): en computadora, fotos fijas a la izquierda que cambian con el scroll
   // y la información a la derecha. En celular se ve igual que el diseño normal.
@@ -1098,7 +1103,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       {!std && (<>
       {/* ───────── REGALOS ───────── */}
       {(mesas.length > 0 || linkRegalos || d.mesa_regalos_nota || d.lluvia_sobres) && (
-        <Sec p={p} ancho={mesas.length > 1 ? 720 : 520}>
+        <Sec p={p} ancho={mesas.length > 1 ? 720 : 520} clase="cw-regalos">
           <div style={etiqueta}>{t('Si deseas obsequiarnos algo', "If you'd like to give a gift")}</div>
           <h2 style={titulo}>{t('Mesa de regalos', 'Gift registry')}</h2>
           {d.mesa_regalos_nota && <p style={{ ...parrafo, marginTop: 14 }}>{d.mesa_regalos_nota}</p>}
@@ -1128,7 +1133,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
 
 
       {/* ───────── FOTOS Y FIRMAS (lado a lado en pantallas anchas) ───────── */}
-      <Sec p={p} ancho={1040}>
+      <Sec p={p} ancho={1040} clase="cw-fotos-firmas">
       <div className="cw-par">
       <div>
         <div style={etiqueta}>{t('El álbum de todos', 'Shared photo album')}</div>
@@ -1179,8 +1184,12 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           <p style={{ ...parrafo, marginTop: 22, color: p.acento }}>{t('Gracias — tu mensaje aparecerá aquí cuando lo aprobemos.', 'Thank you — your message will appear here once we approve it.')}</p>
         ) : (
           <div className="cw-firma-card" style={{ marginTop: 22, textAlign: 'left', padding: '24px 22px', border: `1px solid ${p.cardBorde}`, borderRadius: 20, background: p.card }}>
-            <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Tu nombre', 'Your name')}</label>
-            <input className="cw-campo" maxLength={100} value={ctl.firmas.nombre} onChange={e => ctl.firmas.setNombre(e.target.value)} style={{ fontFamily: p.serif, color: p.txt }} />
+            {invitado ? (
+              <div style={{ fontFamily: p.serif, fontSize: 17, color: p.txt2 }}>{t('Firma de', 'From')} <span style={{ fontFamily: p.script, fontSize: 30, color: p.acento, marginLeft: 6, lineHeight: 1 }}>{invitado}</span></div>
+            ) : (<>
+              <label style={{ ...etiqueta, color: p.txt3, display: 'block' }}>{t('Tu nombre', 'Your name')}</label>
+              <input className="cw-campo" maxLength={100} value={ctl.firmas.nombre} onChange={e => ctl.firmas.setNombre(e.target.value)} style={{ fontFamily: p.serif, color: p.txt }} />
+            </>)}
             <label style={{ ...etiqueta, color: p.txt3, display: 'block', marginTop: 18 }}>{t('Tu mensaje', 'Your message')}</label>
             <textarea className="cw-campo" maxLength={1000} rows={3} value={ctl.firmas.mensaje} onChange={e => ctl.firmas.setMensaje(e.target.value)} placeholder={t('Un deseo, un recuerdo, lo que el corazón te dicte…', "A wish, a memory, whatever's on your heart…")} style={{ fontFamily: p.serif, color: p.txt, resize: 'none' }} />
             <div style={{ marginTop: 20 }}><Boton p={p} relleno ancho onClick={ctl.firmas.enviar} deshabilitado={preview || !ctl.firmas.nombre.trim() || !ctl.firmas.mensaje.trim() || ctl.firmas.enviando}>{ctl.firmas.enviando ? '…' : t('Firmar el libro', 'Sign the book')}</Boton></div>
@@ -1481,7 +1490,16 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-mesa > div:first-child { font-size: 21px !important; }
         .cw-dividido .cw-mesa > div:last-child { margin-top: 6px !important; }
         .cw-dividido .cw-firma-card { padding: 16px 18px !important; margin-top: 14px !important; }
-        .cw-dividido .cw-firma-card textarea { height: 2.6em; }
+        .cw-dividido .cw-firma-card textarea { height: 2.4em; }
+        /* Bloque 6: jerarquía de tamaños para que todo quepa */
+        .cw-dividido .cw-regalos { padding-bottom: 4px !important; }
+        .cw-dividido .cw-fotos-firmas { padding-top: 10px !important; }
+        .cw-dividido .cw-regalos h2, .cw-dividido .cw-fotos-firmas h2 { font-size: 30px !important; margin-top: 4px !important; }
+        .cw-dividido .cw-regalos p, .cw-dividido .cw-fotos-firmas p { font-size: 17px !important; line-height: 1.45 !important; margin-top: 8px !important; }
+        .cw-dividido .cw-fotos-firmas p[style*="italic"] { font-size: 14.5px !important; }
+        .cw-dividido .cw-fotos-firmas .cw-btn { padding: 11px 22px !important; }
+        .cw-dividido .cw-fotos-firmas .cw-firma-card .cw-btn { padding: 11px 8px !important; }
+        .cw-dividido .cw-fotos-firmas .cw-firma-card > div:last-child { margin-top: 12px !important; }
         .cw-dividido .cw-album-qr { width: 76px; height: 76px; padding: 5px; }
         .cw-dividido .cw-grupo { display: flex; flex-direction: column; justify-content: center; min-height: calc(100vh / 1.15); }
         .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
