@@ -268,6 +268,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   const itinerario: any[] = Array.isArray(d.itinerario) ? d.itinerario : []
   const colores: any[] = Array.isArray(d.vestimenta_colores) ? d.vestimenta_colores : []
   const hoteles: any[] = Array.isArray(d.hoteles) ? d.hoteles : []
+  // Con tarifa de boda: tarjeta. Sin tarifa (p. ej. Crowne Plaza): un párrafo corto al final.
+  const hotelesTarjeta = hoteles.filter((h: any) => h && h.tarifa_especial !== false)
+  const hotelesParrafo = hoteles.filter((h: any) => h && h.tarifa_especial === false)
   // familias ("Padres de la novia: José y Patricia" -> etiqueta + nombres), para el Save the date de escritorio
   const padresLineas = String(d.mensaje_padres || '').split('\n').map(l => l.trim()).filter(Boolean).slice(0, 4).map(linea => {
     const k = linea.indexOf(':')
@@ -301,7 +304,9 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
   // Diseño 2 (?diseno=2): en computadora, fotos fijas a la izquierda que cambian con el scroll
   // y la información a la derecha. En celular se ve igual que el diseño normal.
   const [dividido, setDividido] = useState(false)
-  const [fotoIdx, setFotoIdx] = useState(0)
+  const [bloqueIdx, setBloqueIdx] = useState(0)
+  const [numBloques, setNumBloques] = useState(0)
+
   useEffect(() => { setDividido(new URLSearchParams(window.location.search).get('diseno') === '2') }, [])
   const fotosPanel: string[] = Array.from(new Set([
     ...(Array.isArray(d.fotos_sesion) ? d.fotos_sesion.map((x: any) => urlImagenSegura(typeof x === 'string' ? x : x?.url)) : []),
@@ -316,15 +321,14 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       const bloques = Array.from(document.querySelectorAll('.cw-pagina .cw-bloque'))
       let k = 0
       bloques.forEach((b, j) => { if (b.getBoundingClientRect().top <= window.innerHeight * 0.5) k = j })
-      setFotoIdx(k % n)
+      setBloqueIdx(k); setNumBloques(bloques.length)
     }
     window.addEventListener('scroll', fn, { passive: true })
     fn()
     return () => window.removeEventListener('scroll', fn)
   }, [dividido, sobreAbierto, fotosPanel.length])
 
-  // Diseño 2: cada bloque ocupa una pantalla completa. Si su contenido es más alto que la
-  // pantalla, se reduce lo justo para que quepa entero (nunca menos del 70%).
+  // Diseño 2: cada bloque ocupa al menos una pantalla completa. La letra nunca se reduce.
   useEffect(() => {
     if (!dividido || !sobreAbierto) return
     const ajustar = () => {
@@ -335,11 +339,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       grupos.forEach(g => {
         g.style.zoom = ''; g.style.minHeight = ''
         if (!ancho) return
-        const alto = g.getBoundingClientRect().height
-        const disp = window.innerHeight
-        const z = alto > disp * 0.98 ? Math.max(0.7, (disp * 0.96) / alto) : 1
-        if (z < 1) g.style.zoom = String(z)
-        g.style.minHeight = `${disp / (zp * z)}px`
+        g.style.minHeight = `${window.innerHeight / zp}px`
       })
     }
     ajustar()
@@ -348,6 +348,64 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
     document.fonts?.ready.then(ajustar).catch(() => {})
     window.addEventListener('resize', ajustar)
     return () => { window.clearTimeout(t1); window.clearTimeout(t2); window.removeEventListener('resize', ajustar) }
+  }, [dividido, sobreAbierto])
+
+  // Diseño 2 en computadora: el scroll avanza un bloque completo por gesto (rueda, trackpad o
+  // teclado). Si un bloque no cabe en la pantalla, primero se recorre y luego salta al siguiente.
+  useEffect(() => {
+    if (!dividido || !sobreAbierto) return
+    let bloqueadoHasta = 0
+    let ultimoEvento = 0
+    let esperandoPausa = false // tras un salto, ignora la inercia hasta que el gesto termine
+    const grupos = () => Array.from(document.querySelectorAll<HTMLElement>('.cw-pagina .cw-grupo'))
+    const actual = () => {
+      const gs = grupos(); let k = 0
+      gs.forEach((g, j) => { if (g.getBoundingClientRect().top <= window.innerHeight * 0.4) k = j })
+      return { gs, k }
+    }
+    const ir = (dir: 1 | -1) => {
+      const { gs, k } = actual()
+      const destino = gs[Math.min(gs.length - 1, Math.max(0, k + dir))]
+      if (!destino) return
+      bloqueadoHasta = Date.now() + 900
+      esperandoPausa = true
+      window.scrollTo({ top: window.scrollY + destino.getBoundingClientRect().top, behavior: 'smooth' })
+    }
+    // ¿El bloque actual todavía tiene contenido por recorrer en esa dirección?
+    const falta = (dir: 1 | -1) => {
+      const { gs, k } = actual(); const r = gs[k]?.getBoundingClientRect()
+      if (!r) return false
+      return dir === 1 ? r.bottom > window.innerHeight + 4 : r.top < -4
+    }
+    const rueda = (e: WheelEvent) => {
+      if (!window.matchMedia('(min-width: 900px)').matches) return
+      if (e.ctrlKey) return // zoom con el trackpad
+      const ahora = Date.now()
+      if (ahora - ultimoEvento > 180) esperandoPausa = false
+      ultimoEvento = ahora
+      if (Math.abs(e.deltaY) < 2) return
+      const dir: 1 | -1 = e.deltaY > 0 ? 1 : -1
+      if (ahora < bloqueadoHasta || esperandoPausa) { e.preventDefault(); return }
+      if (falta(dir)) return // deja el scroll normal dentro del bloque largo
+      e.preventDefault()
+      ir(dir)
+    }
+    const tecla = (e: KeyboardEvent) => {
+      if (!window.matchMedia('(min-width: 900px)').matches) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName))) return
+      const abajo = ['ArrowDown', 'PageDown', ' '].includes(e.key)
+      const arriba = ['ArrowUp', 'PageUp'].includes(e.key)
+      if (!abajo && !arriba) return
+      const dir: 1 | -1 = abajo ? 1 : -1
+      if (falta(dir)) return
+      e.preventDefault()
+      if (Date.now() < bloqueadoHasta) return
+      ir(dir)
+    }
+    window.addEventListener('wheel', rueda, { passive: false })
+    window.addEventListener('keydown', tecla)
+    return () => { window.removeEventListener('wheel', rueda); window.removeEventListener('keydown', tecla) }
   }, [dividido, sobreAbierto])
 
   // Flores fijas de las esquinas: transparentes en cuanto el invitado baja (ver .cw-bajo).
@@ -453,11 +511,11 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       <Ambiente p={p} />
       {dividido && fotosPanel.length > 0 && (
         <div className="cw-panel" aria-hidden="true">
-          {fotosPanel.map((u, i) => <img key={u} src={u} alt="" className={i === fotoIdx ? 'cw-panel-on' : ''} loading={i < 2 ? 'eager' : 'lazy'} />)}
+          {fotosPanel.map((u, i) => <img key={u} src={u} alt="" className={i === bloqueIdx % fotosPanel.length ? 'cw-panel-on' : ''} loading={i < 2 ? 'eager' : 'lazy'} />)}
           <div className="cw-panel-pie">
             <div style={{ fontFamily: p.script, fontSize: 52, lineHeight: 1 }}>{nombreBoda}</div>
             <div style={{ fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', marginTop: 12, opacity: .9 }}>{fechaPuntos(d.fecha_boda, lang)}</div>
-            {fotosPanel.length > 1 && <div className="cw-panel-puntos">{fotosPanel.map((u, i) => <span key={u} className={i === fotoIdx ? 'on' : ''} />)}</div>}
+            {numBloques > 1 && <div className="cw-panel-puntos">{Array.from({ length: numBloques }, (_, i) => <span key={i} className={i === bloqueIdx ? 'on' : ''} />)}</div>}
           </div>
         </div>
       )}
@@ -973,15 +1031,19 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
       )}
 
       </>)}
+      {!std && <div className="cw-sep" style={{ padding: '22px 0 26px' }}><Orn p={p} /></div>}
+      </div>
 
+      {/* ═══ BLOQUE 5: hospedaje ═══ */}
+      <div className="cw-grupo cw-bloque">
       {/* ───────── HOSPEDAJE ───────── */}
       {(hoteles.length > 0 || d.info_viaje) && (
-        <Sec p={p} ancho={hoteles.length > 1 ? 1040 : undefined}>
+        <Sec p={p} ancho={hotelesTarjeta.length > 2 ? 1040 : hotelesTarjeta.length === 2 ? 880 : undefined}>
           <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For out-of-town guests')}</div>
           <h2 style={titulo}>{t('Hospedaje', 'Where to stay')}</h2>
           {d.info_viaje && <p style={{ ...parrafo, marginTop: 16, whiteSpace: 'pre-wrap', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>{d.info_viaje}</p>}
           <div className="cw-hoteles">
-          {hoteles.map((h, i) => {
+          {hotelesTarjeta.map((h, i) => {
             const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
             return (
               <div key={i} className="cw-hotel" style={{ padding: '22px 20px', border: `1px solid ${p.cardBorde}`, borderRadius: 18, background: p.card }}>
@@ -990,24 +1052,58 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 {h.tarifa_especial && !h.tarifa && <span style={{ display: 'inline-block', marginTop: 8, fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento, border: `1px solid ${p.linea}`, borderRadius: 99, padding: '4px 11px' }}>{t('Tarifa especial de boda', 'Special wedding rate')}</span>}
                 {h.direccion && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 17, color: p.txt3, marginTop: 10 }}>{h.direccion}</div>}
                 </div>
-                <div>{h.resena && <p style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ display: 'block', marginTop: 6, color: p.acento }}>{x}</em> : x)}</p>}</div>
-                <div><TarifaHotel p={p} h={h} t={t} /></div>
-                <div>{h.traslado && (
+                <div>{h.resena && <p className="cw-hotel-resena" style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ display: 'block', marginTop: 6, color: p.acento }}>{x}</em> : x)}</p>}</div>
+                <div><div className="cw-movil"><TarifaHotel p={p} h={h} t={t} /></div>
+                <div className="cw-escritorio">
+                  {h.tarifa && <div style={{ marginTop: 14, padding: '12px 14px', border: `1px solid ${p.linea}`, borderRadius: 12 }}>
+                    <div style={{ fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento }}>{t('Tarifa especial de boda', 'Special wedding rate')}</div>
+                    <p style={{ fontFamily: p.serif, fontSize: 16, lineHeight: 1.4, color: p.txt, margin: '6px 0 0' }}>{String(h.tarifa).slice(0, 400)}</p>
+                    {h.codigo && <div style={{ marginTop: 8, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.txt2 }}>{t('Clave', 'Code')}: <b style={{ color: p.acento }}>{String(h.codigo).split(' ')[0]}</b></div>}
+                  </div>}
+                </div></div>
+                <div><div className="cw-escritorio">{h.traslado && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15.5, color: p.txt3, marginTop: 10 }}>{String(h.traslado).slice(0, 160)}</div>}</div>
+                <div className="cw-movil">{h.traslado && (
                   <div style={{ marginTop: 14, padding: '10px 14px', border: `1px solid ${p.linea}`, borderRadius: 12, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.acento, lineHeight: 1.6 }}>
                     {String(h.traslado).slice(0, 160)}
                   </div>
-                )}</div>
-                <div><ComoLlegar p={p} lugar={`${h.nombre} ${h.direccion || ''}`.trim()} google={enlace} t={t} /></div>
+                )}</div></div>
+                <div><div className="cw-movil"><ComoLlegar p={p} lugar={`${h.nombre} ${h.direccion || ''}`.trim()} google={enlace} t={t} /></div>
+                <div className="cw-escritorio" style={{ marginTop: 14 }}>
+                  {urlEnlaceSegura(h.reservar) && <Boton p={p} relleno ancho compacto href={urlEnlaceSegura(h.reservar)!}>{t('Reservar con tarifa especial', 'Book with the wedding rate')}</Boton>}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    <div style={{ flex: 1 }}><Boton p={p} ancho compacto href={enlace || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion || ''}`)}`}>Maps</Boton></div>
+                    <div style={{ flex: 1 }}><Boton p={p} ancho compacto href={`https://waze.com/ul?q=${encodeURIComponent(`${h.nombre} ${h.direccion || ''}`)}&navigate=yes`}>Waze</Boton></div>
+                  </div>
+                </div></div>
               </div>
             )
           })}
           </div>
+          {hotelesParrafo.map((h, i) => {
+            const q = encodeURIComponent(`${String(h.nombre).replace(/\s+/g, ' ')} ${h.direccion || ''}`.trim())
+            const partes = String(h.resena || '').split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i)
+            return (
+              <div key={i} style={{ marginTop: 30, maxWidth: 760, marginLeft: 'auto', marginRight: 'auto' }}>
+                <div style={{ ...etiqueta, color: p.txt3 }}>{t('Otra opción cercana', 'Another option nearby')}</div>
+                <p style={{ ...parrafo, fontSize: 18, marginTop: 10 }}>
+                  <span style={{ color: p.txt, fontWeight: 500 }}>{String(h.nombre).replace(/\s+/g, ' ')}</span>
+                  {h.direccion && <span style={{ fontStyle: 'italic', color: p.txt3 }}> · {h.direccion}</span>}
+                  {partes.some(x => x) && <>{'. '}{partes.map((x, k) => k % 2 ? <em key={k} style={{ color: p.acento }}>{x}</em> : x)}</>}
+                  {h.traslado && <span style={{ color: p.txt3 }}>{' '}{String(h.traslado).replace(/\.$/, '')}.</span>}
+                </p>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
+                  <a className="cw-chip" href={urlEnlaceSegura(h.link) || `https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>Google Maps</a>
+                  <a className="cw-chip" href={`https://waze.com/ul?q=${q}&navigate=yes`} target="_blank" rel="noopener noreferrer" style={{ fontFamily: p.etiqueta, color: p.acento, border: `1px solid ${p.linea}` }}>Waze</a>
+                </div>
+              </div>
+            )
+          })}
         </Sec>
       )}
       {!std && <div className="cw-sep" style={{ padding: '22px 0 26px' }}><Orn p={p} /></div>}
       </div>
 
-      {/* ═══ BLOQUE 5: regalos, fotos, firmas y cierre ═══ */}
+      {/* ═══ BLOQUE 6: regalos, fotos, firmas y cierre ═══ */}
       <div className="cw-grupo cw-bloque">
       {!std && (<>
       {/* ───────── REGALOS ───────── */}
@@ -1333,6 +1429,12 @@ export function Estilos({ p }: { p: Paleta }) {
       .cw-momento { display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: 0; align-content: start; }
       .cw-col5 { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; align-content: start; }
       .cw-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+      .cw-escritorio { display: none; }
+      @media (min-width: 900px) {
+        .cw-hotel .cw-movil { display: none; }
+        .cw-hotel .cw-escritorio { display: block; }
+        .cw-hotel-resena { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 16.5px !important; }
+      }
       .cw-hoteles { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 26px; text-align: center; }
       .cw-hotel { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; align-content: start; }
       /* Capa decorativa fija: las ramas se quedan arriba mientras se hace scroll */
@@ -1356,7 +1458,7 @@ export function Estilos({ p }: { p: Paleta }) {
       /* Diseño 2: fotos a la izquierda, información a la derecha (solo pantallas anchas) */
       .cw-panel { display: none; }
       @media (min-width: 900px) {
-        .cw-dividido .cw-panel { display: block; position: fixed; top: 0; left: 0; bottom: 0; width: 46vw; z-index: 3; overflow: hidden; background: #3a2a26; }
+        .cw-dividido .cw-panel { display: block; position: fixed; top: 0; left: 0; bottom: 0; width: 38vw; z-index: 3; overflow: hidden; background: #3a2a26; }
         .cw-panel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity 1.2s ease, transform 7s ease; }
         .cw-panel img.cw-panel-on { opacity: 1; transform: scale(1); }
         .cw-panel::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(40,25,22,0) 55%, rgba(40,25,22,.6)); pointer-events: none; }
@@ -1364,14 +1466,14 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-panel-puntos { display: flex; gap: 7px; justify-content: center; margin-top: 16px; }
         .cw-panel-puntos span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.45); transition: background .4s, transform .4s; }
         .cw-panel-puntos span.on { background: #fff; transform: scale(1.3); }
-        .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.15); }
+        .cw-dividido .cw-pagina { margin-left: calc(38vw / 1.15); }
+        .cw-dividido .cw-dos, .cw-dividido .cw-par, .cw-dividido .cw-hoteles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cw-dividido .cw-arco { display: none; }
         .cw-dividido .cw-historia { display: none; }
-        .cw-dividido .cw-grupo { display: flex; flex-direction: column; justify-content: center; scroll-snap-align: start; }
-        html:has(.cw-dividido) { scroll-snap-type: y mandatory; }
+        .cw-dividido .cw-grupo { display: flex; flex-direction: column; justify-content: center; }
         .cw-dividido .cw-rama-i, .cw-dividido .cw-flor-i1, .cw-dividido .cw-flor-i2, .cw-dividido .cw-flor-i3 { display: none; }
       }
-      @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(46vw / 1.3); } }
+      @media (min-width: 1180px) { .cw-dividido .cw-pagina { margin-left: calc(38vw / 1.3); } }
       @media print { .cw-panel { display: none !important; } .cw-dividido .cw-pagina { margin-left: 0 !important; } .cw-dividido .cw-arco { display: block !important; } }
       @keyframes cw-mece { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(2.2deg); } }
       .cw-pre-titulo { font-size: 24px; }
