@@ -308,7 +308,8 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref, 
 
   // Diseño 2 (?diseno=2): en computadora, fotos fijas a la izquierda que cambian con el scroll
   // y la información a la derecha. En celular se ve igual que el diseño normal.
-  const [dividido] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('diseno') === '2')
+  // Diseño único de la invitación (fotos a la izquierda en computadora, historias en celular)
+  const dividido = true
   const [bloqueIdx, setBloqueIdx] = useState(0)
   const [numBloques, setNumBloques] = useState(0)
   const [fotoSale, setFotoSale] = useState(-1) // foto que va saliendo (para el efecto parallax)
