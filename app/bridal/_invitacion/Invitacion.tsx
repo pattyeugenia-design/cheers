@@ -600,8 +600,17 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
           {d.nombre_novio}
         </h1>
         <div style={{ ...etiqueta, color: p.txt2, marginTop: 22, letterSpacing: '.26em', padding: '0 14px' }}>{fechaPuntos(d.fecha_boda, lang)}</div>
-        {(std ? stdLugar : lugar1Nombre) && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{std ? stdLugar : lugar1Nombre}</div>}
-        {!std && d.lugar2_nombre && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '4px auto 0', maxWidth: 320, padding: '0 16px' }}>{String(d.lugar2_nombre).split(',')[0]}</div>}
+        {std && stdLugar && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 19, lineHeight: 1.3, color: p.txt3, margin: '10px auto 0', maxWidth: 320, padding: '0 16px' }}>{stdLugar}</div>}
+        {!std && (lugar1Nombre || d.lugar2_nombre) && (
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '18px auto 0', maxWidth: 620, padding: '0 12px' }}>
+            {[[t('Ceremonia', 'Ceremony'), lugar1Nombre], [t('Recepción', 'Reception'), String(d.lugar2_nombre || '').split(',')[0]]].filter(x => x[1]).map(([etq, nom], i) => (
+              <div key={i} style={{ flex: '1 1 0', padding: '2px 18px', borderLeft: i ? `1px solid ${p.linea}` : 'none' }}>
+                <div style={{ fontFamily: p.etiqueta, fontSize: 10.5, fontWeight: 500, letterSpacing: '.24em', textTransform: 'uppercase', color: p.acento }}>{etq}</div>
+                <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 18, lineHeight: 1.3, color: p.txt3, marginTop: 6 }}>{nom}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="cw-arco" style={{ position: 'relative', width: 'min(74vw,320px)', margin: '36px auto 0' }}>
           <div aria-hidden="true" style={{ position: 'absolute', inset: -11, border: `1px solid ${p.linea}`, borderRadius: '999px 999px 22px 22px' }} />
