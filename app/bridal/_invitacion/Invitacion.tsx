@@ -1031,7 +1031,7 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
         <Sec p={p} ancho={hotelesTarjeta.length > 2 ? 1040 : hotelesTarjeta.length === 2 ? 880 : undefined}>
           <div style={etiqueta}>{t('Para quienes vienen de lejos', 'For out-of-town guests')}</div>
           <h2 style={titulo}>{t('Hospedaje', 'Where to stay')}</h2>
-          {d.info_viaje && <p style={{ ...parrafo, marginTop: 16, whiteSpace: 'pre-wrap', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>{d.info_viaje}</p>}
+          {d.info_viaje && <p style={{ ...parrafo, fontSize: 17.5, lineHeight: 1.5, marginTop: 14, whiteSpace: 'pre-wrap', maxWidth: 900, marginLeft: 'auto', marginRight: 'auto', textWrap: 'balance' } as React.CSSProperties}>{d.info_viaje}</p>}
           <div className="cw-hoteles">
           {hotelesTarjeta.map((h, i) => {
             const enlace = urlEnlaceSegura(h.link) || (h.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${h.nombre} ${h.direccion}`)}` : null)
@@ -1045,10 +1045,10 @@ export default function Invitacion({ d: dOriginal, lang, modo, ctl, volverHref }
                 <div>{h.resena && <p className="cw-hotel-resena" style={{ ...parrafo, fontSize: 18, marginTop: 14, textAlign: 'left' }}>{String(h.resena).slice(0, 700).split(/((?:sin tarifa especial|no special wedding rate)[^.]*\.?)/i).map((x, k) => k % 2 ? <em key={k} style={{ display: 'block', marginTop: 6, color: p.acento }}>{x}</em> : x)}</p>}</div>
                 <div><div className="cw-movil"><TarifaHotel p={p} h={h} t={t} /></div>
                 <div className="cw-escritorio">
-                  {h.tarifa && <div style={{ marginTop: 14, padding: '12px 14px', border: `1px solid ${p.linea}`, borderRadius: 12 }}>
-                    <div style={{ fontFamily: p.etiqueta, fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: p.acento }}>{t('Tarifa especial de boda', 'Special wedding rate')}</div>
-                    <p style={{ fontFamily: p.serif, fontSize: 16, lineHeight: 1.4, color: p.txt, margin: '6px 0 0' }}>{String(h.tarifa).slice(0, 400)}</p>
-                    {h.codigo && <div style={{ marginTop: 8, fontFamily: p.etiqueta, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: p.txt2 }}>{t('Clave', 'Code')}: <b style={{ color: p.acento }}>{String(h.codigo).split(' ')[0]}</b></div>}
+                  {h.tarifa && <div style={{ marginTop: 10, padding: '8px 12px', border: `1px solid ${p.linea}`, borderRadius: 10 }}>
+                    <div style={{ fontFamily: p.etiqueta, fontSize: 9.5, letterSpacing: '.2em', textTransform: 'uppercase', color: p.acento }}>{t('Tarifa especial de boda', 'Special wedding rate')}</div>
+                    <p style={{ fontFamily: p.serif, fontSize: 14.5, lineHeight: 1.35, color: p.txt, margin: '4px 0 0' }}>{String(h.tarifa).slice(0, 400)}</p>
+                    {h.codigo && <div style={{ marginTop: 5, fontFamily: p.etiqueta, fontSize: 10.5, letterSpacing: '.14em', textTransform: 'uppercase', color: p.txt2 }}>{t('Clave', 'Code')}: <b style={{ color: p.acento }}>{String(h.codigo).split(' ')[0]}</b></div>}
                   </div>}
                 </div></div>
                 <div><div className="cw-escritorio">{h.traslado && <div style={{ fontFamily: p.serif, fontStyle: 'italic', fontSize: 15.5, color: p.txt3, marginTop: 10 }}>{String(h.traslado).slice(0, 160)}</div>}</div>
