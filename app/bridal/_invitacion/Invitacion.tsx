@@ -1496,7 +1496,7 @@ export function Estilos({ p }: { p: Paleta }) {
         .cw-dividido .cw-fotos-firmas { padding-top: 10px !important; }
         .cw-dividido .cw-regalos h2, .cw-dividido .cw-fotos-firmas h2 { font-size: 30px !important; margin-top: 4px !important; }
         .cw-dividido .cw-regalos p, .cw-dividido .cw-fotos-firmas p { font-size: 17px !important; line-height: 1.45 !important; margin-top: 8px !important; }
-        .cw-dividido .cw-fotos-firmas p[style*="italic"] { font-size: 14.5px !important; }
+        .cw-dividido .cw-fotos-firmas p[style*="italic"] { font-size: 14.5px !important; max-width: 290px !important; margin-left: auto !important; margin-right: auto !important; text-wrap: balance; }
         .cw-dividido .cw-fotos-firmas .cw-btn { padding: 11px 22px !important; }
         .cw-dividido .cw-fotos-firmas .cw-firma-card .cw-btn { padding: 11px 8px !important; }
         .cw-dividido .cw-fotos-firmas .cw-firma-card > div:last-child { margin-top: 12px !important; }
